@@ -8,3 +8,15 @@ wheels/
 
 # Virtual environments
 .venv
+.env
+
+# Tool directories
+.claude/
+.specify/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
