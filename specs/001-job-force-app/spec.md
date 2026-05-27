@@ -23,32 +23,35 @@ Hero roster:
 
 ---
 
-### User Story 1 — Scout: Find Matching Jobs (Priority: P1)
+### User Story 1 — Scout: Find & Ingest Job Listings (Priority: P1)
 
-The user tells Scout what kind of role they are looking for. Scout searches available
-job sources, retrieves matching listings, and presents them in a mission briefing
-format. This is the entry point of the entire workflow — without discovered jobs,
-none of the other heroes have a target.
+The user browses a job board in their browser (or triggers a Playwright MCP crawl)
+and captures a job listing into the app via the Chrome extension or a CLI skill. Scout
+stores the raw HTML snapshot and structured listing data, then surfaces captured
+listings in the Scout job board. Scout is a **push-only ingest model** — there is no
+outbound search engine; the user drives discovery by navigating to job pages.
 
 **Why this priority**: All other capabilities depend on having a job listing to act on.
 Without job discovery, the app has no MVP.
 
-**Independent Test**: Can be fully tested by entering a job search query and verifying
-that a list of matching job listings is returned and displayed, each showing title,
-company, location, and a link to apply.
+**Independent Test**: Can be fully tested by navigating to a job listing URL, clicking
+the Chrome extension button (or running the Playwright MCP skill), and verifying that
+the listing appears in the Scout job board at `/jobs` with title, company, location,
+and source link.
 
 **Acceptance Scenarios**:
 
-1. **Given** the user has not yet searched for jobs, **When** they describe their target
-   role and preferences to Scout, **Then** Scout returns a list of relevant job listings
-   matching those criteria.
-2. **Given** Scout has returned results, **When** the user views the list, **Then** each
-   listing shows at minimum: job title, company name, location, and a source link.
-3. **Given** a search returns no results, **When** Scout completes the search, **Then**
-   the user receives a clear message that no matches were found with a suggestion to
-   broaden criteria.
-4. **Given** the user has run multiple searches, **When** they view their history,
-   **Then** previously discovered jobs are saved and accessible without re-searching.
+1. **Given** the user is on a job listing page, **When** they click the Chrome extension
+   button or trigger the Playwright MCP skill with a URL, **Then** the listing is
+   captured and appears in the Scout job board with status `saved`.
+2. **Given** a listing has been captured, **When** the user views the Scout job board,
+   **Then** each listing shows at minimum: job title, company name, location, source
+   URL, crawled date, and current pipeline status.
+3. **Given** the user captures the same URL twice, **When** the second ingest is
+   attempted, **Then** the app returns a 409 conflict and does not create a duplicate.
+4. **Given** multiple listings have been captured, **When** the user views the job board,
+   **Then** they can filter by status (saved/applied/interviewing/offer/rejected/withdrawn),
+   location, and role type to narrow the visible set.
 
 ---
 
