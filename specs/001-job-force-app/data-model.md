@@ -40,8 +40,10 @@ job_listings
 ├── description     TEXT                        -- full job description text
 ├── source_url      TEXT NOT NULL
 ├── status          TEXT NOT NULL DEFAULT 'saved'
-│                   -- enum: saved | applied | interviewing | offer | rejected
-├── fit_score       REAL                        -- 0.0–1.0, set by Oracle
+│                   -- enum: saved | applied | interviewing | offer | rejected | withdrawn
+├── fit_score       REAL                        -- 0.0–1.0, set by Oracle; NULL = not yet scored
+├── fit_scored      INTEGER NOT NULL DEFAULT 0  -- 0 = unscored, 1 = scored (distinguishes NULL score from poor fit)
+├── fit_confidence  REAL                        -- 0.0–1.0, Oracle's confidence in the score (low = sparse description)
 ├── fit_rationale   TEXT                        -- Oracle's explanation
 ├── crawled_at      TEXT                        -- when Scout captured it
 ├── created_at      TEXT NOT NULL
@@ -49,7 +51,9 @@ job_listings
 ```
 
 **Constraints**: `source_url` unique per company. `status` values enforced via
-CHECK constraint. `fit_score` nullable until Oracle has run.
+CHECK constraint. `fit_score` and `fit_confidence` are NULL until Oracle has run
+(`fit_scored=0`). Once Oracle runs, `fit_scored=1` regardless of score value —
+a low score is valid data, not an absence of scoring.
 
 **Relationships**: one JobListing → many StatusTransitions, one PageSnapshot,
 many InterviewSessions, many TailoredResumes, many MeetingNotes.
@@ -204,16 +208,20 @@ search_configs
 
 ```
 [new] → saved → applied → interviewing → offer
-                    ↓           ↓           ↓
-                rejected    rejected    rejected
+          ↓         ↓           ↓           ↓
+       withdrawn  rejected   rejected    rejected
+                    ↓           ↓
+                withdrawn   withdrawn
 ```
 
 Valid transitions:
-- `saved` → `applied`, `rejected`
-- `applied` → `interviewing`, `rejected`
-- `interviewing` → `offer`, `rejected`
+
+- `saved` → `applied`, `rejected`, `withdrawn`
+- `applied` → `interviewing`, `rejected`, `withdrawn`
+- `interviewing` → `offer`, `rejected`, `withdrawn`
 - `offer` → (terminal)
 - `rejected` → (terminal)
+- `withdrawn` → (terminal)
 
 Backward transitions are blocked at the service layer.
 

@@ -225,10 +225,15 @@ counts per status and the meeting note is retrievable from the company detail vi
 - **FR-006**: Users MUST be able to maintain a profile describing their skills,
   experience, and job preferences.
 - **FR-007**: Oracle MUST score each saved job listing against the user's profile
-  and return an ordered ranked list.
+  and return an ordered ranked list. Score and pipeline status are independent —
+  a user may act on any listing regardless of its score.
 - **FR-008**: Each score MUST be accompanied by a natural language explanation
-  identifying strengths and gaps.
+  identifying strengths and gaps, and a confidence level (high / medium / low)
+  reflecting how much signal Oracle could extract from the job description.
 - **FR-009**: Scores MUST update when the user's profile changes.
+- **FR-009a**: When a job description is too sparse for reliable scoring, Oracle
+  MUST return a low-confidence score rather than an error, and MUST surface a
+  visible warning to the user that the score may not be reliable.
 
 #### Forge — Resume Tailoring & PDF Generation
 
@@ -262,7 +267,7 @@ counts per status and the meeting note is retrievable from the company detail vi
 #### Application Pipeline & Status Tracking
 
 - **FR-021**: Each job listing MUST have a pipeline status: Saved, Applied,
-  Interviewing, Offer, or Rejected.
+  Interviewing, Offer, Rejected, or Withdrawn.
 - **FR-022**: Every status transition MUST be recorded with a timestamp (date and
   time) forming an immutable audit log for that listing.
 - **FR-023**: Users MUST be able to manually advance or update the status of any
@@ -270,8 +275,8 @@ counts per status and the meeting note is retrievable from the company detail vi
 - **FR-024**: The application MUST provide a pipeline review view showing all
   listings grouped or filterable by current status, with transition timestamps
   visible on each listing's detail.
-- **FR-025**: Oracle MUST exclude listings with status Offer or Rejected from
-  active ranking by default, while still allowing the user to view them.
+- **FR-025**: Oracle MUST exclude listings with status Offer, Rejected, or Withdrawn
+  from active ranking by default, while still allowing the user to view them.
 
 #### HQ Dashboard & Meeting Notes
 
@@ -309,7 +314,7 @@ counts per status and the meeting note is retrievable from the company detail vi
   description, source URL, fit score, current pipeline status, and a full status
   history log of timestamped transitions (e.g., Saved at 2026-05-27T10:00,
   Applied at 2026-05-28T14:32). Valid statuses: Saved, Applied, Interviewing,
-  Offer, Rejected.
+  Offer, Rejected, Withdrawn.
 - **Resume**: Structured data file representing the user's resume (personal info,
   work history, education, skills). Forge uses this as input to produce tailored
   content and render a polished PDF via LaTeX. Multiple resume variants may exist,
