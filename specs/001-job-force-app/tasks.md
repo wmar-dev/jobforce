@@ -24,15 +24,15 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 **Purpose**: Repository layout, tooling, and configuration before any feature work begins.
 
-- [ ] T001 Create root directory structure: `backend/`, `frontend/`, `chrome-extension/`, `.claude/skills/` per plan.md
-- [ ] T002 [P] Create `backend/pyproject.toml` with dependencies: fastapi, sqlalchemy[asyncio], aiosqlite, pydantic-settings[yaml], jinja2, anthropic, ruff, mypy, pytest, pytest-asyncio, pytest-cov
-- [ ] T003 [P] Create `frontend/package.json` with dependencies: next@14, react@18, typescript, tailwindcss, shadcn/ui, swr; add `dev` script running both servers via concurrently
-- [ ] T004 [P] Create root `Makefile` with targets: `dev` (start backend + frontend), `check` (run all quality gates), `seed` (run backend seed script)
-- [ ] T005 [P] Create `backend/Makefile` with `check` target: ruff lint + mypy type-check + pytest with coverage
-- [ ] T006 [P] Create `config.example.yaml` documenting all required and optional fields: database.path, search.queries[], search.target_companies[], user.full_name, user.skills[]
-- [ ] T007 [P] Create `.gitignore` additions: `backend/data/jobforce.db`, `backend/data/pages/`, `frontend/.next/`, `chrome-extension/icons/*.png` (placeholders)
-- [ ] T008 [P] Create `frontend/next.config.ts` with API proxy rewrites: `/api/*` → `http://localhost:8000/api/*` in development
-- [ ] T009 [P] Create `frontend/tailwind.config.ts` with shadcn/ui preset and superhero color theme tokens
+- [x] T001 Create root directory structure: `backend/`, `frontend/`, `chrome-extension/`, `.claude/skills/` per plan.md
+- [x] T002 [P] Create `backend/pyproject.toml` with dependencies: fastapi, sqlalchemy[asyncio], aiosqlite, pydantic-settings[yaml], jinja2, anthropic, ruff, mypy, pytest, pytest-asyncio, pytest-cov
+- [x] T003 [P] Create `frontend/package.json` with dependencies: next@14, react@18, typescript, tailwindcss, shadcn/ui, swr; add `dev` script running both servers via concurrently
+- [x] T004 [P] Create root `Makefile` with targets: `dev` (start backend + frontend), `check` (run all quality gates), `seed` (run backend seed script)
+- [x] T005 [P] Create `backend/Makefile` with `check` target: ruff lint + mypy type-check + pytest with coverage
+- [x] T006 [P] Create `config.example.yaml` documenting all required and optional fields: database.path, search.queries[], search.target_companies[], user.full_name, user.skills[]
+- [x] T007 [P] Create `.gitignore` additions: `backend/data/jobforce.db`, `backend/data/pages/`, `frontend/.next/`, `chrome-extension/icons/*.png` (placeholders)
+- [x] T008 [P] Create `frontend/next.config.ts` with API proxy rewrites: `/api/*` → `http://localhost:8000/api/*` in development
+- [x] T009 [P] Create `frontend/tailwind.config.ts` with shadcn/ui preset and superhero color theme tokens
 
 ---
 
@@ -42,20 +42,20 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 **⚠️ CRITICAL**: Phases 3–7 cannot start until this phase is complete.
 
-- [ ] T010 Create `backend/jobforce/config.py`: pydantic-settings YAML loader for `config.yaml`; models for `DatabaseConfig`, `SearchConfig`, `CompanyConfig`, `UserConfig`; fail-fast validation on startup
-- [ ] T011 Create `backend/jobforce/db/engine.py`: async SQLAlchemy engine with aiosqlite driver, WAL mode enabled (`PRAGMA journal_mode=WAL`), pool_size=5, max_overflow=10
-- [ ] T012 Create `backend/jobforce/db/models.py`: all 8 ORM models — `Company`, `JobListing`, `StatusTransition`, `PageSnapshot`, `Resume`, `InterviewSession`, `MeetingNote`, `UserProfile`, `SearchConfig` — with relationships, CHECK constraints, and indexes per data-model.md
-- [ ] T013 Create `backend/jobforce/db/init.py`: `create_all()` async function creating tables and indexes; idempotent (safe to re-run)
-- [ ] T014 Create `backend/jobforce/db/seed.py`: `seed_from_config()` idempotent async function seeding `Company` and `SearchConfig` rows from `config.yaml`; skips existing records
-- [ ] T015 Create `backend/jobforce/main.py`: FastAPI app factory with lifespan (DB init + seed on startup), CORSMiddleware (localhost origins), structured request logging middleware, router registration stubs
-- [ ] T016 Create `backend/tests/conftest.py`: async pytest fixtures — `test_client` (AsyncClient with temp SQLite DB), `db_session`, `sample_company`, `sample_job` factories
-- [ ] T017 [P] Create `backend/tests/unit/test_config.py`: unit tests for config loader — valid YAML passes, missing required fields raise ValidationError, extra fields are ignored
-- [ ] T018 [P] Create `backend/tests/unit/test_db_models.py`: unit tests for ORM model constraints — status CHECK constraint rejects invalid values, `fit_scored` defaults to 0, status transitions append-only
-- [ ] T019 Create `frontend/src/lib/types.ts`: TypeScript interfaces for all API response shapes per contracts/api-contracts.md — `JobListing`, `Company`, `Resume`, `InterviewSession`, `MeetingNote`, `DashboardSummary`, `OracleRankResult`
-- [ ] T020 Create `frontend/src/lib/api.ts`: typed fetch helper functions for all API endpoints; handles errors, returns typed responses; base URL from env var with localhost:8000 fallback
-- [ ] T021 Create `frontend/src/app/layout.tsx`: root layout with `Sidebar` navigation component (hero nav: HQ | Scout | Oracle | Forge | Coach)
-- [ ] T022 Create `frontend/src/components/layout/Sidebar.tsx`: sidebar with superhero-themed navigation links, `HeroCard` identity chips per agent, active route highlighting
-- [ ] T023 Create `frontend/src/components/layout/HeroCard.tsx`: agent identity card component showing hero name, codename, power description, and themed color/icon
+- [x] T010 Create `backend/jobforce/config.py`: pydantic-settings YAML loader for `config.yaml`; models for `DatabaseConfig`, `SearchConfig`, `CompanyConfig`, `UserConfig`; fail-fast validation on startup
+- [x] T011 Create `backend/jobforce/db/engine.py`: async SQLAlchemy engine with aiosqlite driver, WAL mode enabled (`PRAGMA journal_mode=WAL`), pool_size=5, max_overflow=10
+- [x] T012 Create `backend/jobforce/db/models.py`: all 8 ORM models — `Company`, `JobListing`, `StatusTransition`, `PageSnapshot`, `Resume`, `InterviewSession`, `MeetingNote`, `UserProfile`, `SearchConfig` — with relationships, CHECK constraints, and indexes per data-model.md
+- [x] T013 Create `backend/jobforce/db/init.py`: `create_all()` async function creating tables and indexes; idempotent (safe to re-run)
+- [x] T014 Create `backend/jobforce/db/seed.py`: `seed_from_config()` idempotent async function seeding `Company` and `SearchConfig` rows from `config.yaml`; skips existing records
+- [x] T015 Create `backend/jobforce/main.py`: FastAPI app factory with lifespan (DB init + seed on startup), CORSMiddleware (localhost origins), structured request logging middleware, router registration stubs
+- [x] T016 Create `backend/tests/conftest.py`: async pytest fixtures — `test_client` (AsyncClient with temp SQLite DB), `db_session`, `sample_company`, `sample_job` factories
+- [x] T017 [P] Create `backend/tests/unit/test_config.py`: unit tests for config loader — valid YAML passes, missing required fields raise ValidationError, extra fields are ignored
+- [x] T018 [P] Create `backend/tests/unit/test_db_models.py`: unit tests for ORM model constraints — status CHECK constraint rejects invalid values, `fit_scored` defaults to 0, status transitions append-only
+- [x] T019 Create `frontend/src/lib/types.ts`: TypeScript interfaces for all API response shapes per contracts/api-contracts.md — `JobListing`, `Company`, `Resume`, `InterviewSession`, `MeetingNote`, `DashboardSummary`, `OracleRankResult`
+- [x] T020 Create `frontend/src/lib/api.ts`: typed fetch helper functions for all API endpoints; handles errors, returns typed responses; base URL from env var with localhost:8000 fallback
+- [x] T021 Create `frontend/src/app/layout.tsx`: root layout with `Sidebar` navigation component (hero nav: HQ | Scout | Oracle | Forge | Coach)
+- [x] T022 Create `frontend/src/components/layout/Sidebar.tsx`: sidebar with superhero-themed navigation links, `HeroCard` identity chips per agent, active route highlighting
+- [x] T023 Create `frontend/src/components/layout/HeroCard.tsx`: agent identity card component showing hero name, codename, power description, and themed color/icon
 
 **Checkpoint**: Backend starts (`uvicorn jobforce.main:app`), DB creates tables, frontend builds, sidebar renders. Quality gates pass: `make check`.
 

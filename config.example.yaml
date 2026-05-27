@@ -1,0 +1,45 @@
+# Jobforce Configuration — copy to config.yaml and fill in your details
+# Required fields are marked [REQUIRED]. Missing required fields cause startup failure.
+
+# Database configuration
+database:
+  path: "backend/data/jobforce.db"  # Path to SQLite file (relative to project root)
+
+# Job search configuration — used to seed SearchConfig records
+# At least one entry required for Scout's Playwright MCP skill to have targets
+search:
+  queries:  # [REQUIRED] List of job search queries
+    - query: "Senior Python Engineer"
+      location: "Remote, US"
+      source: "linkedin"
+    - query: "Staff Backend Engineer"
+      location: "San Francisco, CA"
+      source: "greenhouse"
+
+  # Companies to pre-seed in the database (optional)
+  target_companies:
+    - name: "Acme Corp"
+      domain: "acme.com"
+    - name: "Example Inc"
+      domain: "example.com"
+
+# User profile — used by Oracle for scoring and Forge for PDF generation
+user:
+  full_name: "Jane Smith"           # [REQUIRED for Forge PDF]
+  headline: "Senior Software Engineer"
+  skills:                           # [REQUIRED for Oracle ranking]
+    - "Python"
+    - "FastAPI"
+    - "PostgreSQL"
+    - "Docker"
+    - "AWS"
+  preferences:
+    target_roles:
+      - "Senior Backend Engineer"
+      - "Staff Engineer"
+    locations:
+      - "Remote"
+      - "San Francisco, CA"
+    role_types:
+      - "full-time"
+    min_salary: null                # Optional: minimum salary expectation

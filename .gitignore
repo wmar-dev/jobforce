@@ -9,6 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .env
+.env.*
 
 # Tool directories
 .claude/
@@ -20,3 +21,29 @@ wheels/
 # IDE
 .vscode/
 .idea/
+
+# Node.js / Frontend
+node_modules/
+.next/
+frontend/.next/
+frontend/node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQLite database and raw HTML snapshots
+backend/data/jobforce.db
+backend/data/pages/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Chrome extension build artifacts
+chrome-extension/dist/
