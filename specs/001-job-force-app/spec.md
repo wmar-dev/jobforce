@@ -226,13 +226,18 @@ counts per status and the meeting note is retrievable from the company detail vi
 #### Oracle — Job Ranking
 
 - **FR-006**: Users MUST be able to maintain a profile describing their skills,
-  experience, and job preferences.
+  experience, and job preferences. `skills[]` is the only required field; all
+  other profile fields are optional. Oracle and Forge MUST block with a clear
+  actionable error if their required profile fields are absent.
 - **FR-007**: Oracle MUST score each saved job listing against the user's profile
   and return an ordered ranked list. Score and pipeline status are independent —
-  a user may act on any listing regardless of its score.
+  a user may act on any listing regardless of its score. Oracle MUST return HTTP
+  400 with code `PROFILE_INCOMPLETE` if the user profile has no skills.
 - **FR-008**: Each score MUST be accompanied by a natural language explanation
   identifying strengths and gaps, and a confidence level (high / medium / low)
-  reflecting how much signal Oracle could extract from the job description.
+  reflecting how much signal Oracle could extract from the job description. Scores
+  MUST be displayed as integer percentages (e.g., 87%) with a confidence badge.
+  Differences of ≤5 percentage points MUST NOT be presented as meaningfully different.
 - **FR-009**: Scores MUST update when the user's profile changes.
 - **FR-009a**: When a job description is too sparse for reliable scoring, Oracle
   MUST return a low-confidence score rather than an error, and MUST surface a
@@ -243,7 +248,9 @@ counts per status and the meeting note is retrievable from the company detail vi
 - **FR-010**: Users MUST be able to input their resume as structured data (e.g., a
   structured file defining personal info, work history, education, skills).
 - **FR-011**: Forge MUST produce a tailored resume for a selected job listing
-  without fabricating experience or credentials.
+  without fabricating experience or credentials. Forge MAY rephrase bullet points,
+  reorder items within a section, and emphasise matching keywords. Forge MUST NOT
+  add, remove, or fabricate entire bullet points or jobs. Section order is preserved.
 - **FR-012**: Forge MUST generate a polished PDF resume from the structured resume
   data using LaTeX as the rendering engine. The LaTeX template MUST be included in
   the project and customisable.
@@ -254,10 +261,16 @@ counts per status and the meeting note is retrievable from the company detail vi
 #### Coach — Interview Preparation
 
 - **FR-015**: Coach MUST actively search the web for real interview questions
-  reported for the target company and role, and present them with source attribution.
-- **FR-016**: For technical roles, Coach MUST recommend specific LeetCode problems
-  and system design questions sourced from the web that are relevant to the target
-  role and level.
+  reported for the target company and role. Primary sources are Glassdoor, Blind,
+  and LeetCode; general web search is used as fallback. Each question MUST include
+  a `source_url`; if the source is unavailable or paywalled, `source_url` is null
+  and the guidance field notes "source unavailable". Questions MUST NOT be discarded
+  solely because a source is paywalled.
+- **FR-016**: For technical roles (inferred from job title), Coach MUST recommend
+  specific LeetCode problems and system design questions sourced from the web that
+  are relevant to the target role and level. For non-technical roles, the coding and
+  system_design question categories MAY be empty if web search yields no relevant
+  content.
 - **FR-017**: Each question MUST include a guidance note or example answer framework
   that the user can adapt.
 - **FR-018**: Users MUST be able to enter a mock interview mode where Coach asks
@@ -365,6 +378,27 @@ counts per status and the meeting note is retrievable from the company detail vi
 - **SC-011**: Coach delivers a web-sourced interview prep pack — including
   behavioral questions, LeetCode recommendations, and system design prompts — for
   a target role in under 90 seconds.
+- **SC-012**: Every Oracle, Forge, and Coach API call MUST log: request duration
+  (ms), Anthropic SDK token usage (prompt + completion tokens), and error/success
+  status to the backend structured log. This enables the self-improvement loop
+  described in the constitution (Principle III).
+
+### Performance Measurement Baselines
+
+Timing for SC-001–SC-011 is measured as follows:
+
+- **SC-001** (Scout ingest ≤30s): from extension button click / MCP skill trigger
+  to listing appearing in the Scout job board in the browser.
+- **SC-002** (Oracle rank ≤60s): from POST /api/oracle/rank request sent to
+  ranked results displayed in the Oracle view.
+- **SC-003** (Forge tailor ≤2min): from POST /api/resume/tailor request sent to
+  tailored structured data and diff displayed in the Forge view.
+- **SC-004** (Coach prep ≤60s): from POST /api/coach/prep request sent to
+  question pack displayed in the Coach view.
+- **SC-008** (Forge PDF ≤30s): from POST /api/resume/{id}/export request sent to
+  PDF binary available for download (excludes browser save dialog time).
+- **SC-009** (Dashboard ≤3s): from page navigation event to all pipeline count
+  cards and activity feed rendered with real data (no skeleton loaders visible).
 
 ---
 
@@ -378,6 +412,24 @@ counts per status and the meeting note is retrievable from the company detail vi
 - Q: Should job listings have a trackable status lifecycle? → A: Yes — full pipeline tracking (Saved → Applied → Interviewing → Offer / Rejected) with timestamps recorded at each stage transition, plus a dedicated status review view showing the full history of state changes per listing.
 - Q: Resume format — PDF import or text input? → A: No PDF import. Instead, Forge generates polished PDF resumes from a structured data file using LaTeX. Users also need: in-app status changes on the pipeline view, per-company meeting notes to track interactions, and an overview HQ dashboard showing the full job search campaign at a glance.
 - Q: How should Coach source interview questions? → A: Coach MUST actively scour the web for real example interview questions specific to the role and company, recommend relevant LeetCode problems (for engineering roles), and surface system design questions drawn from web sources — not just generate questions from the job description alone.
+
+### Session 2026-05-27 (Pre-Tasks Audit)
+
+- Q: User profile fields — required vs optional? → A: `skills[]` is required to run Oracle. `full_name` is required for Forge PDF. All other profile fields (headline, experience[], preferences) are optional. Missing required fields block the relevant action with a clear, actionable error message (e.g., "Oracle requires at least one skill. Update your profile first.").
+- Q: Resume structured_data schema — strict or flexible? → A: Strict schema with required fields. `personal_info.name` and `personal_info.email` are required. `work_history[]` items require `title`, `company`, `start_date`. `education[]` and `skills[]` items are optional but must conform to documented structure if present. All other fields are nullable.
+- Q: Scout deduplication rule? → A: URL-only dedup. Exact `source_url` match is the sole dedup key. Cross-source duplicates (same job on LinkedIn and Greenhouse) are the user's responsibility to manage.
+- Q: Coach question categories for non-technical roles? → A: The 4-category schema (behavioral, coding, system_design, role_specific) always applies. For non-technical roles, coding and system_design categories MAY be empty if web search yields no relevant content. LeetCode recommendations apply only to roles where web search indicates they are relevant (engineering, data science, ML).
+- Q: config.yaml — what happens if required fields are missing at startup? → A: Fail fast. App refuses to start; prints the missing config key path and exits with a non-zero code. No defaults substitute for missing required fields.
+- Q: Coach web sources — any source or specific sites? → A: Target Glassdoor, Blind, and LeetCode by default. Fall back to general web search if those yield no results. Every question must include a `source_url`; general-search results include the search result URL.
+- Q: Coach source URL unavailable or paywalled? → A: Include the question, set `source_url` to null, add `"source unavailable"` to the guidance field. Do not discard questions solely because the source is paywalled.
+- Q: Forge tailoring scope — how much may it restructure content? → A: Keyword and emphasis adjustments only. Forge MAY rephrase bullet points, reorder items within a section (e.g., most relevant skill first), and highlight matching keywords. Forge MUST NOT add, remove, or fabricate entire bullet points or jobs. Section order (work history, education, skills) is preserved.
+- Q: Fit score display format? → A: Integer percentage (e.g., 87%) alongside a High/Medium/Low confidence badge. Differences of ≤5 percentage points are not considered meaningfully different in the UI.
+- Q: config.yaml seed — idempotent on re-run? → A: Idempotent by name. Re-running seed with an updated config skips Company and SearchConfig records whose `name` or `query+location` already exist. New records are inserted. Existing records are never updated by seed; the user must edit the DB directly to change seeded values.
+- Q: LaTeX unavailable behavior? → A: POST /api/resume/{id}/export returns HTTP 503 with `{"detail": "LaTeX not available on this host"}`. The frontend surfaces this as a dismissible error banner with instructions to install `latexmk`. No silent fallback or alternative format.
+- Q: Stale/404 job URL? → A: The app stores a snapshot at crawl time; post-crawl URL changes are not monitored. If the user clicks the source link and gets a 404, that is expected behavior. No notification or stale-detection is required for v1.
+- Q: Oracle with empty profile (skills[] empty)? → A: Oracle returns HTTP 400 with `{"detail": "Profile requires at least one skill to rank jobs. Update your profile first.", "code": "PROFILE_INCOMPLETE"}`. Oracle does not run in reduced-confidence mode with zero skills.
+- Q: Backward pipeline transitions (e.g., Applied → Saved)? → A: Blocked. Only forward transitions are valid per the state machine. Backward transitions return HTTP 422 with `{"detail": "Invalid transition: applied → saved", "code": "INVALID_TRANSITION"}`. The UI disables invalid transition options.
+- Q: Chrome extension — backend not running? → A: Extension icon shows a red badge. Popup displays: "Jobforce backend is not running. Start it with: cd backend && make dev". The capture attempt fails gracefully; no data is lost or queued for retry.
 
 ## Assumptions
 
@@ -398,3 +450,8 @@ counts per status and the meeting note is retrievable from the company detail vi
 - All user data is stored locally on the user's machine (no backend, no login).
   No data is shared with third parties beyond what is required for job search queries
   and AI agent calls.
+- When a job board requires authentication, the Playwright MCP skill opens a visible
+  browser window and pauses for the user to complete login manually before proceeding
+  with the crawl. This is a documented, expected user interaction — not an error state.
+  The skill MUST print a prompt: "Please log in to [site] in the browser window, then
+  press Enter to continue." Automated login bypass is out of scope for v1.

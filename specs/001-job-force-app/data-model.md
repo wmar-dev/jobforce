@@ -37,6 +37,7 @@ job_listings
 ├── company_id      INTEGER NOT NULL REFERENCES companies(id)
 ├── title           TEXT NOT NULL
 ├── location        TEXT
+├── role_type       TEXT                        -- e.g. "full-time", "contract", "part-time", "internship"
 ├── description     TEXT                        -- full job description text
 ├── source_url      TEXT NOT NULL
 ├── status          TEXT NOT NULL DEFAULT 'saved'
@@ -116,7 +117,63 @@ resumes
 ```
 
 **Constraints**: Exactly one resume may have `is_base=1`. `structured_data` stores
-the full resume as JSON (personal_info, work_history[], education[], skills[]).
+the full resume as a JSON object conforming to the schema below.
+
+**`structured_data` JSON Schema**:
+
+```json
+{
+  "personal_info": {
+    "name":     "string — REQUIRED",
+    "email":    "string — REQUIRED",
+    "phone":    "string | null",
+    "location": "string | null",
+    "linkedin": "string | null",
+    "github":   "string | null",
+    "website":  "string | null"
+  },
+  "summary": "string | null",
+  "work_history": [
+    {
+      "title":       "string — REQUIRED",
+      "company":     "string — REQUIRED",
+      "start_date":  "string — REQUIRED (YYYY-MM or YYYY)",
+      "end_date":    "string | null (null = present)",
+      "location":    "string | null",
+      "bullets":     ["string"]
+    }
+  ],
+  "education": [
+    {
+      "degree":      "string — REQUIRED",
+      "institution": "string — REQUIRED",
+      "start_date":  "string | null",
+      "end_date":    "string | null",
+      "gpa":         "string | null",
+      "notes":       "string | null"
+    }
+  ],
+  "skills": ["string"],
+  "certifications": [
+    {
+      "name":   "string — REQUIRED",
+      "issuer": "string | null",
+      "year":   "integer | null"
+    }
+  ],
+  "projects": [
+    {
+      "name":        "string — REQUIRED",
+      "description": "string | null",
+      "url":         "string | null",
+      "bullets":     ["string"]
+    }
+  ]
+}
+```
+
+Required fields are validated at `PUT /api/resume/base` and before Forge PDF export.
+`personal_info.name` and `personal_info.email` are required for PDF rendering.
 
 ---
 

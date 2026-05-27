@@ -24,9 +24,12 @@ Ingest a crawled job listing (called by Chrome extension or Playwright MCP skill
   "title": "Senior Python Engineer",
   "company_name": "Acme Corp",
   "location": "Remote, US",
+  "role_type": "full-time",
   "description": "We are looking for..."
 }
 ```
+
+`role_type` is optional (null if not extractable from page). Accepted values: `full-time`, `part-time`, `contract`, `internship`, `other`.
 
 **Response 201**:
 
@@ -44,7 +47,7 @@ Ingest a crawled job listing (called by Chrome extension or Playwright MCP skill
 
 List all job listings with filters.
 
-**Query params**: `status`, `company_id`, `min_score`, `limit`, `offset`
+**Query params**: `status`, `company_id`, `min_score`, `location` (partial match), `role_type` (exact match), `limit`, `offset`
 
 **Response 200**:
 
@@ -57,6 +60,7 @@ List all job listings with filters.
       "title": "Senior Python Engineer",
       "company": { "id": 7, "name": "Acme Corp" },
       "location": "Remote, US",
+      "role_type": "full-time",
       "source_url": "https://...",
       "status": "saved",
       "fit_scored": true,
