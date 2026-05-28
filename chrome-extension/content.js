@@ -55,12 +55,21 @@ function slugToLocation(pathname) {
 
 const openaiAdapter = {
   company_name: () => "OpenAI",
+  title: (doc) =>
+    text(doc.querySelector("main h2")) || null,
   location: (doc) => {
-    const domLoc = text(doc.querySelector("h1 + p, h1 ~ p"));
+    const domLoc = text(doc.querySelector("main h2 + p, main h2 ~ p"));
     return domLoc || slugToLocation(window.location.pathname) || null;
   },
   description: (doc) =>
-    text(doc.querySelector("article, main section")) || null,
+    text(doc.querySelector("main article, main section")) || null,
+  compensation: (doc) => {
+    for (const el of doc.querySelectorAll("main p")) {
+      const t = (el.innerText ?? el.textContent ?? "").trim();
+      if (/^\$[\d,]/.test(t)) return t;
+    }
+    return null;
+  },
 };
 
 /* ─── Registry: hostname → adapter ───────────────────────────────────────── */

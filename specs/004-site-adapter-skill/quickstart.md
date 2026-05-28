@@ -44,11 +44,20 @@ Claude will:
 Each hostname gets its own adapter entry in `ADAPTERS`. Running for a new
 hostname never touches existing entries.
 
+## Reliable selector patterns (discovered during implementation)
+
+- **Title**: `main h2` — OpenAI and many custom career sites use `h2` not `h1` for the job title.
+- **Location**: `main h2 + p` — the paragraph immediately after the title heading reliably contains dept + location on OpenAI pages.
+- **Compensation**: scan `main p` for any text matching `$NNN` — works across sites that surface salary in the body rather than a dedicated element.
+- **Description**: `main article` or `main section` — prefer semantic wrappers over class-name selectors.
+- **Fragile patterns to avoid**: nth-child selectors, class names containing random hashes, deeply nested div chains.
+
 ## Troubleshooting
 
-| Symptom                        | Fix                                                   |
-| ------------------------------ | ----------------------------------------------------- |
-| `❌ Could not load URL`        | Check that the URL is publicly accessible (no login)  |
+| Symptom | Fix |
+| ------- | --- |
+| `❌ Could not load URL` | Check that the URL is publicly accessible (no login) |
 | `⚠️ content.js has uncommitted changes` | `git stash` or commit before running the skill |
-| Fields show "(not found)"      | The page may use JavaScript rendering — retry once    |
+| Fields show "(not found)" | The page may use JavaScript rendering — retry once |
 | Adapter writes but fields wrong | Re-run the skill; the updated adapter replaces the old one |
+| Compensation shows full paragraph text | Selector is too broad — tighten to the element containing only the salary range |

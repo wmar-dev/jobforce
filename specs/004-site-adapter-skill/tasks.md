@@ -23,8 +23,8 @@ description: "Task list for Site Adapter Skill"
 
 **Purpose**: Confirm environment and project structure are ready.
 
-- [ ] T001 Verify Playwright MCP server is configured (`claude mcp list` shows `playwright`)
-- [ ] T002 Verify `chrome-extension/content.js` is at expected path and has the `ADAPTERS` registry structure intact
+- [x] T001 Verify Playwright MCP server is configured (`claude mcp list` shows `playwright`)
+- [x] T002 Verify `chrome-extension/content.js` is at expected path and has the `ADAPTERS` registry structure intact
 
 ---
 
@@ -34,9 +34,9 @@ description: "Task list for Site Adapter Skill"
 
 **⚠️ CRITICAL**: The existing `openaiAdapter` uses `h1 + p` for location selection but the live OpenAI careers page uses `h2` for the job title. This regression must be fixed before the skill is built.
 
-- [ ] T003 Fix `openaiAdapter` location selector in `chrome-extension/content.js`: change `h1 + p` → `main h2 + p` and verify title uses `main h2` not `h1`
-- [ ] T004 Fix `openaiAdapter` title selector in `chrome-extension/content.js` to use `main h2` (currently falls through to `genericAdapter` which uses `h1`)
-- [ ] T005 [P] Add compensation extractor to `openaiAdapter` in `chrome-extension/content.js` targeting the sidebar paragraph (selector: scan for paragraph preceded by `strong` containing "Compensation")
+- [x] T003 Fix `openaiAdapter` location selector in `chrome-extension/content.js`: change `h1 + p` → `main h2 + p` and verify title uses `main h2` not `h1`
+- [x] T004 Fix `openaiAdapter` title selector in `chrome-extension/content.js` to use `main h2` (currently falls through to `genericAdapter` which uses `h1`)
+- [x] T005 [P] Add compensation extractor to `openaiAdapter` in `chrome-extension/content.js` targeting the sidebar paragraph (selector: scan for paragraph preceded by `strong` containing "Compensation")
 
 **Checkpoint**: Load the extension in Chrome, navigate to an OpenAI careers URL, trigger capture — confirm title, location, and compensation extract correctly.
 
@@ -50,9 +50,9 @@ description: "Task list for Site Adapter Skill"
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Create skill file `.claude/skills/site-adapter-update.md` with the skill header, usage instructions, and the field extraction phase (Steps 1–3 only: navigate, snapshot, extract FieldSummary and display it)
-- [ ] T007 [P] [US1] Add input validation section to `.claude/skills/site-adapter-update.md`: handle missing URL argument (print usage and exit) and handle navigation failure (print error and exit)
-- [ ] T008 [P] [US1] Add field summary output format to `.claude/skills/site-adapter-update.md`: markdown table with all 6 fields (title, company_name, location, description truncated to 200 chars, compensation, role_type), show "(not found)" for missing fields, and show "Adapter exists: Yes / No"
+- [x] T006 [US1] Create skill file `.claude/skills/site-adapter-update.md` with the skill header, usage instructions, and the field extraction phase (Steps 1–3 only: navigate, snapshot, extract FieldSummary and display it)
+- [x] T007 [P] [US1] Add input validation section to `.claude/skills/site-adapter-update.md`: handle missing URL argument (print usage and exit) and handle navigation failure (print error and exit)
+- [x] T008 [P] [US1] Add field summary output format to `.claude/skills/site-adapter-update.md`: markdown table with all 6 fields (title, company_name, location, description truncated to 200 chars, compensation, role_type), show "(not found)" for missing fields, and show "Adapter exists: Yes / No"
 
 **Checkpoint**: Run `/site-adapter-update https://openai.com/careers/software-engineer-ad-formats-san-francisco/` — verify field summary prints correctly and no files are modified.
 
@@ -66,10 +66,10 @@ description: "Task list for Site Adapter Skill"
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Add git guard step to `.claude/skills/site-adapter-update.md`: run `git diff --name-only chrome-extension/content.js` — if file is dirty, print warning and exit without writing
-- [ ] T010 [US2] Add adapter generation step to `.claude/skills/site-adapter-update.md`: using extracted FieldSummary, generate a SiteAdapter JS object containing only the fields that were successfully found (omit fields returning null/not found)
-- [ ] T011 [US2] Add content.js write step to `.claude/skills/site-adapter-update.md`: locate the `ADAPTERS` object literal in `chrome-extension/content.js`, replace the existing entry for the hostname if present, or insert a new entry if absent — preserve all other file content byte-for-byte
-- [ ] T012 [P] [US2] Add completion report step to `.claude/skills/site-adapter-update.md`: print hostname, file path, list of fields with site-specific extractors, and list of fields falling back to generic adapter
+- [x] T009 [US2] Add git guard step to `.claude/skills/site-adapter-update.md`: run `git diff --name-only chrome-extension/content.js` — if file is dirty, print warning and exit without writing
+- [x] T010 [US2] Add adapter generation step to `.claude/skills/site-adapter-update.md`: using extracted FieldSummary, generate a SiteAdapter JS object containing only the fields that were successfully found (omit fields returning null/not found)
+- [x] T011 [US2] Add content.js write step to `.claude/skills/site-adapter-update.md`: locate the `ADAPTERS` object literal in `chrome-extension/content.js`, replace the existing entry for the hostname if present, or insert a new entry if absent — preserve all other file content byte-for-byte
+- [x] T012 [P] [US2] Add completion report step to `.claude/skills/site-adapter-update.md`: print hostname, file path, list of fields with site-specific extractors, and list of fields falling back to generic adapter
 
 **Checkpoint**: Run `/site-adapter-update https://openai.com/careers/software-engineer-ad-formats-san-francisco/` — verify `content.js` contains an updated `openai.com` adapter entry, then run again to verify idempotency (no duplicate entry).
 
@@ -83,8 +83,8 @@ description: "Task list for Site Adapter Skill"
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Add hostname normalisation step to `.claude/skills/site-adapter-update.md`: strip `www.` prefix from URL hostname before using as the adapter key (e.g., `www.greenhouse.io` → `greenhouse.io`)
-- [ ] T014 [P] [US3] Add site-agnostic selector inference guidance to `.claude/skills/site-adapter-update.md`: instruct Claude to prefer semantic selectors (heading levels, ARIA roles, sibling relationships) over class names or nth-child, and to note in the completion report if any selectors used are fragile
+- [x] T013 [US3] Add hostname normalisation step to `.claude/skills/site-adapter-update.md`: strip `www.` prefix from URL hostname before using as the adapter key (e.g., `www.greenhouse.io` → `greenhouse.io`)
+- [x] T014 [P] [US3] Add site-agnostic selector inference guidance to `.claude/skills/site-adapter-update.md`: instruct Claude to prefer semantic selectors (heading levels, ARIA roles, sibling relationships) over class names or nth-child, and to note in the completion report if any selectors used are fragile
 
 **Checkpoint**: Run skill against a Greenhouse or Lever job URL — verify a new adapter entry is added without modifying the `openai.com` entry.
 
@@ -94,9 +94,9 @@ description: "Task list for Site Adapter Skill"
 
 **Purpose**: Documentation, edge case hardening, and final validation.
 
-- [ ] T015 [P] Add error handling guidance for non-job pages to `.claude/skills/site-adapter-update.md`: if title and company_name both return "(not found)", print a warning and ask developer to confirm before writing the adapter
-- [ ] T016 Update `specs/004-site-adapter-skill/quickstart.md` with any final usage notes discovered during implementation (especially any selector patterns that proved reliable across sites)
-- [ ] T017 Run full end-to-end validation per `specs/004-site-adapter-skill/quickstart.md`: OpenAI URL → field summary correct, adapter written, Chrome extension captures correctly
+- [x] T015 [P] Add error handling guidance for non-job pages to `.claude/skills/site-adapter-update.md`: if title and company_name both return "(not found)", print a warning and ask developer to confirm before writing the adapter
+- [x] T016 Update `specs/004-site-adapter-skill/quickstart.md` with any final usage notes discovered during implementation (especially any selector patterns that proved reliable across sites)
+- [x] T017 Run full end-to-end validation per `specs/004-site-adapter-skill/quickstart.md`: OpenAI URL → field summary correct, adapter written, Chrome extension captures correctly
 
 ---
 
