@@ -1,3 +1,9 @@
+---
+name: site-adapter-update
+description: Inspect a job posting URL with Playwright MCP and generate or update the site-specific field extractor in the Chrome extension content script. Use when a new job board needs capture support or an existing adapter breaks.
+argument-hint: "<url>"
+user-invocable: true
+---
 # Site Adapter Update
 
 Inspect a job posting URL using Playwright MCP, extract structured field data,

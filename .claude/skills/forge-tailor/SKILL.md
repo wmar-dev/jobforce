@@ -1,3 +1,10 @@
+---
+name: forge-tailor
+description: Tailor your base resume to a specific job listing and optionally export a PDF. Fetches your base resume, posts to the tailor endpoint, shows a diff of changes, then saves the PDF locally. Use when preparing a resume for a specific job application.
+argument-hint: "<job_id>"
+user-invocable: true
+---
+
 # Forge Tailor — Resume Tailoring Skill
 
 Tailor your base resume to a specific job listing and download the PDF.

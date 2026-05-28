@@ -1,3 +1,10 @@
+---
+name: coach-prep
+description: Generate an AI-powered interview prep pack for a specific job listing. Fetches questions by type (behavioral, coding, system design, role-specific) from the backend and displays them with tips and LeetCode links. Use before an interview.
+argument-hint: "<job_id>"
+user-invocable: true
+---
+
 # Coach Prep — Interview Preparation Skill
 
 Generate an AI-powered interview prep pack for a job listing.

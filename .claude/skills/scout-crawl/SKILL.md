@@ -1,3 +1,9 @@
+---
+name: scout-crawl
+description: Capture a job listing from a URL using Playwright MCP and ingest it into Jobforce. Navigates to the page, handles login if needed, extracts structured job data, and posts it to the backend. Use when you want to save a job posting from the web.
+argument-hint: "<URL>"
+user-invocable: true
+---
 # Scout Crawl — Playwright MCP Skill
 
 Capture a job listing from a URL using Playwright MCP and ingest it into Jobforce.

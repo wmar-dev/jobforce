@@ -1,3 +1,10 @@
+---
+name: oracle-rank
+description: Score and rank active job listings against your profile using AI reasoning. Fetches jobs from the backend, evaluates fit, writes scores back, and prints a ranked summary. Use when you want to see which jobs are the best match.
+argument-hint: "[job_id ...]"
+user-invocable: true
+---
+
 # Oracle Rank — Job Fit Ranking Skill
 
 Score active job listings against your profile. All AI reasoning happens
