@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import os
-import tempfile
 from collections.abc import AsyncGenerator
 from typing import Any
 
-import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.engine import build_engine, build_session_factory
@@ -38,9 +35,7 @@ async def test_client(db_engine: Any, monkeypatch: Any) -> AsyncGenerator[AsyncC
     from jobforce.main import create_app
 
     monkeypatch.setattr(engine_module, "_engine", db_engine)
-    monkeypatch.setattr(
-        engine_module, "_session_factory", build_session_factory(db_engine)
-    )
+    monkeypatch.setattr(engine_module, "_session_factory", build_session_factory(db_engine))
 
     async def noop_lifespan(app: Any) -> AsyncGenerator[None, None]:
         yield
@@ -48,11 +43,10 @@ async def test_client(db_engine: Any, monkeypatch: Any) -> AsyncGenerator[AsyncC
     app = create_app()
     # Override lifespan to skip startup DB init (already done in fixture)
     from contextlib import asynccontextmanager
+
     app.router.lifespan_context = asynccontextmanager(noop_lifespan)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
 

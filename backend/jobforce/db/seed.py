@@ -22,9 +22,7 @@ async def seed_from_config(session: AsyncSession, config: AppConfig) -> None:
 async def _seed_companies(session: AsyncSession, config: AppConfig) -> None:
     for company_cfg in config.search.target_companies:
         normalised = company_cfg.name.strip().lower()
-        result = await session.execute(
-            select(Company).where(Company.name.ilike(normalised))
-        )
+        result = await session.execute(select(Company).where(Company.name.ilike(normalised)))
         if result.scalar_one_or_none() is None:
             session.add(Company(name=company_cfg.name.strip(), domain=company_cfg.domain or None))
             logger.info("Seeded company: %s", company_cfg.name)
@@ -47,3 +45,24 @@ async def _seed_search_configs(session: AsyncSession, config: AppConfig) -> None
                 )
             )
             logger.info("Seeded search config: %s @ %s", query_cfg.query, query_cfg.location)
+
+
+if __name__ == "__main__":
+    import asyncio
+    import logging
+    import os
+
+    logging.basicConfig(level=logging.INFO)
+    from jobforce.config import load_config
+    from jobforce.db.engine import get_session_factory, init_engine
+
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _root = os.path.normpath(os.path.join(_here, "..", "..", ".."))
+    config = load_config(os.path.join(_root, "config.yaml"))
+    init_engine(config.database.path)
+
+    async def _run() -> None:
+        async with get_session_factory()() as session:
+            await seed_from_config(session, config)
+
+    asyncio.run(_run())

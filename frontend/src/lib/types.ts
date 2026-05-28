@@ -58,9 +58,7 @@ export interface OracleRankResult {
   scored_at?: string;
 }
 
-export interface OracleRankResponse {
-  ranked: OracleRankResult[];
-}
+export type OracleRankResponse = OracleRankResult[];
 
 export interface PersonalInfo {
   name: string;
@@ -166,31 +164,43 @@ export interface SessionSummary {
 export interface MeetingNote {
   id: number;
   company_id: number;
-  job_listing_id?: number | null;
-  body: string;
+  content: string;
   created_at: string;
 }
 
 export interface DashboardSummary {
-  pipeline: Record<PipelineStatus, number>;
+  counts: Record<PipelineStatus, number>;
   recent_transitions: Array<{
     job_id: number;
-    title: string;
+    job_title: string;
+    from_status: PipelineStatus | null;
     to_status: PipelineStatus;
-    at: string;
+    transitioned_at: string;
   }>;
-  recent_notes: Array<{
+  recent_notes: MeetingNote[];
+}
+
+export interface CompanyDetail {
+  id: number;
+  name: string;
+  domain?: string | null;
+  listings: Array<{
     id: number;
-    company: string;
-    body: string;
+    title: string;
+    status: PipelineStatus;
+    role_type?: RoleType | null;
+    location?: string | null;
     created_at: string;
   }>;
+  notes: MeetingNote[];
 }
 
 export interface UserProfile {
+  id?: number;
   full_name?: string | null;
   headline?: string | null;
-  skills: string[];
-  experience?: object[] | null;
-  preferences?: object | null;
+  skills?: string | null;
+  experience?: string | null;
+  preferences?: string | null;
+  updated_at?: string;
 }

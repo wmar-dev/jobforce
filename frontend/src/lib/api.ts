@@ -10,6 +10,7 @@ import type {
   AnswerFeedback,
   SessionSummary,
   DashboardSummary,
+  CompanyDetail,
   MeetingNote,
   UserProfile,
   PipelineStatus,
@@ -162,21 +163,20 @@ export function getDashboard(): Promise<DashboardSummary> {
 }
 
 // Companies
-export function getCompany(companyId: number): Promise<object> {
-  return apiFetch(`/api/companies/${companyId}`);
+export function getCompany(companyId: number): Promise<CompanyDetail> {
+  return apiFetch<CompanyDetail>(`/api/companies/${companyId}`);
 }
 
-export function getCompanyNotes(companyId: number): Promise<{ items: MeetingNote[] }> {
-  return apiFetch(`/api/companies/${companyId}/notes`);
+export function getCompanyNotes(companyId: number): Promise<MeetingNote[]> {
+  return apiFetch<MeetingNote[]>(`/api/companies/${companyId}/notes`);
 }
 
 export function createMeetingNote(
   companyId: number,
-  body: string,
-  jobListingId?: number
+  content: string
 ): Promise<MeetingNote> {
   return apiFetch(`/api/companies/${companyId}/notes`, {
     method: "POST",
-    body: JSON.stringify({ body, job_listing_id: jobListingId }),
+    body: JSON.stringify({ content }),
   });
 }

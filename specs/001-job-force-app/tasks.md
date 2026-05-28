@@ -69,29 +69,29 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 ### Tests for User Story 1 (Write first — confirm failing before implementing)
 
-- [ ] T024 [P] [US1] Write contract test `backend/tests/contract/test_ingest.py`: POST /api/ingest with valid payload returns 201 with job id; duplicate URL returns 409; missing source_url returns 422
-- [ ] T025 [P] [US1] Write contract test `backend/tests/contract/test_jobs.py`: GET /api/jobs returns paginated list; filter by status/location/role-type returns correct subset; GET /api/jobs/{id} returns full detail with status_history
-- [ ] T026 [P] [US1] Write integration test `backend/tests/integration/test_scout_service.py`: dedup by URL works; HTML >500KB routes to file, ≤500KB stored as BLOB; company auto-created from company_name
-- [ ] T027 [P] [US1] Write integration test `backend/tests/integration/test_storage_service.py`: BLOB threshold routing; `verify_integrity()` detects missing file_path on disk
-- [ ] T027a [US1] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_ingest.py backend/tests/contract/test_jobs.py backend/tests/integration/test_scout_service.py backend/tests/integration/test_storage_service.py` — confirm ALL tests fail (not error) before proceeding to implementation
+- [x] T024 [P] [US1] Write contract test `backend/tests/contract/test_ingest.py`: POST /api/ingest with valid payload returns 201 with job id; duplicate URL returns 409; missing source_url returns 422
+- [x] T025 [P] [US1] Write contract test `backend/tests/contract/test_jobs.py`: GET /api/jobs returns paginated list; filter by status/location/role-type returns correct subset; GET /api/jobs/{id} returns full detail with status_history
+- [x] T026 [P] [US1] Write integration test `backend/tests/integration/test_scout_service.py`: dedup by URL works; HTML >500KB routes to file, ≤500KB stored as BLOB; company auto-created from company_name
+- [x] T027 [P] [US1] Write integration test `backend/tests/integration/test_storage_service.py`: BLOB threshold routing; `verify_integrity()` detects missing file_path on disk
+- [x] T027a [US1] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_ingest.py backend/tests/contract/test_jobs.py backend/tests/integration/test_scout_service.py backend/tests/integration/test_storage_service.py` — confirm ALL tests fail (not error) before proceeding to implementation
 
 ### Implementation for User Story 1
 
-- [ ] T028 [US1] Create `backend/jobforce/services/storage.py`: BLOB vs file routing logic (threshold 500KB), `store_snapshot()`, `retrieve_snapshot()`, `verify_integrity()` check
-- [ ] T029 [US1] Create `backend/jobforce/services/scout.py`: `ingest_listing()` — dedup by source_url, auto-create Company from company_name, create JobListing, call storage service for HTML snapshot, record initial StatusTransition (saved)
-- [ ] T030 [US1] Create `backend/jobforce/routers/ingest.py`: POST /api/ingest endpoint; validates request, calls scout service, returns 201 or 409
-- [ ] T031 [US1] Create `backend/jobforce/routers/jobs.py`: GET /api/jobs (paginated, filterable by status/company_id/min_score); GET /api/jobs/{id} (full detail + status_history); PATCH /api/jobs/{id}/status (validate transition, append StatusTransition)
-- [ ] T032 [US1] Create `chrome-extension/manifest.json`: MV3 manifest with permissions (activeTab, storage, scripting), host_permissions (localhost:8000), background service_worker, content_scripts
-- [ ] T033 [US1] Create `chrome-extension/content.js`: extract source_url, title, company_name, location, description, outerHTML from DOM; send to background service worker via chrome.runtime.sendMessage
-- [ ] T034 [US1] Create `chrome-extension/background.js`: receive message from content script; POST to /api/ingest; show badge (✅ Saved / ❌ Server not running); persist last_ingested_url in chrome.storage.local
-- [ ] T035 [US1] Create `chrome-extension/popup.html` and `chrome-extension/popup.js`: simple popup showing backend status (running/not running) and last captured URL
-- [ ] T036 [P] [US1] Create `chrome-extension/tests/test_content_extraction.js`: manual test script asserting content.js extracts expected fields from a sample HTML fixture
-- [ ] T037 [US1] Create `frontend/src/app/jobs/page.tsx`: Scout job board page — fetches jobs via useJobs hook, renders JobTable with status filter tabs (All / Saved / Applied / Interviewing / Offer / Rejected / Withdrawn) and secondary filter controls for location and role type
-- [ ] T037a [P] [US1] Add `location` and `role_type` query params to `GET /api/jobs` in `backend/jobforce/routers/jobs.py`; filter applied in SQLAlchemy WHERE clause (partial match for location, exact match for role_type)
-- [ ] T038 [P] [US1] Create `frontend/src/components/jobs/JobTable.tsx`: sortable table of job listings showing title, company, location, status badge, fit score (if scored), crawled date
-- [ ] T039 [P] [US1] Create `frontend/src/components/jobs/StatusBadge.tsx`: colour-coded badge for all 6 pipeline statuses (saved=grey, applied=blue, interviewing=yellow, offer=green, rejected=red, withdrawn=purple)
-- [ ] T040 [P] [US1] Create `frontend/src/hooks/useJobs.ts`: SWR hook for GET /api/jobs with status/company/location/role_type filter params
-- [ ] T041 [US1] Create `.claude/skills/speckit-scout-crawl.md`: Playwright MCP skill — navigate to URL, extract text content, call POST /api/ingest; handle auth-required sites with manual login prompt
+- [x] T028 [US1] Create `backend/jobforce/services/storage.py`: BLOB vs file routing logic (threshold 500KB), `store_snapshot()`, `retrieve_snapshot()`, `verify_integrity()` check
+- [x] T029 [US1] Create `backend/jobforce/services/scout.py`: `ingest_listing()` — dedup by source_url, auto-create Company from company_name, create JobListing, call storage service for HTML snapshot, record initial StatusTransition (saved)
+- [x] T030 [US1] Create `backend/jobforce/routers/ingest.py`: POST /api/ingest endpoint; validates request, calls scout service, returns 201 or 409
+- [x] T031 [US1] Create `backend/jobforce/routers/jobs.py`: GET /api/jobs (paginated, filterable by status/company_id/min_score); GET /api/jobs/{id} (full detail + status_history); PATCH /api/jobs/{id}/status (validate transition, append StatusTransition)
+- [x] T032 [US1] Create `chrome-extension/manifest.json`: MV3 manifest with permissions (activeTab, storage, scripting), host_permissions (localhost:8000), background service_worker, content_scripts
+- [x] T033 [US1] Create `chrome-extension/content.js`: extract source_url, title, company_name, location, description, outerHTML from DOM; send to background service worker via chrome.runtime.sendMessage
+- [x] T034 [US1] Create `chrome-extension/background.js`: receive message from content script; POST to /api/ingest; show badge (✅ Saved / ❌ Server not running); persist last_ingested_url in chrome.storage.local
+- [x] T035 [US1] Create `chrome-extension/popup.html` and `chrome-extension/popup.js`: simple popup showing backend status (running/not running) and last captured URL
+- [x] T036 [P] [US1] Create `chrome-extension/tests/test_content_extraction.js`: manual test script asserting content.js extracts expected fields from a sample HTML fixture
+- [x] T037 [US1] Create `frontend/src/app/jobs/page.tsx`: Scout job board page — fetches jobs via useJobs hook, renders JobTable with status filter tabs (All / Saved / Applied / Interviewing / Offer / Rejected / Withdrawn) and secondary filter controls for location and role type
+- [x] T037a [P] [US1] Add `location` and `role_type` query params to `GET /api/jobs` in `backend/jobforce/routers/jobs.py`; filter applied in SQLAlchemy WHERE clause (partial match for location, exact match for role_type)
+- [x] T038 [P] [US1] Create `frontend/src/components/jobs/JobTable.tsx`: sortable table of job listings showing title, company, location, status badge, fit score (if scored), crawled date
+- [x] T039 [P] [US1] Create `frontend/src/components/jobs/StatusBadge.tsx`: colour-coded badge for all 6 pipeline statuses (saved=grey, applied=blue, interviewing=yellow, offer=green, rejected=red, withdrawn=purple)
+- [x] T040 [P] [US1] Create `frontend/src/hooks/useJobs.ts`: SWR hook for GET /api/jobs with status/company/location/role_type filter params
+- [x] T041 [US1] Create `.claude/skills/speckit-scout-crawl.md`: Playwright MCP skill — navigate to URL, extract text content, call POST /api/ingest; handle auth-required sites with manual login prompt
 
 **Checkpoint**: Chrome extension captures a real job listing, it appears in the Scout job board. `make check` passes.
 
@@ -105,18 +105,18 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 ### Tests for User Story 2
 
-- [ ] T042 [P] [US2] Write contract test `backend/tests/contract/test_oracle.py`: POST /api/oracle/rank returns ranked array with score, confidence, rationale; GET /api/oracle/rank/{id} returns cached result; sparse description returns low confidence + warning field
-- [ ] T043 [P] [US2] Write contract test extension in `backend/tests/contract/test_jobs.py`: PATCH /api/jobs/{id}/status validates transitions; rejected/withdrawn/offer statuses excluded from Oracle ranking by default
-- [ ] T043a [US2] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_oracle.py` — confirm ALL tests fail before proceeding to implementation
+- [x] T042 [P] [US2] Write contract test `backend/tests/contract/test_oracle.py`: POST /api/oracle/rank returns ranked array with score, confidence, rationale; GET /api/oracle/rank/{id} returns cached result; sparse description returns low confidence + warning field
+- [x] T043 [P] [US2] Write contract test extension in `backend/tests/contract/test_jobs.py`: PATCH /api/jobs/{id}/status validates transitions; rejected/withdrawn/offer statuses excluded from Oracle ranking by default
+- [x] T043a [US2] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_oracle.py` — confirm ALL tests fail before proceeding to implementation
 
 ### Implementation for User Story 2
 
-- [ ] T044 [US2] Create `backend/jobforce/services/oracle.py`: `rank_jobs()` — fetch user profile + job descriptions, build Anthropic SDK prompt for scoring, parse score (0.0–1.0) + confidence (high/medium/low) + rationale + optional warning; set `fit_scored=1`, `fit_score`, `fit_confidence` on JobListing
-- [ ] T045 [US2] Create `backend/jobforce/routers/oracle.py`: POST /api/oracle/rank (accepts optional job_ids, defaults to all active); GET /api/oracle/rank/{job_id} (cached result)
-- [ ] T046 [US2] Create `backend/jobforce/routers/profile.py`: GET /api/profile; PUT /api/profile (upsert single-row UserProfile)
-- [ ] T047 [P] [US2] Create `frontend/src/app/oracle/page.tsx`: Oracle ranking view — run ranking button, ranked job list ordered by fit_score, confidence badge per result, sparse-description warning callout
-- [ ] T048 [P] [US2] Create `frontend/src/hooks/useProfile.ts`: SWR hook for GET/PUT /api/profile
-- [ ] T049 [US2] Create `.claude/skills/speckit-oracle-rank.md`: Oracle Claude Code skill — fetch profile, fetch saved jobs, POST /api/oracle/rank, print ranked results to terminal
+- [x] T044 [US2] Create `backend/jobforce/services/oracle.py`: `rank_jobs()` — fetch user profile + job descriptions, build Anthropic SDK prompt for scoring, parse score (0.0–1.0) + confidence (high/medium/low) + rationale + optional warning; set `fit_scored=1`, `fit_score`, `fit_confidence` on JobListing
+- [x] T045 [US2] Create `backend/jobforce/routers/oracle.py`: POST /api/oracle/rank (accepts optional job_ids, defaults to all active); GET /api/oracle/rank/{job_id} (cached result)
+- [x] T046 [US2] Create `backend/jobforce/routers/profile.py`: GET /api/profile; PUT /api/profile (upsert single-row UserProfile)
+- [x] T047 [P] [US2] Create `frontend/src/app/oracle/page.tsx`: Oracle ranking view — run ranking button, ranked job list ordered by fit_score, confidence badge per result, sparse-description warning callout
+- [x] T048 [P] [US2] Create `frontend/src/hooks/useProfile.ts`: SWR hook for GET/PUT /api/profile
+- [x] T049 [US2] Create `.claude/skills/speckit-oracle-rank.md`: Oracle Claude Code skill — fetch profile, fetch saved jobs, POST /api/oracle/rank, print ranked results to terminal
 
 **Checkpoint**: Running Oracle on 3 jobs returns scored, ordered results with confidence indicators. `make check` passes.
 
@@ -132,20 +132,20 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 ### Tests for User Story 5
 
-- [ ] T050 [P] [US5] Write contract test `backend/tests/contract/test_dashboard.py`: GET /api/dashboard returns correct counts per status including withdrawn; recent_transitions and recent_notes present
-- [ ] T051 [P] [US5] Write contract test for companies in `backend/tests/contract/test_dashboard.py`: POST /api/companies/{id}/notes creates note; GET /api/companies/{id}/notes returns reverse-chron; GET /api/companies/{id} returns embedded listings + notes
-- [ ] T051a [US5] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_dashboard.py` — confirm ALL tests fail before proceeding to implementation
+- [x] T050 [P] [US5] Write contract test `backend/tests/contract/test_dashboard.py`: GET /api/dashboard returns correct counts per status including withdrawn; recent_transitions and recent_notes present
+- [x] T051 [P] [US5] Write contract test for companies in `backend/tests/contract/test_dashboard.py`: POST /api/companies/{id}/notes creates note; GET /api/companies/{id}/notes returns reverse-chron; GET /api/companies/{id} returns embedded listings + notes
+- [x] T051a [US5] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_dashboard.py` — confirm ALL tests fail before proceeding to implementation
 
 ### Implementation for User Story 5
 
-- [ ] T052 [US5] Create `backend/jobforce/routers/dashboard.py`: GET /api/dashboard — aggregate pipeline counts (all 6 statuses), last 10 status transitions, last 5 meeting notes
-- [ ] T053 [US5] Create `backend/jobforce/routers/companies.py`: GET /api/companies/{id} (company detail with listings + notes); POST /api/companies/{id}/notes; GET /api/companies/{id}/notes (reverse-chron)
-- [ ] T054 [P] [US5] Create `frontend/src/app/page.tsx`: HQ Dashboard — PipelineSummary widget, ActivityFeed widget, quick-access HeroCard links to each agent section
-- [ ] T055 [P] [US5] Create `frontend/src/components/dashboard/PipelineSummary.tsx`: pipeline count cards for all 6 statuses with colour coding matching StatusBadge
-- [ ] T056 [P] [US5] Create `frontend/src/components/dashboard/ActivityFeed.tsx`: chronological feed of recent status transitions and meeting notes with timestamps
-- [ ] T057 [P] [US5] Create `frontend/src/app/companies/[id]/page.tsx`: company detail view — all listings with StatusTransitionModal, meeting notes list in reverse-chron order, add-note form
-- [ ] T058 [P] [US5] Create `frontend/src/components/jobs/StatusTransitionModal.tsx`: modal for advancing/changing pipeline status inline; lists valid transitions for current status; blocks invalid transitions
-- [ ] T059 [P] [US5] Create `frontend/src/hooks/useDashboard.ts`: SWR hook for GET /api/dashboard with auto-refresh interval
+- [x] T052 [US5] Create `backend/jobforce/routers/dashboard.py`: GET /api/dashboard — aggregate pipeline counts (all 6 statuses), last 10 status transitions, last 5 meeting notes
+- [x] T053 [US5] Create `backend/jobforce/routers/companies.py`: GET /api/companies/{id} (company detail with listings + notes); POST /api/companies/{id}/notes; GET /api/companies/{id}/notes (reverse-chron)
+- [x] T054 [P] [US5] Create `frontend/src/app/page.tsx`: HQ Dashboard — PipelineSummary widget, ActivityFeed widget, quick-access HeroCard links to each agent section
+- [x] T055 [P] [US5] Create `frontend/src/components/dashboard/PipelineSummary.tsx`: pipeline count cards for all 6 statuses with colour coding matching StatusBadge
+- [x] T056 [P] [US5] Create `frontend/src/components/dashboard/ActivityFeed.tsx`: chronological feed of recent status transitions and meeting notes with timestamps
+- [x] T057 [P] [US5] Create `frontend/src/app/companies/[id]/page.tsx`: company detail view — all listings with StatusTransitionModal, meeting notes list in reverse-chron order, add-note form
+- [x] T058 [P] [US5] Create `frontend/src/components/jobs/StatusTransitionModal.tsx`: modal for advancing/changing pipeline status inline; lists valid transitions for current status; blocks invalid transitions
+- [x] T059 [P] [US5] Create `frontend/src/hooks/useDashboard.ts`: SWR hook for GET /api/dashboard with auto-refresh interval
 
 **Checkpoint**: HQ Dashboard loads with accurate pipeline counts. Status transitions work in-app. Meeting notes save and appear in feed. `make check` passes.
 
@@ -159,19 +159,19 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 ### Tests for User Story 3
 
-- [ ] T060 [P] [US3] Write contract test `backend/tests/contract/test_forge.py`: GET /api/resume/base returns base resume; PUT /api/resume/base saves it; POST /api/resume/tailor returns tailored variant; POST /api/resume/{id}/export returns PDF bytes (200) or 503 if LaTeX unavailable
-- [ ] T061 [P] [US3] Write integration test `backend/tests/integration/test_forge_service.py`: tailored resume contains keywords from job description; original content not fabricated; LaTeX renders without subprocess error on CI
-- [ ] T061a [US3] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_forge.py backend/tests/integration/test_forge_service.py` — confirm ALL tests fail before proceeding to implementation
+- [x] T060 [P] [US3] Write contract test `backend/tests/contract/test_forge.py`: GET /api/resume/base returns base resume; PUT /api/resume/base saves it; POST /api/resume/tailor returns tailored variant; POST /api/resume/{id}/export returns PDF bytes (200) or 503 if LaTeX unavailable
+- [x] T061 [P] [US3] Write integration test `backend/tests/integration/test_forge_service.py`: tailored resume contains keywords from job description; original content not fabricated; LaTeX renders without subprocess error on CI
+- [x] T061a [US3] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_forge.py backend/tests/integration/test_forge_service.py` — confirm ALL tests fail before proceeding to implementation
 
 ### Implementation for User Story 3
 
-- [ ] T062 [US3] Create `backend/jobforce/templates/resume.tex.j2`: Jinja2 LaTeX resume template with `\VAR{}` delimiters for personal_info, work_history[], education[], skills[]; professional typesetting with section headings
-- [ ] T063 [US3] Create `backend/jobforce/services/forge.py`: `tailor_resume()` — use Anthropic SDK to adjust emphasis/keywords against job description without fabricating content; `compute_diff()` — field-level diff between base and tailored `structured_data` returning list of `{field, original, tailored}` objects; `render_pdf()` — Jinja2 render to .tex, latexmk subprocess, stream PDF bytes, cleanup temp files in try/finally
-- [ ] T064 [US3] Create `backend/jobforce/routers/forge.py`: GET /api/resume/base; PUT /api/resume/base; POST /api/resume/tailor (response includes `diff` array from `compute_diff()`); POST /api/resume/{id}/export (StreamingResponse for PDF)
-- [ ] T065 [P] [US3] Create `frontend/src/app/forge/page.tsx`: Forge page — base resume structured data editor, target job selector, diff view (ResumeDiff), generate PDF button with loading state
-- [ ] T066 [P] [US3] Create `frontend/src/components/forge/ResumeDiff.tsx`: side-by-side comparison of original vs tailored content driven by backend `diff` array; highlights added/removed text per field
-- [ ] T067 [P] [US3] Create `frontend/src/components/forge/PDFDownloadButton.tsx`: button triggering POST /api/resume/{id}/export, handles loading/error/503 (LaTeX not available) states
-- [ ] T068 [US3] Create `.claude/skills/speckit-forge-tailor.md`: Forge Claude Code skill — accept job_id arg, fetch base resume, POST /api/resume/tailor, POST export, save PDF to local path, print path
+- [x] T062 [US3] Create `backend/jobforce/templates/resume.tex.j2`: Jinja2 LaTeX resume template with `\VAR{}` delimiters for personal_info, work_history[], education[], skills[]; professional typesetting with section headings
+- [x] T063 [US3] Create `backend/jobforce/services/forge.py`: `tailor_resume()` — use Anthropic SDK to adjust emphasis/keywords against job description without fabricating content; `compute_diff()` — field-level diff between base and tailored `structured_data` returning list of `{field, original, tailored}` objects; `render_pdf()` — Jinja2 render to .tex, latexmk subprocess, stream PDF bytes, cleanup temp files in try/finally
+- [x] T064 [US3] Create `backend/jobforce/routers/forge.py`: GET /api/resume/base; PUT /api/resume/base; POST /api/resume/tailor (response includes `diff` array from `compute_diff()`); POST /api/resume/{id}/export (StreamingResponse for PDF)
+- [x] T065 [P] [US3] Create `frontend/src/app/forge/page.tsx`: Forge page — base resume structured data editor, target job selector, diff view (ResumeDiff), generate PDF button with loading state
+- [x] T066 [P] [US3] Create `frontend/src/components/forge/ResumeDiff.tsx`: side-by-side comparison of original vs tailored content driven by backend `diff` array; highlights added/removed text per field
+- [x] T067 [P] [US3] Create `frontend/src/components/forge/PDFDownloadButton.tsx`: button triggering POST /api/resume/{id}/export, handles loading/error/503 (LaTeX not available) states
+- [x] T068 [US3] Create `.claude/skills/speckit-forge-tailor.md`: Forge Claude Code skill — accept job_id arg, fetch base resume, POST /api/resume/tailor, POST export, save PDF to local path, print path
 
 **Checkpoint**: Forge produces a tailored PDF resume for a saved job listing. `make check` passes.
 
@@ -185,18 +185,18 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 ### Tests for User Story 4
 
-- [ ] T069 [P] [US4] Write contract test `backend/tests/contract/test_coach.py`: POST /api/coach/prep returns session with questions across all 4 categories; at least one coding question has leetcode_url; POST /api/coach/sessions/{id}/answer returns feedback + score; GET /api/coach/sessions/{id}/summary returns overall_score + areas_to_improve
-- [ ] T070 [P] [US4] Write unit test `backend/tests/unit/test_db_models.py` addition: InterviewSession question JSON schema validates required fields (id, category, text)
-- [ ] T070a [US4] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_coach.py` — confirm ALL tests fail before proceeding to implementation
+- [x] T069 [P] [US4] Write contract test `backend/tests/contract/test_coach.py`: POST /api/coach/prep returns session with questions across all 4 categories; at least one coding question has leetcode_url; POST /api/coach/sessions/{id}/answer returns feedback + score; GET /api/coach/sessions/{id}/summary returns overall_score + areas_to_improve
+- [x] T070 [P] [US4] Write unit test `backend/tests/unit/test_db_models.py` addition: InterviewSession question JSON schema validates required fields (id, category, text)
+- [x] T070a [US4] **Red-gate checkpoint**: run `pytest backend/tests/contract/test_coach.py` — confirm ALL tests fail before proceeding to implementation
 
 ### Implementation for User Story 4
 
-- [ ] T071 [US4] Create `backend/jobforce/services/coach.py`: `generate_prep_pack()` — use Playwright MCP (or Anthropic web search tool) to search Glassdoor/Blind for company interview questions; search LeetCode for role-relevant problems; use Anthropic SDK to synthesise into categorised question pack (behavioral/coding/system_design/role_specific) with source attribution; `evaluate_answer()` — score response + generate feedback
-- [ ] T072 [US4] Create `backend/jobforce/routers/coach.py`: POST /api/coach/prep; POST /api/coach/sessions/{id}/answer; GET /api/coach/sessions/{id}/summary
-- [ ] T073 [P] [US4] Create `frontend/src/app/coach/page.tsx`: Coach page — target job selector, interview prep pack display with category tabs, mock interview mode toggle
-- [ ] T074 [P] [US4] Create `frontend/src/components/coach/QuestionCard.tsx`: displays question text, category badge, source URL link, LeetCode link (if present), guidance section; expandable answer framework
-- [ ] T075 [P] [US4] Create `frontend/src/components/coach/MockInterviewPanel.tsx`: sequential question-answer interface; text area for user response; submit for feedback; shows Coach feedback inline; session summary at end
-- [ ] T076 [US4] Create `.claude/skills/speckit-coach-prep.md`: Coach Claude Code skill — accept job_id, invoke Playwright MCP for web search, POST /api/coach/prep, print categorised question pack with LeetCode links to terminal
+- [x] T071 [US4] Create `backend/jobforce/services/coach.py`: `generate_prep_pack()` — use Playwright MCP (or Anthropic web search tool) to search Glassdoor/Blind for company interview questions; search LeetCode for role-relevant problems; use Anthropic SDK to synthesise into categorised question pack (behavioral/coding/system_design/role_specific) with source attribution; `evaluate_answer()` — score response + generate feedback
+- [x] T072 [US4] Create `backend/jobforce/routers/coach.py`: POST /api/coach/prep; POST /api/coach/sessions/{id}/answer; GET /api/coach/sessions/{id}/summary
+- [x] T073 [P] [US4] Create `frontend/src/app/coach/page.tsx`: Coach page — target job selector, interview prep pack display with category tabs, mock interview mode toggle
+- [x] T074 [P] [US4] Create `frontend/src/components/coach/QuestionCard.tsx`: displays question text, category badge, source URL link, LeetCode link (if present), guidance section; expandable answer framework
+- [x] T075 [P] [US4] Create `frontend/src/components/coach/MockInterviewPanel.tsx`: sequential question-answer interface; text area for user response; submit for feedback; shows Coach feedback inline; session summary at end
+- [x] T076 [US4] Create `.claude/skills/speckit-coach-prep.md`: Coach Claude Code skill — accept job_id, invoke Playwright MCP for web search, POST /api/coach/prep, print categorised question pack with LeetCode links to terminal
 
 **Checkpoint**: Coach delivers a web-sourced prep pack with LeetCode links and system design questions. Mock interview session produces per-answer feedback and a summary. `make check` passes.
 
@@ -206,14 +206,14 @@ description: "Task list for Jobforce — Superhero Job Hunt Command Center"
 
 **Purpose**: Quality, observability, and self-improvement artifacts across all stories.
 
-- [ ] T077 [P] Add timing instrumentation middleware to `backend/jobforce/main.py`: log request duration for all /api/oracle, /api/forge, /api/coach endpoints; log Anthropic SDK token usage per call
-- [ ] T077a [P] Add performance assertion test to `backend/tests/contract/test_forge.py`: POST /api/resume/{id}/export with a pre-rendered .tex fixture must complete in ≤30 seconds (SC-008); use `time.monotonic()` around the request; skip if LaTeX not installed (`pytest.mark.skipif`)
-- [ ] T078 [P] Add `backend/jobforce/routers/jobs.py` PATCH validation: enforce valid state machine transitions (saved→applied→interviewing→offer; any→rejected/withdrawn; offer/rejected/withdrawn terminal) with 422 on invalid
-- [ ] T079 [P] Create `docs/retrospective.md`: structured feedback template per constitution §III — sections for what worked, what to improve, recurring failure patterns; commit as empty template
-- [ ] T080 [P] Update `backend/jobforce/db/models.py`: add `storage.verify_integrity()` call to FastAPI startup lifespan to cross-reference all `file_path` references against filesystem
-- [ ] T081 [P] Create `frontend/src/components/jobs/StatusTransitionModal.tsx` guard: disable transitions to terminal states (offer/rejected/withdrawn already in terminal); surface confirmation dialog for destructive transitions (rejected/withdrawn)
-- [ ] T082 [P] Run `make check` across all three projects (backend, frontend, chrome-extension manual test); fix all ruff, mypy, and Jest failures to zero
-- [ ] T083 [P] Validate `quickstart.md` end-to-end: follow all steps from Prerequisites through "Run the Hero Agents"; fix any step that fails or is missing
+- [x] T077 [P] Add timing instrumentation middleware to `backend/jobforce/main.py`: log request duration for all /api/oracle, /api/forge, /api/coach endpoints; log Anthropic SDK token usage per call
+- [x] T077a [P] Add performance assertion test to `backend/tests/contract/test_forge.py`: POST /api/resume/{id}/export with a pre-rendered .tex fixture must complete in ≤30 seconds (SC-008); use `time.monotonic()` around the request; skip if LaTeX not installed (`pytest.mark.skipif`)
+- [x] T078 [P] Add `backend/jobforce/routers/jobs.py` PATCH validation: enforce valid state machine transitions (saved→applied→interviewing→offer; any→rejected/withdrawn; offer/rejected/withdrawn terminal) with 422 on invalid
+- [x] T079 [P] Create `docs/retrospective.md`: structured feedback template per constitution §III — sections for what worked, what to improve, recurring failure patterns; commit as empty template
+- [x] T080 [P] Update `backend/jobforce/db/models.py`: add `storage.verify_integrity()` call to FastAPI startup lifespan to cross-reference all `file_path` references against filesystem
+- [x] T081 [P] Create `frontend/src/components/jobs/StatusTransitionModal.tsx` guard: disable transitions to terminal states (offer/rejected/withdrawn already in terminal); surface confirmation dialog for destructive transitions (rejected/withdrawn)
+- [x] T082 [P] Run `make check` across all three projects (backend, frontend, chrome-extension manual test); fix all ruff, mypy, and Jest failures to zero
+- [x] T083 [P] Validate `quickstart.md` end-to-end: follow all steps from Prerequisites through "Run the Hero Agents"; fix any step that fails or is missing
 
 ---
 

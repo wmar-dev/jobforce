@@ -4,9 +4,8 @@ import textwrap
 from pathlib import Path
 
 import pytest
-import yaml
 
-from jobforce.config import AppConfig, load_config
+from jobforce.config import load_config
 
 
 def write_config(tmp_path: Path, content: str) -> Path:

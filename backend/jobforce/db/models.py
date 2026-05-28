@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     CheckConstraint,
+    Float,
     ForeignKey,
     Index,
     Integer,
     LargeBinary,
-    Float,
     Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class Base(DeclarativeBase):
@@ -28,8 +27,8 @@ class Company(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    domain: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    domain: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 
@@ -56,20 +55,18 @@ class JobListing(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    company_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("companies.id"), nullable=False
-    )
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
-    location: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    role_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    location: Mapped[str | None] = mapped_column(Text, nullable=True)
+    role_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="saved")
-    fit_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     fit_scored: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    fit_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    fit_rationale: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    crawled_at: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fit_confidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fit_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    crawled_at: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 
@@ -77,7 +74,7 @@ class JobListing(Base):
     status_transitions: Mapped[list[StatusTransition]] = relationship(
         "StatusTransition", back_populates="job_listing", cascade="all, delete-orphan"
     )
-    page_snapshot: Mapped[Optional[PageSnapshot]] = relationship(
+    page_snapshot: Mapped[PageSnapshot | None] = relationship(
         "PageSnapshot", back_populates="job_listing", uselist=False, cascade="all, delete-orphan"
     )
     resumes: Mapped[list[Resume]] = relationship(
@@ -93,15 +90,13 @@ class JobListing(Base):
 
 class StatusTransition(Base):
     __tablename__ = "status_transitions"
-    __table_args__ = (
-        Index("idx_status_transitions_job", "job_listing_id"),
-    )
+    __table_args__ = (Index("idx_status_transitions_job", "job_listing_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     job_listing_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("job_listings.id"), nullable=False
     )
-    from_status: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    from_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     to_status: Mapped[str] = mapped_column(Text, nullable=False)
     transitioned_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
 
@@ -117,15 +112,13 @@ class PageSnapshot(Base):
     job_listing_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("job_listings.id"), nullable=False, unique=True
     )
-    html_blob: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
-    file_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    html_blob: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_hash: Mapped[str] = mapped_column(Text, nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     captured_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
 
-    job_listing: Mapped[JobListing] = relationship(
-        "JobListing", back_populates="page_snapshot"
-    )
+    job_listing: Mapped[JobListing] = relationship("JobListing", back_populates="page_snapshot")
 
 
 class Resume(Base):
@@ -134,18 +127,16 @@ class Resume(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     label: Mapped[str] = mapped_column(Text, nullable=False)
     is_base: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    job_listing_id: Mapped[Optional[int]] = mapped_column(
+    job_listing_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("job_listings.id"), nullable=True
     )
     structured_data: Mapped[str] = mapped_column(Text, nullable=False)
-    latex_source: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    pdf_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    latex_source: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pdf_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 
-    job_listing: Mapped[Optional[JobListing]] = relationship(
-        "JobListing", back_populates="resumes"
-    )
+    job_listing: Mapped[JobListing | None] = relationship("JobListing", back_populates="resumes")
 
 
 class InterviewSession(Base):
@@ -161,7 +152,7 @@ class InterviewSession(Base):
     )
     session_type: Mapped[str] = mapped_column(Text, nullable=False, default="prep")
     questions: Mapped[str] = mapped_column(Text, nullable=False)
-    overall_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    overall_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 
@@ -178,17 +169,15 @@ class MeetingNote(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    company_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("companies.id"), nullable=False
-    )
-    job_listing_id: Mapped[Optional[int]] = mapped_column(
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), nullable=False)
+    job_listing_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("job_listings.id"), nullable=True
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
 
     company: Mapped[Company] = relationship("Company", back_populates="meeting_notes")
-    job_listing: Mapped[Optional[JobListing]] = relationship(
+    job_listing: Mapped[JobListing | None] = relationship(
         "JobListing", back_populates="meeting_notes"
     )
 
@@ -197,11 +186,11 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    full_name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    headline: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    skills: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    experience: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    preferences: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    headline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skills: Mapped[str | None] = mapped_column(Text, nullable=True)
+    experience: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preferences: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 
 
@@ -210,6 +199,6 @@ class SearchConfigRecord(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    location: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    source: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    location: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(Text, nullable=True)
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

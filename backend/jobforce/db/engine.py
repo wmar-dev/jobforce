@@ -1,7 +1,14 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy import event, text
+from collections.abc import AsyncGenerator
+
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 
 def build_engine(db_path: str) -> AsyncEngine:
@@ -16,7 +23,8 @@ def build_engine(db_path: str) -> AsyncEngine:
 
     @event.listens_for(engine.sync_engine, "connect")
     def set_wal_mode(dbapi_conn: object, _: object) -> None:
-        cursor = dbapi_conn.cursor()  # type: ignore[union-attr]
+        # Works for both raw sqlite3 and aiosqlite's AsyncAdapt wrapper
+        cursor = dbapi_conn.cursor()  # type: ignore[attr-defined]
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -51,7 +59,7 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
-async def get_session() -> AsyncSession:  # type: ignore[return]
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     factory = get_session_factory()
     async with factory() as session:
         yield session

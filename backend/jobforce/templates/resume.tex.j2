@@ -1,0 +1,88 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fontenc}
+\usepackage{inputenc}
+\usepackage{parskip}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{8pt}{4pt}
+
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
+\pagestyle{empty}
+
+\begin{document}
+
+%% Personal Info
+\begin{center}
+  {\LARGE \textbf{\VAR{data.personal_info.name}}}\\[4pt]
+  \VAR{data.personal_info.email}%
+  \BLOCK{if data.personal_info.phone} $\cdot$ \VAR{data.personal_info.phone}\BLOCK{endif}%
+  \BLOCK{if data.personal_info.location} $\cdot$ \VAR{data.personal_info.location}\BLOCK{endif}%
+  \BLOCK{if data.personal_info.linkedin}\\
+  \href{https://\VAR{data.personal_info.linkedin}}{\VAR{data.personal_info.linkedin}}\BLOCK{endif}%
+  \BLOCK{if data.personal_info.github} $\cdot$ \href{https://github.com/\VAR{data.personal_info.github}}{github.com/\VAR{data.personal_info.github}}\BLOCK{endif}
+\end{center}
+
+\BLOCK{if data.summary}
+\section{Summary}
+\VAR{data.summary}
+\BLOCK{endif}
+
+\BLOCK{if data.work_history}
+\section{Experience}
+\BLOCK{for job in data.work_history}
+\textbf{\VAR{job.title}} \hfill \VAR{job.start_date} -- \VAR{job.end_date if job.end_date else 'Present'}\\
+\textit{\VAR{job.company}}\BLOCK{if job.location} $\cdot$ \VAR{job.location}\BLOCK{endif}
+\BLOCK{if job.bullets}
+\begin{itemize}[noitemsep,topsep=2pt,leftmargin=*]
+\BLOCK{for bullet in job.bullets}
+  \item \VAR{bullet}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\vspace{4pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if data.education}
+\section{Education}
+\BLOCK{for edu in data.education}
+\textbf{\VAR{edu.degree}} \hfill \VAR{edu.institution}%
+\BLOCK{if edu.start_date or edu.end_date} -- \VAR{edu.end_date if edu.end_date else edu.start_date}\BLOCK{endif}%
+\BLOCK{if edu.gpa}\\ GPA: \VAR{edu.gpa}\BLOCK{endif}
+\vspace{2pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if data.skills}
+\section{Skills}
+\VAR{', '.join(data.skills)}
+\BLOCK{endif}
+
+\BLOCK{if data.certifications}
+\section{Certifications}
+\BLOCK{for cert in data.certifications}
+\textbf{\VAR{cert.name}}\BLOCK{if cert.issuer} -- \VAR{cert.issuer}\BLOCK{endif}\BLOCK{if cert.year} (\VAR{cert.year})\BLOCK{endif}\\
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if data.projects}
+\section{Projects}
+\BLOCK{for proj in data.projects}
+\textbf{\VAR{proj.name}}\BLOCK{if proj.url} (\href{\VAR{proj.url}}{\VAR{proj.url}})\BLOCK{endif}%
+\BLOCK{if proj.description}\\ \VAR{proj.description}\BLOCK{endif}
+\BLOCK{if proj.bullets}
+\begin{itemize}[noitemsep,topsep=2pt,leftmargin=*]
+\BLOCK{for bullet in proj.bullets}
+  \item \VAR{bullet}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\vspace{4pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\end{document}

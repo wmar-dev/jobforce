@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jobforce Scout</title>
+  <style>
+    body {
+      width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      margin: 0;
+      padding: 16px;
+    }
+    h1 { font-size: 14px; font-weight: 700; margin: 0 0 4px; color: #10b981; }
+    .subtitle { font-size: 11px; color: #64748b; margin-bottom: 12px; }
+    .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.online { background: #10b981; }
+    .dot.offline { background: #ef4444; }
+    .status-text { font-size: 12px; color: #94a3b8; }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result { margin-top: 10px; font-size: 12px; padding: 8px; border-radius: 4px; }
+    .result.success { background: #052e16; color: #86efac; }
+    .result.duplicate { background: #431407; color: #fed7aa; }
+    .result.error { background: #450a0a; color: #fca5a5; }
+    .last-url { margin-top: 8px; font-size: 10px; color: #475569; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>⚡ Jobforce Scout</h1>
+  <div class="subtitle">Superhero Job Hunt Command Center</div>
+
+  <div class="status-row">
+    <div id="dot" class="dot offline"></div>
+    <span id="status-text" class="status-text">Checking backend...</span>
+  </div>
+
+  <button id="capture-btn" disabled>📥 Capture This Job</button>
+  <div id="result" class="result" style="display:none"></div>
+  <div id="last-url" class="last-url"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

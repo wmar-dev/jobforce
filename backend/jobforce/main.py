@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from jobforce.config import get_config
-from jobforce.db.engine import init_engine, get_session_factory
+from jobforce.db.engine import get_session_factory, init_engine
 from jobforce.db.init import create_all
 from jobforce.db.seed import seed_from_config
 
@@ -27,6 +27,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await create_all()
     async with get_session_factory()() as session:
         await seed_from_config(session, config)
+        from jobforce.services.storage import verify_integrity
+
+        missing = await verify_integrity(session)
+        if missing:
+            logger.warning(
+                "Storage integrity check: %d missing file(s): %s",
+                len(missing),
+                missing[:5],
+            )
+        else:
+            logger.info("Storage integrity check passed.")
     logger.info("Jobforce backend started.")
     yield
     logger.info("Jobforce backend shutting down.")
@@ -68,7 +79,7 @@ def create_app() -> FastAPI:
         return response
 
     # Routers registered here — imported lazily to avoid circular imports
-    from jobforce.routers import ingest, jobs, oracle, forge, coach, dashboard, companies, profile
+    from jobforce.routers import coach, companies, dashboard, forge, ingest, jobs, oracle, profile
 
     app.include_router(ingest.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")

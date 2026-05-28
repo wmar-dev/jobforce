@@ -1,16 +1,22 @@
 .PHONY: check lint typecheck test dev
 
+PYTHON := .venv/bin/python
+RUFF := .venv/bin/ruff
+MYPY := .venv/bin/mypy
+PYTEST := .venv/bin/pytest
+UVICORN := .venv/bin/uvicorn
+
 check: lint typecheck test
 
 lint:
-	ruff check jobforce/ tests/
-	ruff format --check jobforce/ tests/
+	$(RUFF) check jobforce/ tests/
+	$(RUFF) format --check jobforce/ tests/
 
 typecheck:
-	mypy jobforce/
+	$(MYPY) jobforce/
 
 test:
-	pytest tests/ -v
+	$(PYTEST) tests/ -v
 
 dev:
-	uvicorn jobforce.main:app --reload --port 8000
+	$(UVICORN) jobforce.main:app --reload --port 8000
