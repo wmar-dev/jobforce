@@ -1,0 +1,197 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useJob } from "@/hooks/useJob";
+import { StatusBadge } from "@/components/jobs/StatusBadge";
+import { StatusTransitionModal } from "@/components/jobs/StatusTransitionModal";
+import type { PipelineStatus } from "@/lib/types";
+
+const FIT_CONFIDENCE_CLASSES: Record<string, string> = {
+  high: "text-emerald-400",
+  medium: "text-yellow-400",
+  low: "text-red-400",
+};
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export default function JobDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const jobId = parseInt(params.id, 10);
+  const router = useRouter();
+  const { data: job, mutate, error, isLoading } = useJob(jobId);
+  const [showModal, setShowModal] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="text-gray-500 text-sm py-16 text-center">
+        Loading job...
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-red-400 text-sm mb-4">
+          Failed to load job. Is the backend running?
+        </p>
+        <Link href="/jobs" className="text-emerald-400 text-sm hover:underline">
+          ← Back to jobs
+        </Link>
+      </div>
+    );
+  }
+
+  const handleTransitioned = (newStatus: PipelineStatus) => {
+    mutate({ ...job, status: newStatus });
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      {/* Back nav */}
+      <div className="mb-6">
+        <button
+          onClick={() => router.back()}
+          className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+        >
+          ← Back
+        </button>
+      </div>
+
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-1">{job.title}</h1>
+            <p className="text-gray-400 text-base">{job.company.name}</p>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <StatusBadge status={job.status} />
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 text-gray-300 rounded transition-colors"
+            >
+              Move status
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Meta row */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6 text-sm text-gray-400">
+        {job.location && (
+          <span>
+            <span className="text-gray-600 mr-1">📍</span>
+            {job.location}
+          </span>
+        )}
+        {job.role_type && (
+          <span>
+            <span className="text-gray-600 mr-1">💼</span>
+            {job.role_type}
+          </span>
+        )}
+        <span>
+          <span className="text-gray-600 mr-1">📅</span>
+          Added {formatDate(job.created_at)}
+        </span>
+        <a
+          href={job.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-emerald-400 hover:text-emerald-300 transition-colors"
+        >
+          View original ↗
+        </a>
+      </div>
+
+      {/* Fit score */}
+      {job.fit_scored && job.fit_score != null && (
+        <div className="mb-6 p-4 bg-gray-900 border border-gray-800 rounded-lg">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-sm font-medium text-gray-300">Fit Score</span>
+            <span
+              className={`text-lg font-bold ${
+                FIT_CONFIDENCE_CLASSES[job.fit_confidence ?? ""] ?? "text-gray-300"
+              }`}
+            >
+              {job.fit_score}
+              <span className="text-xs font-normal text-gray-500 ml-1">/ 100</span>
+            </span>
+            {job.fit_confidence && (
+              <span className="text-xs text-gray-500 capitalize">
+                ({job.fit_confidence})
+              </span>
+            )}
+          </div>
+          {job.fit_rationale && (
+            <p className="text-sm text-gray-400">{job.fit_rationale}</p>
+          )}
+        </div>
+      )}
+
+      {/* Description */}
+      {job.description && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Description
+          </h2>
+          <div className="prose prose-invert max-w-none">
+            <pre className="whitespace-pre-wrap text-sm text-gray-300 font-sans leading-relaxed bg-gray-900 border border-gray-800 rounded-lg p-4">
+              {job.description}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Status history */}
+      {job.status_history.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Status History
+          </h2>
+          <ol className="relative border-l border-gray-800 ml-2">
+            {job.status_history.map((transition) => (
+              <li key={transition.id} className="mb-4 ml-4">
+                <div className="absolute w-2 h-2 bg-emerald-600 rounded-full -left-1 mt-1" />
+                <div className="flex items-center gap-2 flex-wrap">
+                  {transition.from_status && (
+                    <>
+                      <StatusBadge status={transition.from_status} />
+                      <span className="text-gray-600 text-xs">→</span>
+                    </>
+                  )}
+                  <StatusBadge status={transition.to_status} />
+                  <span className="text-xs text-gray-500 ml-auto">
+                    {formatDate(transition.transitioned_at)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Status transition modal */}
+      {showModal && (
+        <StatusTransitionModal
+          jobId={job.id}
+          currentStatus={job.status}
+          onTransitioned={handleTransitioned}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </div>
+  );
+}
