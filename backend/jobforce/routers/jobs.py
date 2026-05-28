@@ -54,6 +54,13 @@ class JobListPage(BaseModel):
     items: list[JobListingOut]
 
 
+class JobPatchRequest(BaseModel):
+    title: str | None = None
+    location: str | None = None
+    role_type: str | None = None
+    description: str | None = None
+
+
 class StatusPatchRequest(BaseModel):
     status: str
 
@@ -132,6 +139,44 @@ async def get_job(
     if job is None:
         raise HTTPException(status_code=404, detail="Job listing not found")
 
+    transitions = sorted(job.status_transitions, key=lambda t: t.transitioned_at)
+    return JobListingDetail(
+        **_to_out(job).model_dump(),
+        description=job.description,
+        fit_rationale=job.fit_rationale,
+        status_history=[
+            StatusTransitionOut(
+                id=t.id,
+                from_status=t.from_status,
+                to_status=t.to_status,
+                transitioned_at=t.transitioned_at,
+            )
+            for t in transitions
+        ],
+    )
+
+
+@router.patch("/jobs/{job_id}", response_model=JobListingDetail)
+async def patch_job(
+    job_id: int,
+    body: JobPatchRequest,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> Any:
+    result = await session.execute(
+        select(JobListing)
+        .options(
+            selectinload(JobListing.company),
+            selectinload(JobListing.status_transitions),
+        )
+        .where(JobListing.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(job, field, value)
+    await session.commit()
+    await session.refresh(job)
     transitions = sorted(job.status_transitions, key=lambda t: t.transitioned_at)
     return JobListingDetail(
         **_to_out(job).model_dump(),
