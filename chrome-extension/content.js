@@ -72,6 +72,58 @@ const openaiAdapter = {
   },
 };
 
+const workdayAdapter = {
+  // Workday: company name lives in the subdomain (tenant.wd1.myworkdayjobs.com)
+  company_name: () => {
+    const sub = window.location.hostname.split(".")[0];
+    return sub ? sub[0].toUpperCase() + sub.slice(1) : null;
+  },
+  // Title is an h2 inside the job detail panel (h1 in banner is empty on Workday)
+  title: (doc) => text(doc.querySelector('[data-automation-id="jobPostingHeader"] h2, .jobPostingTitle h2')) ||
+    text(doc.querySelector("main h2, [role='main'] h2")) || null,
+  // Location comes from the definition list: <dt>locations</dt><dd>...</dd>
+  location: (doc) => {
+    for (const dt of doc.querySelectorAll("dt, [data-automation-id='locations'] dd")) {
+      if ((dt.innerText ?? dt.textContent ?? "").trim().toLowerCase() === "locations") {
+        const dd = dt.nextElementSibling;
+        return dd ? text(dd) : null;
+      }
+    }
+    return null;
+  },
+  // role_type from the "time type" definition list entry
+  role_type: (doc) => {
+    for (const dt of doc.querySelectorAll("dt")) {
+      if ((dt.innerText ?? dt.textContent ?? "").trim().toLowerCase() === "time type") {
+        const dd = dt.nextElementSibling;
+        const val = (dd ? (dd.innerText ?? dd.textContent ?? "") : "").toLowerCase();
+        if (val.includes("full")) return "full-time";
+        if (val.includes("part")) return "part-time";
+        if (val.includes("contract")) return "contract";
+        if (val.includes("intern")) return "internship";
+      }
+    }
+    return null;
+  },
+  // Description: all paragraphs and list items in the main content section
+  description: (doc) => {
+    const section = doc.querySelector('[data-automation-id="jobPostingDescription"], .job-description, main section');
+    if (section) return text(section) || null;
+    // Fallback: gather paragraphs from the main content area
+    const paras = doc.querySelectorAll("main p, [role='main'] p");
+    const parts = Array.from(paras).map((p) => text(p)).filter(Boolean);
+    return parts.length ? parts.join("\n\n") : null;
+  },
+  compensation: (doc) => {
+    const all = doc.querySelectorAll("main p, [role='main'] p");
+    for (const el of all) {
+      const t = (el.innerText ?? el.textContent ?? "").trim();
+      if (/\$[\d,]+/.test(t)) return t;
+    }
+    return null;
+  },
+};
+
 const ashbyAdapter = {
   // Ashby pages have no <main> and no og:site_name; title tag is "<Role> @ <Company>"
   company_name: (doc) => {
@@ -106,6 +158,7 @@ const ashbyAdapter = {
 const ADAPTERS = {
   "openai.com": openaiAdapter,
   "jobs.ashbyhq.com": ashbyAdapter,
+  "myworkdayjobs.com": workdayAdapter,
   // "greenhouse.io": greenhouseAdapter,  // add future adapters here
   // "lever.co": leverAdapter,
   // "linkedin.com": linkedinAdapter,
@@ -143,7 +196,9 @@ function merge(base, override) {
 
 function extractJobData() {
   const hostname = window.location.hostname.replace(/^www\./, "");
-  const adapter = ADAPTERS[hostname];
+  // Exact match first, then suffix match (e.g. "myworkdayjobs.com" matches "tenant.wd1.myworkdayjobs.com")
+  const adapter = ADAPTERS[hostname] ||
+    Object.entries(ADAPTERS).find(([k]) => hostname.endsWith("." + k))?.[1];
   const base = runAdapter(genericAdapter, document);
   const override = adapter ? runAdapter(adapter, document) : {};
   return {
@@ -171,5 +226,5 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
 /* ─── Exports for Jest tests (no-op in browser context) ──────────────────── */
 
 if (typeof module !== "undefined") {
-  module.exports = { extractJobData, genericAdapter, openaiAdapter, ashbyAdapter, slugToLocation, runAdapter, merge };
+  module.exports = { extractJobData, genericAdapter, openaiAdapter, ashbyAdapter, workdayAdapter, slugToLocation, runAdapter, merge };
 }
