@@ -37,8 +37,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# User config (may contain credentials)
+# User config (may contain personal data)
 config.yaml
+config/resume.json
 
 # SQLite database and raw HTML snapshots
 backend/data/jobforce.db
