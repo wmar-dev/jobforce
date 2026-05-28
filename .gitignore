@@ -17,6 +17,7 @@ htmlcov/
 # Tool directories
 .claude/projects/
 .specify/scripts/
+.playwright-mcp/
 
 # macOS
 .DS_Store
