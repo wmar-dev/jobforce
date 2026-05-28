@@ -153,13 +153,58 @@ const ashbyAdapter = {
   description: (doc) => text(doc.querySelector('[role="tabpanel"]')) || null,
 };
 
+const greenhouseAdapter = {
+  // Company name: logo alt text ends with " Logo" (e.g. "Crunchyroll, LLC Logo")
+  company_name: (doc) => {
+    const logo = doc.querySelector('img[alt$=" Logo"]');
+    if (logo) return (logo.alt || "").replace(/\s+Logo$/i, "").trim() || null;
+    // Fallback: page title "Job Application for <role> at <company>"
+    const m = doc.title?.match(/\bat\s+(.+)$/);
+    return m ? m[1].trim() : null;
+  },
+  title: (doc) => text(doc.querySelector("main h1")) || null,
+  // Location lives in a div immediately following the h1 wrapper
+  location: (doc) => {
+    const h1 = doc.querySelector("main h1");
+    if (!h1) return null;
+    const wrapper = h1.closest("div") || h1.parentElement;
+    const locEl = wrapper?.nextElementSibling;
+    return locEl ? text(locEl) || null : null;
+  },
+  // Collect all pay transparency dollar amounts and join them
+  compensation: (doc) => {
+    const amounts = [];
+    for (const el of doc.querySelectorAll("main p")) {
+      const t = (el.innerText ?? el.textContent ?? "").trim();
+      if (/^\$[\d,]/.test(t)) amounts.push(t);
+    }
+    return amounts.length ? amounts.join(" / ") : null;
+  },
+  // Description: paragraphs and list items in job detail section (before the application form)
+  description: (doc) => {
+    const sections = doc.querySelectorAll("main h2");
+    const parts = [];
+    for (const h2 of sections) {
+      const label = (h2.innerText ?? h2.textContent ?? "").trim();
+      if (label === "Apply for this job") break;
+      let el = h2.nextElementSibling;
+      while (el && el.tagName !== "H2" && el.tagName !== "H3") {
+        const t = text(el);
+        if (t) parts.push(t);
+        el = el.nextElementSibling;
+      }
+    }
+    return parts.length ? parts.join("\n\n") : text(doc.querySelector("main")) || null;
+  },
+};
+
 /* ─── Registry: hostname → adapter ───────────────────────────────────────── */
 
 const ADAPTERS = {
   "openai.com": openaiAdapter,
   "jobs.ashbyhq.com": ashbyAdapter,
   "myworkdayjobs.com": workdayAdapter,
-  // "greenhouse.io": greenhouseAdapter,  // add future adapters here
+  "job-boards.greenhouse.io": greenhouseAdapter,
   // "lever.co": leverAdapter,
   // "linkedin.com": linkedinAdapter,
 };
