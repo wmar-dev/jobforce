@@ -1,0 +1,60 @@
+{
+  "personal_info": {
+    "name": "Jane Smith",
+    "email": "jane.smith@example.com",
+    "phone": "+1 (555) 123-4567",
+    "location": "San Francisco, CA",
+    "linkedin": "linkedin.com/in/janesmith",
+    "github": "github.com/janesmith",
+    "website": null
+  },
+  "summary": null,
+  "work_history": [
+    {
+      "title": "Senior Software Engineer",
+      "company": "Acme Corp",
+      "start_date": "2021-03",
+      "end_date": null,
+      "location": "Remote",
+      "bullets": [
+        "Led backend redesign that reduced API latency by 40%.",
+        "Mentored a team of 4 engineers and drove quarterly roadmap planning."
+      ]
+    },
+    {
+      "title": "Software Engineer",
+      "company": "Example Inc",
+      "start_date": "2018-06",
+      "end_date": "2021-02",
+      "location": "San Francisco, CA",
+      "bullets": [
+        "Built data pipeline processing 10M events/day using Python and Kafka.",
+        "Improved test coverage from 40% to 85% and introduced CI/CD practices."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Computer Science B.S.",
+      "institution": "University of California Berkeley",
+      "start_date": null,
+      "end_date": "2018",
+      "gpa": "3.8",
+      "notes": null
+    }
+  ],
+  "skills": [
+    "Python", "Go", "TypeScript",
+    "PostgreSQL", "Redis", "Kafka",
+    "Docker", "Kubernetes", "AWS",
+    "FastAPI", "React"
+  ],
+  "certifications": [
+    {
+      "name": "AWS Solutions Architect Associate",
+      "issuer": "Amazon Web Services",
+      "year": 2022
+    }
+  ],
+  "projects": null
+}
