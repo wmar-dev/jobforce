@@ -118,7 +118,7 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": lambda doc, url: "OpenAI",
         "title": lambda doc, url: _text(doc.select_one("main h2")),
         "location": _openai_location,
-        "description": lambda doc, url: _text(doc.select_one("main article, main section")),
+        "description": lambda doc, url: _text(doc.select_one("main article, main section, main div")),
         "compensation": _openai_compensation,
     },
 }
