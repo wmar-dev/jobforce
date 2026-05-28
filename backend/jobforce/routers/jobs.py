@@ -59,6 +59,10 @@ class JobPatchRequest(BaseModel):
     location: str | None = None
     role_type: str | None = None
     description: str | None = None
+    fit_score: float | None = None
+    fit_scored: int | None = None
+    fit_confidence: str | None = None
+    fit_rationale: str | None = None
 
 
 class StatusPatchRequest(BaseModel):

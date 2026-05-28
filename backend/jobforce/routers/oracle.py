@@ -1,16 +1,20 @@
-"""Oracle router — POST /api/oracle/rank, GET /api/oracle/rank/{job_id}."""
+"""Oracle router — GET /api/oracle/rank/{job_id}.
+
+Job fit ranking is now performed by Claude Code via the /oracle-rank skill.
+POST /api/oracle/rank returns 501 to guide callers to the new workflow.
+"""
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.engine import get_session
 from jobforce.db.models import JobListing
-from jobforce.services.oracle import rank_jobs
 
 router = APIRouter(prefix="/oracle", tags=["oracle"])
 
@@ -27,24 +31,17 @@ class RankResult(BaseModel):
     warning: str | None = None
 
 
-@router.post("/rank", response_model=list[RankResult])
-async def post_rank(
-    body: RankRequest,
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> list[RankResult]:
-    results = await rank_jobs(session, job_ids=body.job_ids)
-
-    # Persist fit scores for results produced by a mocked rank_jobs (no-op if already persisted)
-    for r in results:
-        job = await session.get(JobListing, r["job_id"])
-        if job is not None and not job.fit_scored:
-            job.fit_score = r["score"]
-            job.fit_scored = 1
-            job.fit_confidence = r["confidence"]
-            job.fit_rationale = r["rationale"]
-    await session.commit()
-
-    return [RankResult(**r) for r in results]
+@router.post("/rank")
+async def post_rank(body: RankRequest) -> Any:
+    return JSONResponse(
+        status_code=501,
+        content={
+            "detail": (
+                "Oracle ranking is now performed via Claude Code. "
+                "Run /oracle-rank in Claude Code to score jobs."
+            )
+        },
+    )
 
 
 @router.get("/rank/{job_id}", response_model=RankResult)

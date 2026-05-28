@@ -86,15 +86,7 @@ export function ingestJob(
   return apiFetch("/api/ingest", { method: "POST", body: JSON.stringify(payload) });
 }
 
-// Oracle
-export function rankJobs(
-  jobIds?: number[]
-): Promise<OracleRankResponse> {
-  return apiFetch("/api/oracle/rank", {
-    method: "POST",
-    body: JSON.stringify(jobIds ? { job_ids: jobIds } : {}),
-  });
-}
+// Oracle — ranking is performed by Claude Code via /oracle-rank skill
 
 export function getJobRank(jobId: number): Promise<OracleRankResult> {
   return apiFetch<OracleRankResult>(`/api/oracle/rank/${jobId}`);
