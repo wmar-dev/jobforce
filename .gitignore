@@ -15,7 +15,7 @@ htmlcov/
 .env.*
 
 # Tool directories
-.claude/
+.claude/projects/
 .specify/scripts/
 
 # macOS
