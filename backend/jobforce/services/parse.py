@@ -113,6 +113,19 @@ def _openai_compensation(doc: BeautifulSoup, url: str) -> str | None:
     return None
 
 
+def _greenhouse_company(doc: BeautifulSoup, url: str) -> str | None:
+    # boards.greenhouse.io/<company>/jobs/<id> — extract from path
+    parts = urlparse(url).path.strip("/").split("/")
+    if len(parts) >= 1 and parts[0] not in ("jobs",):
+        return " ".join(w.capitalize() for w in parts[0].replace("-", " ").split())
+    return None
+
+
+def _greenhouse_location(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one(".job__location")
+    return _text(el)
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "openai.com": {
         "company_name": lambda doc, url: "OpenAI",
@@ -120,6 +133,10 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "location": _openai_location,
         "description": lambda doc, url: _text(doc.select_one("main article, main section, main div")),
         "compensation": _openai_compensation,
+    },
+    "boards.greenhouse.io": {
+        "company_name": _greenhouse_company,
+        "location": _greenhouse_location,
     },
 }
 

@@ -198,6 +198,18 @@ async def patch_job(
     )
 
 
+@router.delete("/jobs/{job_id}", status_code=204)
+async def delete_job(
+    job_id: int,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    job = await session.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+    await session.delete(job)
+    await session.commit()
+
+
 @router.patch("/jobs/{job_id}/status", response_model=StatusPatchResponse)
 async def patch_job_status(
     job_id: int,
