@@ -51,11 +51,28 @@ class AppConfig(BaseModel):
     user: UserConfig = UserConfig()
 
 
-def load_config(path: str = "config.yaml") -> AppConfig:
+def _find_config(path: str) -> Path:
     config_path = Path(path)
+    if config_path.is_absolute():
+        return config_path
+    # Search from CWD, then walk up to project root (where config.example.yaml lives)
+    candidate = Path.cwd() / config_path
+    if candidate.exists():
+        return candidate
+    # Walk up from this file's location (backend/jobforce/) to find repo root
+    here = Path(__file__).parent
+    for parent in [here, here.parent, here.parent.parent]:
+        candidate = parent / config_path
+        if candidate.exists():
+            return candidate
+    return Path.cwd() / config_path  # let it fail with a clear message below
+
+
+def load_config(path: str = "config.yaml") -> AppConfig:
+    config_path = _find_config(path)
     if not config_path.exists():
         raise FileNotFoundError(
-            f"config.yaml not found at {config_path.resolve()}. "
+            "config.yaml not found. Searched CWD and parent directories. "
             "Copy config.example.yaml to config.yaml and fill in your details."
         )
     with config_path.open() as f:

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.14+ with `uv` or `pip`
+- Python 3.12+ with [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 20+ with `npm`
 - LaTeX distribution: `texlive-full` (macOS: `brew install --cask mactex`)
 - Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
@@ -16,7 +16,7 @@
 git clone <repo-url> && cd jobforce
 
 # Backend
-cd backend && pip install -e ".[dev]"
+cd backend && uv sync --extra dev
 
 # Frontend
 cd ../frontend && npm install
@@ -58,8 +58,8 @@ user:
 
 ```bash
 cd backend
-python -m jobforce.db.init          # creates DB, runs migrations
-python -m jobforce.db.seed          # seeds from config.yaml
+uv run python -m jobforce.db.init   # creates DB, runs migrations
+uv run python -m jobforce.db.seed   # seeds from config.yaml
 ```
 
 ---

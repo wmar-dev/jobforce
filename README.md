@@ -20,7 +20,7 @@ A personal job search assistant powered by Claude AI. Five specialized agents â€
 
 ## Prerequisites
 
-- Python 3.12+ with `uv` or `pip`
+- Python 3.12+ with [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 20+
 - LaTeX (optional â€” for PDF resume export): `brew install --cask mactex`
 - Chrome (for the extension)
@@ -36,8 +36,8 @@ cp config.example.yaml config.yaml
 # Edit config.yaml: add your target roles, companies, and profile
 
 # 3. Initialize and seed the database
-cd backend && python -m jobforce.db.init
-cd backend && python -m jobforce.db.seed
+cd backend && uv run python -m jobforce.db.init
+cd backend && uv run python -m jobforce.db.seed
 
 # 4. Start the app (backend + frontend)
 make dev

@@ -2,7 +2,7 @@
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
-	@cd backend && uvicorn jobforce.main:app --reload --port 8000 &
+	@cd backend && uv run uvicorn jobforce.main:app --reload --port 8000 &
 	@cd frontend && npm run dev
 
 check:
@@ -13,10 +13,10 @@ check:
 
 seed:
 	@echo "Seeding database from config.yaml..."
-	@cd backend && python -m jobforce.db.seed
+	@cd backend && uv run python -m jobforce.db.seed
 
 install:
 	@echo "Installing backend dependencies..."
-	@cd backend && pip install -e ".[dev]"
+	@cd backend && uv sync --extra dev
 	@echo "Installing frontend dependencies..."
 	@cd frontend && npm install
