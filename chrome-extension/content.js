@@ -1,56 +1,136 @@
 /**
  * Content script — runs in every page context.
  * Listens for CAPTURE_JOB messages from the background service worker,
- * extracts structured job data from the DOM, and replies.
+ * extracts structured job data via the site adapter registry, and replies.
+ *
+ * To add a new site: add one entry to ADAPTERS keyed by hostname.
+ * Each adapter declares only the fields it can extract; missing fields
+ * fall back to the generic extractor automatically.
  */
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type !== "CAPTURE_JOB") return;
+/* ─── Generic adapter (works on most job boards) ─────────────────────────── */
 
-  try {
-    const data = extractJobData();
-    sendResponse({ ok: true, data });
-  } catch (err) {
-    sendResponse({ ok: false, error: String(err) });
+function text(el) {
+  return el ? (el.innerText ?? el.textContent ?? "").trim() : null;
+}
+
+const genericAdapter = {
+  title: (doc) =>
+    text(doc.querySelector("h1")) ||
+    doc.title?.replace(/\s*[-|].*$/, "").trim() ||
+    "",
+  company_name: (doc) =>
+    text(doc.querySelector("[data-company], .company-name, .employer-name")) ||
+    doc.querySelector('meta[property="og:site_name"]')?.content ||
+    "",
+  location: (doc) =>
+    text(doc.querySelector("[data-location], .job-location, .location")) ||
+    doc.querySelector('meta[name="job:location"]')?.content ||
+    null,
+  description: (doc) =>
+    text(doc.querySelector('[class*="description"], [class*="job-desc"], #job-description')) || null,
+  role_type: (doc) => {
+    const t = (doc.body?.innerText ?? doc.body?.textContent ?? "").toLowerCase();
+    if (t.includes("full-time") || t.includes("full time")) return "full-time";
+    if (t.includes("part-time") || t.includes("part time")) return "part-time";
+    if (t.includes("contract")) return "contract";
+    if (t.includes("internship") || t.includes("intern")) return "internship";
+    return null;
+  },
+};
+
+/* ─── Site-specific adapters ──────────────────────────────────────────────── */
+
+/**
+ * Parse a known city name from the trailing segment of a URL pathname.
+ * e.g. "/careers/engineer-san-francisco/" → "San Francisco"
+ */
+function slugToLocation(pathname) {
+  const seg = pathname.replace(/\/$/, "").split("/").pop() || "";
+  const cities = ["san-francisco", "new-york", "london", "seattle", "remote", "boston", "chicago", "austin"];
+  const hit = cities.find((c) => seg.endsWith(c));
+  if (!hit) return null;
+  return hit.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+}
+
+const openaiAdapter = {
+  company_name: () => "OpenAI",
+  location: (doc) => {
+    const domLoc = text(doc.querySelector("h1 + p, h1 ~ p"));
+    return domLoc || slugToLocation(window.location.pathname) || null;
+  },
+  description: (doc) =>
+    text(doc.querySelector("article, main section")) || null,
+};
+
+/* ─── Registry: hostname → adapter ───────────────────────────────────────── */
+
+const ADAPTERS = {
+  "openai.com": openaiAdapter,
+  // "greenhouse.io": greenhouseAdapter,  // add future adapters here
+  // "lever.co": leverAdapter,
+  // "linkedin.com": linkedinAdapter,
+};
+
+/* ─── Framework: run adapter + merge ─────────────────────────────────────── */
+
+/**
+ * Call each field function on the adapter, catching errors individually.
+ * Returns a partial JobFields object (only defined fields).
+ */
+function runAdapter(adapter, doc) {
+  const result = {};
+  for (const [key, fn] of Object.entries(adapter)) {
+    try {
+      result[key] = fn(doc);
+    } catch (err) {
+      console.warn(`[jobforce] adapter field ${key} error:`, err);
+      result[key] = null;
+    }
   }
-  return true; // keep channel open for async sendResponse
-});
+  return result;
+}
+
+/**
+ * Merge override into base — override fields win when non-null and non-empty.
+ */
+function merge(base, override) {
+  const out = { ...base };
+  for (const [k, v] of Object.entries(override)) {
+    if (v != null && v !== "") out[k] = v;
+  }
+  return out;
+}
 
 function extractJobData() {
-  const source_url = window.location.href;
-  const html = document.documentElement.outerHTML;
+  const hostname = window.location.hostname.replace(/^www\./, "");
+  const adapter = ADAPTERS[hostname];
+  const base = runAdapter(genericAdapter, document);
+  const override = adapter ? runAdapter(adapter, document) : {};
+  return {
+    source_url: window.location.href,
+    html: document.documentElement.outerHTML,
+    ...merge(base, override),
+  };
+}
 
-  // Best-effort extraction — works on most job boards
-  const title =
-    document.querySelector('h1')?.innerText?.trim() ||
-    document.title?.replace(/\s*[-|].*$/, "").trim() ||
-    "";
+/* ─── Message listener (Chrome extension runtime) ────────────────────────── */
 
-  const company_name =
-    document.querySelector('[data-company], .company-name, .employer-name')
-      ?.innerText?.trim() ||
-    document.querySelector('meta[property="og:site_name"]')?.content ||
-    "";
+if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type !== "CAPTURE_JOB") return;
+    try {
+      const data = extractJobData();
+      sendResponse({ ok: true, data });
+    } catch (err) {
+      sendResponse({ ok: false, error: String(err) });
+    }
+    return true;
+  });
+}
 
-  const location =
-    document.querySelector('[data-location], .job-location, .location')
-      ?.innerText?.trim() ||
-    document.querySelector('meta[name="job:location"]')?.content ||
-    null;
+/* ─── Exports for Jest tests (no-op in browser context) ──────────────────── */
 
-  // Extract role type from common patterns
-  const bodyText = document.body?.innerText?.toLowerCase() || "";
-  let role_type = null;
-  if (bodyText.includes("full-time") || bodyText.includes("full time")) role_type = "full-time";
-  else if (bodyText.includes("part-time") || bodyText.includes("part time")) role_type = "part-time";
-  else if (bodyText.includes("contract")) role_type = "contract";
-  else if (bodyText.includes("internship") || bodyText.includes("intern")) role_type = "internship";
-
-  // Job description — try structured elements first
-  const description =
-    document.querySelector('[class*="description"], [class*="job-desc"], #job-description')
-      ?.innerText?.trim() ||
-    null;
-
-  return { source_url, html, title, company_name, location, role_type, description };
+if (typeof module !== "undefined") {
+  module.exports = { extractJobData, genericAdapter, openaiAdapter, slugToLocation, runAdapter, merge };
 }
