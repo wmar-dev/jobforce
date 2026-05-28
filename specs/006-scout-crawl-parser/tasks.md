@@ -18,10 +18,10 @@
 
 **Purpose**: Add dependencies and create the new module skeleton before any feature work begins.
 
-- [ ] T001 Add `beautifulsoup4>=4.12`, `lxml>=5.0`, `playwright>=1.44` to `backend/pyproject.toml` dependencies and run `uv sync` in `backend/`
-- [ ] T002 Run `uv run playwright install chromium` in `backend/` to install the headless browser binary
-- [ ] T003 Create `backend/jobforce/cli/__init__.py` (empty, makes `cli` a package)
-- [ ] T004 [P] Register `jobforce.cli` in `packages` list in `backend/pyproject.toml` so it is importable via `uv run python -m jobforce.cli.*`
+- [x] T001 Add `beautifulsoup4>=4.12`, `lxml>=5.0`, `playwright>=1.44` to `backend/pyproject.toml` dependencies and run `uv sync` in `backend/`
+- [x] T002 Run `uv run playwright install chromium` in `backend/` to install the headless browser binary
+- [x] T003 Create `backend/jobforce/cli/__init__.py` (empty, makes `cli` a package)
+- [x] T004 [P] Register `jobforce.cli` in `packages` list in `backend/pyproject.toml` so it is importable via `uv run python -m jobforce.cli.*`
 
 ---
 
@@ -31,15 +31,15 @@
 
 **⚠️ CRITICAL**: Phases 3 and 4 both depend on this phase being complete.
 
-- [ ] T005 Write failing unit tests for `parse_html()`, `run_adapter()`, `merge()`, and `slug_to_location()` using static HTML fixtures in `backend/tests/unit/test_parse_service.py` — confirm all tests fail before proceeding
-- [ ] T006 [P] Create static HTML fixture files for the OpenAI adapter tests in `backend/tests/fixtures/openai_job.html` and `backend/tests/fixtures/generic_job.html`
-- [ ] T007 Implement `slug_to_location(pathname: str) -> str | None` in `backend/jobforce/services/parse.py` — port of `slugToLocation()` from `chrome-extension/content.js`
-- [ ] T008 Implement `GENERIC_ADAPTER` dict in `backend/jobforce/services/parse.py` with field extractor functions for `title`, `company_name`, `location`, `description`, `role_type` using BeautifulSoup CSS selectors matching `chrome-extension/content.js` `genericAdapter`
-- [ ] T009 Implement `SITE_ADAPTERS` dict in `backend/jobforce/services/parse.py` with `openai.com` adapter matching `chrome-extension/content.js` `openaiAdapter` (fields: `company_name`, `title`, `location`, `description`, `compensation`)
-- [ ] T010 Implement `run_adapter(adapter: dict, doc: BeautifulSoup, url: str) -> dict` in `backend/jobforce/services/parse.py` — calls each field fn, catches per-field errors, returns partial dict
-- [ ] T011 Implement `merge(base: dict, override: dict) -> dict` in `backend/jobforce/services/parse.py` — override wins when non-null and non-empty string
-- [ ] T012 Implement `parse_html(html: str, url: str) -> dict` public entry point in `backend/jobforce/services/parse.py` — resolves hostname, runs generic + site adapter, merges, returns ParseResult dict
-- [ ] T013 Run `backend/tests/unit/test_parse_service.py` and confirm all tests pass; run `ruff` and `mypy` on `backend/jobforce/services/parse.py`
+- [x] T005 Write failing unit tests for `parse_html()`, `run_adapter()`, `merge()`, and `slug_to_location()` using static HTML fixtures in `backend/tests/unit/test_parse_service.py` — confirm all tests fail before proceeding
+- [x] T006 [P] Create static HTML fixture files for the OpenAI adapter tests in `backend/tests/fixtures/openai_job.html` and `backend/tests/fixtures/generic_job.html`
+- [x] T007 Implement `slug_to_location(pathname: str) -> str | None` in `backend/jobforce/services/parse.py` — port of `slugToLocation()` from `chrome-extension/content.js`
+- [x] T008 Implement `GENERIC_ADAPTER` dict in `backend/jobforce/services/parse.py` with field extractor functions for `title`, `company_name`, `location`, `description`, `role_type` using BeautifulSoup CSS selectors matching `chrome-extension/content.js` `genericAdapter`
+- [x] T009 Implement `SITE_ADAPTERS` dict in `backend/jobforce/services/parse.py` with `openai.com` adapter matching `chrome-extension/content.js` `openaiAdapter` (fields: `company_name`, `title`, `location`, `description`, `compensation`)
+- [x] T010 Implement `run_adapter(adapter: dict, doc: BeautifulSoup, url: str) -> dict` in `backend/jobforce/services/parse.py` — calls each field fn, catches per-field errors, returns partial dict
+- [x] T011 Implement `merge(base: dict, override: dict) -> dict` in `backend/jobforce/services/parse.py` — override wins when non-null and non-empty string
+- [x] T012 Implement `parse_html(html: str, url: str) -> dict` public entry point in `backend/jobforce/services/parse.py` — resolves hostname, runs generic + site adapter, merges, returns ParseResult dict
+- [x] T013 Run `backend/tests/unit/test_parse_service.py` and confirm all tests pass; run `ruff` and `mypy` on `backend/jobforce/services/parse.py`
 
 **Checkpoint**: `parse.py` is complete, tested, and passing quality gates — story phases can now begin.
 
@@ -53,11 +53,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Write failing unit test for `scout_fetch` CLI timeout behaviour (30-second hard limit) in `backend/tests/unit/test_scout_fetch.py` — confirm test fails before proceeding
-- [ ] T015 [US1] Implement `backend/jobforce/cli/scout_fetch.py` — async entrypoint using `async_playwright`, navigates to `--url`, waits for `networkidle`, enforces 30-second hard timeout (exit code 1 + stderr message on timeout), grabs `document.documentElement.outerHTML`, calls `parse_html()`, prints JSON to stdout
-- [ ] T016 [US1] Run `backend/tests/unit/test_scout_fetch.py` and confirm timeout test passes; run `ruff` and `mypy` on `backend/jobforce/cli/scout_fetch.py`
-- [ ] T017 [US1] Update `.claude/skills/scout-crawl/SKILL.md` — replace MCP browser navigation steps and LLM field extraction with: (1) run `cd backend && uv run python -m jobforce.cli.scout_fetch --url <URL>`, (2) parse stdout JSON, (3) POST fields directly to `http://localhost:8000/api/ingest`
-- [ ] T018 [US1] Update `specs/006-scout-crawl-parser/quickstart.md` to reflect the new single-command invocation pattern
+- [x] T014 [US1] Write failing unit test for `scout_fetch` CLI timeout behaviour (30-second hard limit) in `backend/tests/unit/test_scout_fetch.py` — confirm test fails before proceeding
+- [x] T015 [US1] Implement `backend/jobforce/cli/scout_fetch.py` — async entrypoint using `async_playwright`, navigates to `--url`, waits for `networkidle`, enforces 30-second hard timeout (exit code 1 + stderr message on timeout), grabs `document.documentElement.outerHTML`, calls `parse_html()`, prints JSON to stdout
+- [x] T016 [US1] Run `backend/tests/unit/test_scout_fetch.py` and confirm timeout test passes; run `ruff` and `mypy` on `backend/jobforce/cli/scout_fetch.py`
+- [x] T017 [US1] Update `.claude/skills/scout-crawl/SKILL.md` — replace MCP browser navigation steps and LLM field extraction with: (1) run `cd backend && uv run python -m jobforce.cli.scout_fetch --url <URL>`, (2) parse stdout JSON, (3) POST fields directly to `http://localhost:8000/api/ingest`
+- [x] T018 [US1] Update `specs/006-scout-crawl-parser/quickstart.md` to reflect the new single-command invocation pattern
 
 **Checkpoint**: `/scout-crawl <URL>` works end-to-end for any public job URL. Fields are deterministic across repeated runs.
 
@@ -71,9 +71,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Write unit tests verifying field-for-field parity between the OpenAI adapter output and the expected values captured from `backend/tests/fixtures/openai_job.html` in `backend/tests/unit/test_parse_service.py` (extend existing file)
-- [ ] T020 [P] [US2] Write unit tests verifying the generic adapter runs and produces non-null `title` and `role_type` for `backend/tests/fixtures/generic_job.html` in `backend/tests/unit/test_parse_service.py`
-- [ ] T021 [US2] Run new parity tests and confirm they pass; verify `SITE_ADAPTERS` registration pattern requires only adding one entry to `parse.py` to add a new adapter
+- [x] T019 [P] [US2] Write unit tests verifying field-for-field parity between the OpenAI adapter output and the expected values captured from `backend/tests/fixtures/openai_job.html` in `backend/tests/unit/test_parse_service.py` (extend existing file)
+- [x] T020 [P] [US2] Write unit tests verifying the generic adapter runs and produces non-null `title` and `role_type` for `backend/tests/fixtures/generic_job.html` in `backend/tests/unit/test_parse_service.py`
+- [x] T021 [US2] Run new parity tests and confirm they pass; verify `SITE_ADAPTERS` registration pattern requires only adding one entry to `parse.py` to add a new adapter
 
 **Checkpoint**: Adapter parity verified by tests. Single-file adapter addition confirmed.
 
@@ -83,10 +83,10 @@
 
 **Purpose**: Quality gates, documentation, and cleanup across all stories.
 
-- [ ] T022 [P] Run full quality gate suite in `backend/`: `uv run pytest`, `ruff check .`, `mypy jobforce` — fix any failures
-- [ ] T023 [P] Verify `make check` passes from repo root (backend + frontend gates)
-- [ ] T024 Remove any remaining MCP Playwright step references from `.claude/skills/scout-crawl/SKILL.md` notes section
-- [ ] T025 [P] Update `specs/006-scout-crawl-parser/quickstart.md` with the `playwright install chromium` setup step and fixture locations for new adapter authors
+- [x] T022 [P] Run full quality gate suite in `backend/`: `uv run pytest`, `ruff check .`, `mypy jobforce` — fix any failures
+- [x] T023 [P] Verify `make check` passes from repo root (backend + frontend gates)
+- [x] T024 Remove any remaining MCP Playwright step references from `.claude/skills/scout-crawl/SKILL.md` notes section
+- [x] T025 [P] Update `specs/006-scout-crawl-parser/quickstart.md` with the `playwright install chromium` setup step and fixture locations for new adapter authors
 
 ---
 

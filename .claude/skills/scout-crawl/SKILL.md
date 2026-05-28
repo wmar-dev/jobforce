@@ -4,9 +4,9 @@ description: Capture a job listing from a URL using Playwright MCP and ingest it
 argument-hint: "<URL>"
 user-invocable: true
 ---
-# Scout Crawl — Playwright MCP Skill
+# Scout Crawl
 
-Capture a job listing from a URL using Playwright MCP and ingest it into Jobforce.
+Capture a job listing from a URL and ingest it into Jobforce using a deterministic Python parser.
 
 ## Usage
 
@@ -16,52 +16,43 @@ Capture a job listing from a URL using Playwright MCP and ingest it into Jobforc
 
 ## Steps
 
-1. Navigate to the provided URL using Playwright MCP:
+1. Run the scout fetch tool:
+   ```bash
+   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<URL>"
    ```
-   mcp__playwright__navigate({ url: "<URL>" })
-   ```
+   This fetches the page headlessly and parses it using site-specific adapters.
 
-2. Check if login is required. If the page shows a login form or redirects to auth:
-   - Print: "Please log in to [site] in the browser window, then press Enter to continue."
-   - Wait for user confirmation before proceeding.
+2. If the command fails with a login-related error, stop and tell the user:
+   "This page requires authentication. Please log in manually and re-run once the page is accessible without login."
 
-3. Extract structured job data from the page:
-   ```
-   mcp__playwright__get_text({ selector: "body" })
-   ```
-   Also capture the page HTML:
-   ```
-   mcp__playwright__evaluate({ expression: "document.documentElement.outerHTML" })
-   ```
+3. Parse the JSON printed to stdout. It contains:
+   - `source_url`
+   - `title`
+   - `company_name`
+   - `location`
+   - `role_type`
+   - `description`
+   - `compensation` (optional)
 
-4. Parse the extracted text to identify:
-   - `title`: Job title (typically in `<h1>`)
-   - `company_name`: Employer name
-   - `location`: Job location (or "Remote")
-   - `role_type`: "full-time" | "part-time" | "contract" | "internship" | null
-   - `description`: Full job description text
-
-5. POST to the Jobforce ingest API:
-   ```json
-   POST http://localhost:8000/api/ingest
-   {
-     "source_url": "<URL>",
-     "html": "<extracted HTML>",
-     "title": "<extracted title>",
-     "company_name": "<extracted company>",
-     "location": "<extracted location>",
-     "role_type": "<extracted role type>",
-     "description": "<extracted description>"
-   }
+4. POST to the Jobforce ingest API:
+   ```bash
+   curl -s -X POST http://localhost:8000/api/ingest \
+     -H "Content-Type: application/json" \
+     -d '<json from step 3 minus compensation field>'
    ```
+   The ingest API accepts: `source_url`, `html` (pass empty string `""`), `title`, `company_name`, `location`, `role_type`, `description`.
 
-6. Report result:
+   Build the payload from the parsed JSON, excluding `compensation` (not in ingest schema).
+
+5. Report result:
    - **201**: "✅ Captured: [title] at [company] — Job #[id]"
    - **409**: "Already saved — this listing is in your board (Job #[id])"
    - **Error**: "❌ Ingest failed: [error detail]"
 
 ## Notes
 
-- Backend must be running: `cd backend && make dev`
-- Playwright MCP must be configured: `claude mcp add playwright npx @playwright/mcp@latest`
-- For auth-required sites, always pause for manual login rather than attempting automated bypass
+- Backend must be running: `make dev`
+- `playwright` and Chromium must be installed: `cd backend && uv sync && uv run playwright install chromium`
+- The parser uses site-specific adapters (starting with OpenAI). For unsupported sites the generic adapter runs.
+- Login-gated pages are not supported; the tool will time out or return incomplete data.
+- To add a new site adapter, edit `backend/jobforce/services/parse.py` — see `quickstart.md` in the feature spec.
