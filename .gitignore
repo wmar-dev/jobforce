@@ -16,7 +16,7 @@ htmlcov/
 
 # Tool directories
 .claude/
-.specify/
+.specify/scripts/
 
 # macOS
 .DS_Store
