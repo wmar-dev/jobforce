@@ -72,10 +72,40 @@ const openaiAdapter = {
   },
 };
 
+const ashbyAdapter = {
+  // Ashby pages have no <main> and no og:site_name; title tag is "<Role> @ <Company>"
+  company_name: (doc) => {
+    const m = doc.title?.match(/@\s*(.+)$/);
+    return m ? m[1].trim() : null;
+  },
+  title: (doc) => text(doc.querySelector("h1")) || null,
+  location: (doc) => {
+    // Ashby renders labeled h2 + sibling p pairs
+    for (const h2 of doc.querySelectorAll("h2")) {
+      if ((h2.innerText ?? h2.textContent ?? "").trim() === "Location") {
+        const p = h2.nextElementSibling;
+        if (p && p.tagName === "P") return text(p) || null;
+      }
+    }
+    return null;
+  },
+  compensation: (doc) => {
+    for (const h2 of doc.querySelectorAll("h2")) {
+      if ((h2.innerText ?? h2.textContent ?? "").trim() === "Compensation") {
+        const list = h2.nextElementSibling;
+        if (list) return text(list.querySelector("li") || list) || null;
+      }
+    }
+    return null;
+  },
+  description: (doc) => text(doc.querySelector('[role="tabpanel"]')) || null,
+};
+
 /* ─── Registry: hostname → adapter ───────────────────────────────────────── */
 
 const ADAPTERS = {
   "openai.com": openaiAdapter,
+  "jobs.ashbyhq.com": ashbyAdapter,
   // "greenhouse.io": greenhouseAdapter,  // add future adapters here
   // "lever.co": leverAdapter,
   // "linkedin.com": linkedinAdapter,
@@ -141,5 +171,5 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
 /* ─── Exports for Jest tests (no-op in browser context) ──────────────────── */
 
 if (typeof module !== "undefined") {
-  module.exports = { extractJobData, genericAdapter, openaiAdapter, slugToLocation, runAdapter, merge };
+  module.exports = { extractJobData, genericAdapter, openaiAdapter, ashbyAdapter, slugToLocation, runAdapter, merge };
 }
