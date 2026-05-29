@@ -119,7 +119,10 @@ async def get_jobs(
     total_result = await session.execute(count_stmt)
     total = total_result.scalar_one()
 
-    stmt = stmt.order_by(JobListing.created_at.desc()).offset(offset).limit(limit)
+    stmt = stmt.order_by(
+        JobListing.fit_score.desc().nulls_last(),
+        JobListing.created_at.desc(),
+    ).offset(offset).limit(limit)
     result = await session.execute(stmt)
     jobs = result.scalars().all()
 
