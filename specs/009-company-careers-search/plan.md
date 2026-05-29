@@ -59,10 +59,18 @@ specs/009-company-careers-search/
 ```text
 backend/
 └── jobforce/
-    └── config.py              # CompanyConfig: add optional careers_url field
+    ├── config.py              # CompanyConfig: add optional careers_url field
+    ├── db/
+    │   ├── models.py          # Company: add careers_url column (nullable Text)
+    │   └── seed.py            # _seed_companies: populate careers_url from config
+    └── routers/
+        └── companies.py       # Add GET /api/companies list + PATCH /api/companies/{id}
 
 backend/tests/unit/
 └── test_config.py             # Add test: CompanyConfig accepts careers_url
+
+backend/tests/integration/
+└── test_companies_service.py  # Add tests: GET list, PATCH careers_url write-back
 
 .claude/skills/
 └── scout-companies/
@@ -112,11 +120,11 @@ No constitution violations. Change is additive only.
 
 ### Decision: `careers_url` as optional field on `CompanyConfig`
 
-**Decision**: Add `careers_url: str = ""` to the existing `CompanyConfig` Pydantic model in `backend/jobforce/config.py`. Empty string means "auto-discover".
+**Decision**: Add `careers_url: str = ""` to `CompanyConfig` in `config.py` and a nullable `careers_url TEXT` column to the `companies` DB table. The seed populates it from config; the skill writes back a discovered URL via `PATCH /api/companies/{id}` so future runs skip re-probing.
 
-**Rationale**: Minimal change to existing model. Consistent with how `domain` is handled (also defaults to empty string). No migration needed — SQLite `companies` table is not affected; this is config-only.
+**Rationale**: Persisting in the DB means the skill is fast on repeat runs. Config remains the authoritative seed — the DB value is a cache that gets written once on first discovery.
 
-**Alternatives considered**: A separate `ats_url` field was considered but `careers_url` is more general and covers all cases (ATS-hosted or custom).
+**Alternatives considered**: Config-only (no DB column) — rejected because it forces re-probing every run. A separate `ats_url` field — rejected; `careers_url` is general enough.
 
 ---
 

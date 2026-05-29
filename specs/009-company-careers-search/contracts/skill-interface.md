@@ -2,7 +2,7 @@
 
 ## Invocation
 
-```
+```text
 /scout-companies [company_name]
 ```
 
@@ -25,12 +25,13 @@
    c. If neither → skip with warning
    d. Navigate to careers URL via Playwright MCP
    e. Extract individual job listing URLs from the page
-   f. For each URL: run `scout_fetch` CLI → POST to `/api/ingest`
+   f. If URL was auto-discovered: write back via `PATCH /api/companies/{id}` with `careers_url`
+   g. For each URL: run `scout_fetch` CLI → POST to `/api/ingest`
 4. **Report** per-company summary and totals
 
 ## Output Format
 
-```
+```text
 🏢 Acme Corp (acme.com/careers)
   ✅ 3 ingested  ⏭ 1 skipped (duplicate)
 
