@@ -163,14 +163,7 @@ const greenhouseAdapter = {
     return m ? m[1].trim() : null;
   },
   title: (doc) => text(doc.querySelector("main h1")) || null,
-  // Location lives in a div immediately following the h1 wrapper
-  location: (doc) => {
-    const h1 = doc.querySelector("main h1");
-    if (!h1) return null;
-    const wrapper = h1.closest("div") || h1.parentElement;
-    const locEl = wrapper?.nextElementSibling;
-    return locEl ? text(locEl) || null : null;
-  },
+  location: (doc) => text(doc.querySelector(".job__location")) || null,
   // Collect all pay transparency dollar amounts and join them
   compensation: (doc) => {
     const amounts = [];

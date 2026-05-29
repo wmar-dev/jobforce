@@ -138,6 +138,10 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": _greenhouse_company,
         "location": _greenhouse_location,
     },
+    "job-boards.greenhouse.io": {
+        "company_name": _greenhouse_company,
+        "location": _greenhouse_location,
+    },
 }
 
 # ---------------------------------------------------------------------------
