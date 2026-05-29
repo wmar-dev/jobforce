@@ -110,17 +110,25 @@ If the page appears login-gated (redirects to a login form, shows sign-in wall),
   ⚠ Skipped: careers page requires authentication
 ```
 
-### 4d: Extract individual job listing URLs
+### 4d: Extract individual job listing URLs and pre-filter by anchor text
 
-From the Playwright snapshot, identify anchor tag `href` values that look like individual job posting links. Criteria:
+From the Playwright snapshot, extract `(anchor_text, href)` pairs where the href looks like an individual job posting link. Criteria for the href:
 - Contains path segments like `/jobs/`, `/roles/`, `/positions/`, `/opening/`, `/job/`, `/careers/`
 - Contains a numeric ID or a job-title-like slug (words separated by hyphens)
 - **Exclude** navigation links, filter links, category pages, "apply" links that just open forms, mailto/tel links, and external social media links
 
-Deduplicate the list. If the list is empty, report:
+Deduplicate by href. If the list is empty, report:
 ```
 🏢 <name> (<careers_url>) — no job listings found
 ```
+
+**Pre-filter by anchor text** (skip this step if `target_roles` is empty): For each `(anchor_text, href)` pair, apply the same relevance check used in 4f against the anchor text before calling `scout_fetch`. If the anchor text does not plausibly match any target role, log and skip immediately — do not call `scout_fetch` at all:
+```
+  ⏭ skipped (off-target): <anchor_text> — <url>
+```
+Count these in the off-target total. Only pass URLs whose anchor text passes the filter on to step 4f.
+
+> **Note**: anchor text on most ATS platforms (Greenhouse, Lever, Workday, Ashby) is the verbatim job title. If a page uses generic link labels like "View role" or "Apply", the anchor text will not match and the URL will be skipped — in that case, disable pre-filtering for that company and fall back to fetching all URLs.
 
 ### 4e: Write back the discovered careers_url (only if auto-discovered in 4b)
 
@@ -131,9 +139,9 @@ curl -s -X PATCH http://localhost:8000/api/companies/<id> \
   -d '{"careers_url": "<discovered_url>"}'
 ```
 
-### 4f: Ingest each job listing URL
+### 4f: Ingest each pre-filtered job listing URL
 
-For each job URL:
+For each URL that passed the anchor-text filter in 4d:
 
 1. Run scout_fetch:
    ```bash
@@ -142,7 +150,7 @@ For each job URL:
 
 2. If scout_fetch fails or returns non-JSON output, log: `  ❌ fetch failed: <url>` and continue.
 
-3. Parse the JSON output. **Filter by title relevance**: compare the extracted `title` against the user's `target_roles` from config (loaded in Step 2 below). A title is considered a match if it shares significant keywords with any target role — treat this as a semantic check, not an exact string match. Keywords to consider: seniority level (Senior, Staff, Principal, Lead), role type (Engineer, Manager, Architect, Scientist), and domain (Backend, Frontend, ML, Data, Platform). If the title does not plausibly match any target role, log and skip:
+3. Parse the JSON output. **Confirm title relevance**: re-apply the same relevance check against the extracted `title` (the fetched title may differ slightly from the anchor text). If it no longer matches, log and skip:
    ```
      ⏭ skipped (off-target): <title> — <url>
    ```
@@ -205,8 +213,10 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | Login-gated page | Skip company, report "requires login" |
 | No job links found on page | Report, continue to next company |
 | scout_fetch fails for a URL | Log error for that URL, continue |
-| Job title doesn't match target_roles | Log as off-target, skip ingest, continue |
-| No target_roles in config | Warn once, ingest all titles |
+| Anchor text doesn't match target_roles | Log as off-target, skip scout_fetch entirely, continue |
+| Fetched title doesn't match target_roles | Log as off-target, skip ingest, continue |
+| All anchor texts are generic (e.g. "View role") | Disable pre-filtering, fall back to fetching all URLs |
+| No target_roles in config | Warn once, skip pre-filtering, ingest all titles |
 
 ## Notes
 
