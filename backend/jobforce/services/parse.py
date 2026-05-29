@@ -107,9 +107,12 @@ GENERIC_ADAPTER: dict[str, Any] = {
 
 
 def _openai_location(doc: BeautifulSoup, url: str) -> str | None:
-    el = doc.select_one("main h2 + p, main h2 ~ p")
-    if el and (t := _text(el)):
-        return t
+    # First h2 in main is the job title; its next sibling p is the dept/location line
+    title_h2 = doc.select_one("main h2")
+    if title_h2:
+        el = title_h2.find_next_sibling("p")
+        if el and (t := _text(el)):
+            return t
     return slug_to_location(urlparse(url).path)
 
 
