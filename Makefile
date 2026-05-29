@@ -1,4 +1,4 @@
-.PHONY: dev stop check seed install
+.PHONY: dev stop check test seed install
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
@@ -15,6 +15,12 @@ check:
 	@cd backend && $(MAKE) check
 	@echo "=== Frontend quality gates ==="
 	@cd frontend && npm run lint && npm test
+
+test:
+	@echo "=== Backend tests ==="
+	@cd backend && $(MAKE) test
+	@echo "=== Frontend tests ==="
+	@cd frontend && npm test
 
 seed:
 	@echo "Seeding database from config.yaml..."
