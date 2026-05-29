@@ -134,6 +134,68 @@ def _greenhouse_location(doc: BeautifulSoup, url: str) -> str | None:
     return _text(el)
 
 
+# ---------------------------------------------------------------------------
+# Workday site adapter — myworkdayjobs.com
+# URL: <company>.wd1.myworkdayjobs.com/en-US/<tenant>/job/<location>/<title>_<id>
+# ---------------------------------------------------------------------------
+
+
+def _workday_company(doc: BeautifulSoup, url: str) -> str | None:
+    # Extract company from subdomain: acme.wd1.myworkdayjobs.com → Acme
+    hostname = urlparse(url).hostname or ""
+    subdomain = hostname.split(".")[0]
+    if subdomain and subdomain not in ("www",):
+        return " ".join(w.capitalize() for w in subdomain.replace("-", " ").split())
+    return None
+
+
+def _workday_title(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("[data-automation-id='jobPostingTitle']")
+    return _text(el)
+
+
+def _workday_location(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("[data-automation-id='location']")
+    return _text(el)
+
+
+def _workday_description(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("[data-automation-id='job-posting-details']")
+    return _text(el)
+
+
+# ---------------------------------------------------------------------------
+# Ashby site adapter — jobs.ashbyhq.com
+# URL: jobs.ashbyhq.com/<company>/<job-id>
+# ---------------------------------------------------------------------------
+
+
+def _ashby_company(doc: BeautifulSoup, url: str) -> str | None:
+    # Extract company from URL path: jobs.ashbyhq.com/figma/... → Figma
+    parts = urlparse(url).path.strip("/").split("/")
+    if parts and parts[0]:
+        return " ".join(w.capitalize() for w in parts[0].replace("-", " ").split())
+    return None
+
+
+def _ashby_title(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one(".ashby-job-posting-brief-description h1")
+    return _text(el)
+
+
+def _ashby_location(doc: BeautifulSoup, url: str) -> str | None:
+    # First brief-description item contains location
+    items = doc.select(".ashby-job-posting-brief-description-item")
+    if items:
+        return _text(items[0])
+    return None
+
+
+def _ashby_description(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one(".ashby-job-posting-description")
+    return _text(el)
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "openai.com": {
         "company_name": lambda doc, url: "OpenAI",
@@ -151,6 +213,18 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "job-boards.greenhouse.io": {
         "company_name": _greenhouse_company,
         "location": _greenhouse_location,
+    },
+    "myworkdayjobs.com": {
+        "company_name": _workday_company,
+        "title": _workday_title,
+        "location": _workday_location,
+        "description": _workday_description,
+    },
+    "jobs.ashbyhq.com": {
+        "company_name": _ashby_company,
+        "title": _ashby_title,
+        "location": _ashby_location,
+        "description": _ashby_description,
     },
 }
 
@@ -178,11 +252,21 @@ def merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _match_adapter(hostname: str) -> dict[str, Any]:
+    if hostname in SITE_ADAPTERS:
+        return SITE_ADAPTERS[hostname]
+    # suffix match for subdomain-based ATSes (e.g. acme.wd1.myworkdayjobs.com)
+    for key, adapter in SITE_ADAPTERS.items():
+        if hostname.endswith("." + key):
+            return adapter
+    return {}
+
+
 def parse_html(html: str, url: str) -> dict[str, Any]:
     doc = BeautifulSoup(html, "lxml")
     hostname = urlparse(url).hostname or ""
     hostname = hostname.removeprefix("www.")
-    adapter = SITE_ADAPTERS.get(hostname, {})
+    adapter = _match_adapter(hostname)
     base = run_adapter(GENERIC_ADAPTER, doc, url)
     override = run_adapter(adapter, doc, url) if adapter else {}
     return {"source_url": url, **merge(base, override)}

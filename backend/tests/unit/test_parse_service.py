@@ -234,3 +234,213 @@ def test_single_file_adapter_registration() -> None:
     SITE_ADAPTERS["test-site.com"] = {"company_name": lambda doc, url: "TestCo"}
     assert "test-site.com" in SITE_ADAPTERS
     del SITE_ADAPTERS["test-site.com"]  # clean up
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Greenhouse adapter (boards.greenhouse.io)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_greenhouse_company_from_url_path() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://boards.greenhouse.io/stripe/jobs/12345")
+    assert result["company_name"] == "Stripe"
+
+
+def test_parse_html_greenhouse_location_from_dom() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://boards.greenhouse.io/stripe/jobs/12345")
+    assert result["location"] == "San Francisco, CA"
+
+
+def test_parse_html_greenhouse_title_from_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://boards.greenhouse.io/stripe/jobs/12345")
+    assert result["title"] == "Staff Engineer"
+
+
+def test_parse_html_greenhouse_job_boards_subdomain() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://job-boards.greenhouse.io/stripe/jobs/12345")
+    assert result["company_name"] == "Stripe"
+
+
+def test_parse_html_greenhouse_detects_full_time() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://boards.greenhouse.io/stripe/jobs/12345")
+    assert result["role_type"] == "full-time"
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Workday adapter (*.myworkdayjobs.com)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_workday_title_from_automation_id() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job.html")
+    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    assert result["title"] == "Senior Software Engineer"
+
+
+def test_parse_html_workday_location_from_automation_id() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job.html")
+    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    assert result["location"] == "Austin, TX"
+
+
+def test_parse_html_workday_company_from_subdomain() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job.html")
+    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    assert result["company_name"] == "Acme"
+
+
+def test_parse_html_workday_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job.html")
+    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    assert result["description"] is not None
+    assert "platform" in result["description"].lower()
+
+
+def test_parse_html_workday_suffix_match_applies_adapter() -> None:
+    from jobforce.services.parse import SITE_ADAPTERS, _match_adapter
+
+    assert "myworkdayjobs.com" in SITE_ADAPTERS
+    assert _match_adapter("acme.wd1.myworkdayjobs.com") is SITE_ADAPTERS["myworkdayjobs.com"]
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Ashby adapter (jobs.ashbyhq.com)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_ashby_title_from_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/figma/abc-123")
+    assert result["title"] == "Principal Engineer"
+
+
+def test_parse_html_ashby_company_from_url_path() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/figma/abc-123")
+    assert result["company_name"] == "Figma"
+
+
+def test_parse_html_ashby_location_from_brief_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/figma/abc-123")
+    assert result["location"] == "New York, NY"
+
+
+def test_parse_html_ashby_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/figma/abc-123")
+    assert result["description"] is not None
+    assert "design" in result["description"].lower()
+
+
+def test_parse_html_ashby_hyphenated_company_capitalized() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/linear-app/xyz-456")
+    assert result["company_name"] == "Linear App"
+
+
+# ---------------------------------------------------------------------------
+# _match_adapter — suffix matching
+# ---------------------------------------------------------------------------
+
+
+def test_match_adapter_exact_match() -> None:
+    from jobforce.services.parse import SITE_ADAPTERS, _match_adapter
+
+    assert _match_adapter("openai.com") is SITE_ADAPTERS["openai.com"]
+
+
+def test_match_adapter_no_match_returns_empty() -> None:
+    from jobforce.services.parse import _match_adapter
+
+    assert _match_adapter("unknown-ats.io") == {}
+
+
+def test_match_adapter_www_prefix_stripped_by_caller() -> None:
+    from jobforce.services.parse import SITE_ADAPTERS, _match_adapter
+
+    # parse_html strips www. before calling _match_adapter
+    assert _match_adapter("boards.greenhouse.io") is SITE_ADAPTERS["boards.greenhouse.io"]
+
+
+# ---------------------------------------------------------------------------
+# CLI — _validate_url
+# ---------------------------------------------------------------------------
+
+
+def test_validate_url_accepts_https() -> None:
+    from jobforce.cli.scout_fetch import _validate_url
+
+    assert _validate_url("https://jobs.example.com/posting/123") == "https://jobs.example.com/posting/123"
+
+
+def test_validate_url_accepts_http() -> None:
+    from jobforce.cli.scout_fetch import _validate_url
+
+    assert _validate_url("http://jobs.example.com/posting/123") == "http://jobs.example.com/posting/123"
+
+
+def test_validate_url_rejects_no_scheme() -> None:
+    import argparse
+
+    import pytest
+
+    from jobforce.cli.scout_fetch import _validate_url
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _validate_url("jobs.example.com/posting/123")
+
+
+def test_validate_url_rejects_ftp_scheme() -> None:
+    import argparse
+
+    import pytest
+
+    from jobforce.cli.scout_fetch import _validate_url
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _validate_url("ftp://jobs.example.com/posting/123")
+
+
+def test_validate_url_rejects_empty_netloc() -> None:
+    import argparse
+
+    import pytest
+
+    from jobforce.cli.scout_fetch import _validate_url
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _validate_url("https://")
