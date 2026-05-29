@@ -132,10 +132,10 @@ Two gitignored files are required at runtime:
 
 ## Current Feature Context
 
-The active feature spec is at [specs/007-oracle-forge-resume/plan.md](specs/007-oracle-forge-resume/plan.md).
+The active feature spec is at [specs/009-company-careers-search/plan.md](specs/009-company-careers-search/plan.md).
 
-This feature replaced `UserProfile` with the base `Resume` as the canonical candidate profile for Oracle and Forge. Key changes:
+This feature adds a `/scout-companies` skill that reads `search.target_companies` from `config.yaml`, navigates each company's careers page via Playwright MCP, extracts job listing URLs, and hands each URL to the existing `scout_fetch` → `POST /api/ingest` pipeline. Key changes:
 
-- `backend/jobforce/routers/profile.py` deleted
-- `services/forge.py` no longer imports Anthropic — tailoring moved to the `/forge-tailor` skill
-- `services/oracle.py`'s `_build_profile_text()` now reads from `Resume(is_base=1)`
+- `backend/jobforce/config.py` — `CompanyConfig` gains optional `careers_url` field
+- `.claude/skills/scout-companies/SKILL.md` — new skill definition
+- `config/config.example.yaml` — `careers_url` added to example
