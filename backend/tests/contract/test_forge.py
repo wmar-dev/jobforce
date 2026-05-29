@@ -30,6 +30,11 @@ _BASE_RESUME_DATA = {
     "skills": ["Python", "FastAPI", "SQL"],
 }
 
+_TAILORED_RESUME_DATA = {
+    **_BASE_RESUME_DATA,
+    "skills": ["Python", "FastAPI", "SQL", "REST APIs"],
+}
+
 
 async def _put_base_resume(client: AsyncClient) -> dict:
     resp = await client.put("/api/resume/base", json=_BASE_RESUME_DATA)
@@ -53,10 +58,19 @@ async def _ingest_job(client: AsyncClient) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_get_base_resume_returns_empty_or_existing(test_client: AsyncClient) -> None:
+async def test_get_base_resume_returns_404_when_empty(test_client: AsyncClient) -> None:
     resp = await test_client.get("/api/resume/base")
-    # Before any resume is uploaded, should return 404 or an empty resume
-    assert resp.status_code in (200, 404)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_base_resume_returns_200_after_upload(test_client: AsyncClient) -> None:
+    await _put_base_resume(test_client)
+    resp = await test_client.get("/api/resume/base")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["is_base"] is True
+    assert data["structured_data"]["personal_info"]["name"] == "Jane Doe"
 
 
 @pytest.mark.asyncio
@@ -70,42 +84,70 @@ async def test_put_base_resume_saves_structured_data(test_client: AsyncClient) -
 
 
 @pytest.mark.asyncio
-async def test_tailor_resume_returns_tailored_variant_with_diff(
+async def test_tailor_resume_accepts_structured_data_from_skill(
     test_client: AsyncClient,
 ) -> None:
-    base = await _put_base_resume(test_client)
+    """Skill performs AI tailoring and POSTs the result; backend stores and diffs."""
+    await _put_base_resume(test_client)
     job = await _ingest_job(test_client)
 
-    mock_tailored = dict(_BASE_RESUME_DATA)
-    mock_tailored["skills"] = ["Python", "FastAPI", "SQL", "REST APIs"]
-    mock_diff = [
-        {
-            "field": "skills",
-            "original": str(_BASE_RESUME_DATA["skills"]),
-            "tailored": str(mock_tailored["skills"]),
-        }
-    ]
-
-    with patch(
-        "jobforce.routers.forge.tailor_resume",
-        new_callable=AsyncMock,
-        return_value={"structured_data": mock_tailored, "diff": mock_diff},
-    ):
-        resp = await test_client.post(
-            "/api/resume/tailor",
-            json={"job_id": job["id"], "base_resume_id": base["id"]},
-        )
+    resp = await test_client.post(
+        "/api/resume/tailor",
+        json={"job_id": job["id"], "structured_data": _TAILORED_RESUME_DATA},
+    )
 
     assert resp.status_code == 200
     data = resp.json()
     assert "id" in data
+    assert data["is_base"] is False
+    assert data["job_listing_id"] == job["id"]
     assert "diff" in data
     assert isinstance(data["diff"], list)
     assert len(data["diff"]) >= 1
-    diff_item = data["diff"][0]
-    assert "field" in diff_item
-    assert "original" in diff_item
-    assert "tailored" in diff_item
+    skills_diff = next((d for d in data["diff"] if d["field"] == "skills"), None)
+    assert skills_diff is not None
+    assert "original" in skills_diff
+    assert "tailored" in skills_diff
+
+
+@pytest.mark.asyncio
+async def test_tailor_resume_no_diff_when_data_unchanged(test_client: AsyncClient) -> None:
+    """If skill sends identical data, diff is empty."""
+    await _put_base_resume(test_client)
+    job = await _ingest_job(test_client)
+
+    resp = await test_client.post(
+        "/api/resume/tailor",
+        json={"job_id": job["id"], "structured_data": _BASE_RESUME_DATA},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["diff"] == []
+
+
+@pytest.mark.asyncio
+async def test_tailor_resume_returns_404_when_no_base_resume(
+    test_client: AsyncClient,
+) -> None:
+    """No base resume → 404 with helpful message."""
+    job = await _ingest_job(test_client)
+    resp = await test_client.post(
+        "/api/resume/tailor",
+        json={"job_id": job["id"], "structured_data": _TAILORED_RESUME_DATA},
+    )
+    assert resp.status_code == 404
+    assert "base resume" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_tailor_with_missing_job_returns_404(test_client: AsyncClient) -> None:
+    await _put_base_resume(test_client)
+    resp = await test_client.post(
+        "/api/resume/tailor",
+        json={"job_id": 99999, "structured_data": _TAILORED_RESUME_DATA},
+    )
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -149,18 +191,7 @@ async def test_export_resume_not_found_returns_404(test_client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_tailor_with_missing_job_returns_404(test_client: AsyncClient) -> None:
-    base = await _put_base_resume(test_client)
-    resp = await test_client.post(
-        "/api/resume/tailor",
-        json={"job_id": 99999, "base_resume_id": base["id"]},
-    )
-    assert resp.status_code == 404
-
-
-@pytest.mark.asyncio
 async def test_export_pdf_performance_within_30s(test_client: AsyncClient) -> None:
-    """SC-008: PDF export must complete within 30 seconds."""
     import shutil
 
     import pytest as _pytest

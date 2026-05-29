@@ -17,11 +17,11 @@
 
 **Purpose**: Confirm the already-implemented changes are correct and the app starts cleanly.
 
-- [ ] T001 Verify backend starts without errors: `cd backend && uv run uvicorn jobforce.main:app` in backend/
-- [ ] T002 [P] Confirm `GET /api/profile` returns 404 (endpoint removed) via curl or httpie
-- [ ] T003 [P] Confirm `GET /api/resume/base` returns 200 with structured resume data
-- [ ] T004 [P] Confirm `grep -r "import anthropic" backend/` returns zero results in backend/jobforce/
-- [ ] T005 [P] Confirm `grep -r "UserProfile" backend/` returns zero results in backend/jobforce/
+- [x] T001 Verify backend starts without errors: `cd backend && uv run uvicorn jobforce.main:app` in backend/
+- [x] T002 [P] Confirm `GET /api/profile` returns 404 (endpoint removed) via curl or httpie
+- [x] T003 [P] Confirm `GET /api/resume/base` returns 200 with structured resume data
+- [x] T004 [P] Confirm `grep -r "import anthropic" backend/` returns zero results in backend/jobforce/
+- [x] T005 [P] Confirm `grep -r "UserProfile" backend/` returns zero results in backend/jobforce/
 
 **Checkpoint**: Backend boots, removed endpoints are gone, no SDK imports remain.
 
@@ -37,14 +37,14 @@
 
 > **Write these tests FIRST and confirm they FAIL before skipping to implementation verification**
 
-- [ ] T006 [P] [US1] Write unit test for `_build_profile_text(None)` returns "No resume configured." in `backend/tests/services/test_oracle.py`
-- [ ] T007 [P] [US1] Write unit test for `_build_profile_text(resume)` returns JSON dump of `structured_data` in `backend/tests/services/test_oracle.py`
-- [ ] T008 [US1] Write integration test: `GET /api/resume/base` → structured_data flows into oracle prompt in `backend/tests/integration/test_oracle_resume.py`
+- [x] T006 [P] [US1] Write unit test for `_build_profile_text(None)` returns "No resume configured." in `backend/tests/services/test_oracle.py`
+- [x] T007 [P] [US1] Write unit test for `_build_profile_text(resume)` returns JSON dump of `structured_data` in `backend/tests/services/test_oracle.py`
+- [x] T008 [US1] Write integration test: `GET /api/resume/base` → structured_data flows into oracle prompt in `backend/tests/integration/test_oracle_resume.py`
 
 ### Implementation verification for User Story 1
 
-- [ ] T009 [US1] Run test suite and confirm T006–T008 pass: `cd backend && uv run pytest tests/services/test_oracle.py tests/integration/test_oracle_resume.py -v`
-- [ ] T010 [US1] Manually run `/oracle-rank` skill against at least one active job and confirm rationale references resume content
+- [x] T009 [US1] Run test suite and confirm T006–T008 pass: `cd backend && uv run pytest tests/services/test_oracle.py tests/integration/test_oracle_resume.py -v`
+- [x] T010 [US1] Manually run `/oracle-rank` skill against at least one active job and confirm rationale references resume content
 
 **Checkpoint**: Oracle tests pass; `/oracle-rank` produces resume-informed rationales.
 
@@ -58,14 +58,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] Write unit test for `POST /resume/tailor` with valid `{job_id, structured_data}` → 200 with diff in `backend/tests/routers/test_forge.py`
-- [ ] T012 [P] [US2] Write unit test for `POST /resume/tailor` with no base resume → 404 with helpful message in `backend/tests/routers/test_forge.py`
-- [ ] T013 [US2] Write unit test for `compute_diff` returns empty list when original equals tailored in `backend/tests/services/test_forge.py`
+- [x] T011 [P] [US2] Write unit test for `POST /resume/tailor` with valid `{job_id, structured_data}` → 200 with diff in `backend/tests/routers/test_forge.py`
+- [x] T012 [P] [US2] Write unit test for `POST /resume/tailor` with no base resume → 404 with helpful message in `backend/tests/routers/test_forge.py`
+- [x] T013 [US2] Write unit test for `compute_diff` returns empty list when original equals tailored in `backend/tests/services/test_forge.py`
 
 ### Implementation verification for User Story 2
 
-- [ ] T014 [US2] Run test suite and confirm T011–T013 pass: `cd backend && uv run pytest tests/routers/test_forge.py tests/services/test_forge.py -v`
-- [ ] T015 [US2] Manually run `/forge-tailor <job_id>` and confirm it completes without supplying a resume ID
+- [x] T014 [US2] Run test suite and confirm T011–T013 pass: `cd backend && uv run pytest tests/routers/test_forge.py tests/services/test_forge.py -v`
+- [x] T015 [US2] Manually run `/forge-tailor <job_id>` and confirm it completes without supplying a resume ID
 
 **Checkpoint**: Forge tests pass; `/forge-tailor` works end-to-end without a resume ID argument.
 
@@ -79,12 +79,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T016 [P] [US3] Write integration test: update base resume via `PUT /api/resume/base`, then confirm oracle prompt contains updated content in `backend/tests/integration/test_resume_consistency.py`
-- [ ] T017 [US3] Write integration test: update base resume, run `POST /resume/tailor`, confirm diff reflects updated base in `backend/tests/integration/test_resume_consistency.py`
+- [x] T016 [P] [US3] Write integration test: update base resume via `PUT /api/resume/base`, then confirm oracle prompt contains updated content in `backend/tests/integration/test_resume_consistency.py`
+- [x] T017 [US3] Write integration test: update base resume, run `POST /resume/tailor`, confirm diff reflects updated base in `backend/tests/integration/test_resume_consistency.py`
 
 ### Implementation verification for User Story 3
 
-- [ ] T018 [US3] Run test suite and confirm T016–T017 pass: `cd backend && uv run pytest tests/integration/test_resume_consistency.py -v`
+- [x] T018 [US3] Run test suite and confirm T016–T017 pass: `cd backend && uv run pytest tests/integration/test_resume_consistency.py -v`
 
 **Checkpoint**: All three user stories independently verified.
 
@@ -94,12 +94,12 @@
 
 **Purpose**: Quality gates, spec cleanup, SDK gate enforcement.
 
-- [ ] T019 [P] Run full linting gate: `cd backend && uv run ruff check jobforce/` — zero warnings
-- [ ] T020 [P] Run type-check gate: `cd backend && uv run mypy jobforce/` — zero errors on public API
-- [ ] T021 [P] Run full test suite: `cd backend && uv run pytest` — 100% pass, no coverage regression
-- [ ] T022 [P] Run AI SDK gate: `grep -r "import anthropic" backend/jobforce/` — must return zero results
-- [ ] T023 Update `backend/jobforce/db/seed.py` docstring if needed to reflect `_seed_base_resume` addition in `backend/jobforce/db/seed.py`
-- [ ] T024 Update spec status from "Draft" to "Implemented" in `specs/007-oracle-forge-resume/spec.md`
+- [x] T019 [P] Run full linting gate: `cd backend && uv run ruff check jobforce/` — zero warnings
+- [x] T020 [P] Run type-check gate: `cd backend && uv run mypy jobforce/` — zero errors on public API
+- [x] T021 [P] Run full test suite: `cd backend && uv run pytest` — 100% pass, no coverage regression
+- [x] T022 [P] Run AI SDK gate: `grep -r "import anthropic" backend/jobforce/` — must return zero results
+- [x] T023 Update `backend/jobforce/db/seed.py` docstring if needed to reflect `_seed_base_resume` addition in `backend/jobforce/db/seed.py`
+- [x] T024 Update spec status from "Draft" to "Implemented" in `specs/007-oracle-forge-resume/spec.md`
 
 ---
 

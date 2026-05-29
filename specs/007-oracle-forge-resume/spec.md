@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-28
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Make oracle and forge be based off of resume.json"
 
