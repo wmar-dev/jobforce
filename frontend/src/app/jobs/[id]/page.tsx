@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useJob } from "@/hooks/useJob";
+import { useJobNote } from "@/hooks/useJobNote";
+import { upsertJobNote, deleteJobNote } from "@/lib/api";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { StatusTransitionModal } from "@/components/jobs/StatusTransitionModal";
 import type { PipelineStatus } from "@/lib/types";
@@ -30,7 +32,37 @@ export default function JobDetailPage({
   const jobId = parseInt(params.id, 10);
   const router = useRouter();
   const { data: job, mutate, error, isLoading } = useJob(jobId);
+  const { data: note, mutate: mutateNote } = useJobNote(jobId);
   const [showModal, setShowModal] = useState(false);
+  const [noteBody, setNoteBody] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+
+  useEffect(() => {
+    setNoteBody(note?.body ?? "");
+  }, [note]);
+
+  async function handleSaveNote() {
+    if (noteSaving) return;
+    setNoteSaving(true);
+    try {
+      await upsertJobNote(jobId, noteBody);
+      await mutateNote();
+    } finally {
+      setNoteSaving(false);
+    }
+  }
+
+  async function handleClearNote() {
+    if (noteSaving) return;
+    setNoteSaving(true);
+    try {
+      await deleteJobNote(jobId);
+      setNoteBody("");
+      await mutateNote();
+    } finally {
+      setNoteSaving(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -182,6 +214,44 @@ export default function JobDetailPage({
           </ol>
         </div>
       )}
+
+      {/* Notes */}
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          Notes
+        </h2>
+        <textarea
+          value={noteBody}
+          onChange={(e) => setNoteBody(e.target.value)}
+          placeholder="Add notes from recruiter meetings or company research..."
+          className="w-full h-36 bg-gray-900 border border-gray-800 rounded-lg p-3 text-sm text-gray-300 placeholder-gray-600 resize-y focus:outline-none focus:border-gray-600 transition-colors"
+        />
+        <div className="flex items-center justify-between mt-2">
+          <div className="text-xs text-gray-600">
+            {note?.updated_at && (
+              <span>Last edited {new Date(note.updated_at).toLocaleString()}</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {note && (
+              <button
+                onClick={handleClearNote}
+                disabled={noteSaving}
+                className="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 rounded transition-colors disabled:opacity-50"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              onClick={handleSaveNote}
+              disabled={noteSaving || noteBody === (note?.body ?? "")}
+              className="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded transition-colors disabled:opacity-50"
+            >
+              {noteSaving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Status transition modal */}
       {showModal && (

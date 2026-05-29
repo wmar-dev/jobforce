@@ -37,6 +37,15 @@ export interface JobListing {
   fit_rationale?: string | null;
   crawled_at?: string | null;
   created_at: string;
+  has_note?: boolean;
+}
+
+export interface JobNote {
+  id: number;
+  job_listing_id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface JobListingDetail extends JobListing {

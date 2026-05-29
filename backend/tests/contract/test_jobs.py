@@ -139,3 +139,95 @@ async def test_get_jobs_pagination_limit_offset(test_client: AsyncClient) -> Non
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["items"]) <= 2
+
+
+# ---------------------------------------------------------------------------
+# Job note endpoints (US1 + US3)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_job_note_returns_404_when_no_note(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note1")
+    job_id = ingest_resp["id"]
+    resp = await test_client.get(f"/api/jobs/{job_id}/note")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_put_job_note_creates_note(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note2")
+    job_id = ingest_resp["id"]
+    resp = await test_client.put(f"/api/jobs/{job_id}/note", json={"body": "First note"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["body"] == "First note"
+    assert data["job_listing_id"] == job_id
+    assert "created_at" in data
+    assert "updated_at" in data
+
+
+@pytest.mark.asyncio
+async def test_put_job_note_updates_existing_note(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note3")
+    job_id = ingest_resp["id"]
+    await test_client.put(f"/api/jobs/{job_id}/note", json={"body": "Original"})
+    resp = await test_client.put(f"/api/jobs/{job_id}/note", json={"body": "Updated"})
+    assert resp.status_code == 200
+    assert resp.json()["body"] == "Updated"
+
+
+@pytest.mark.asyncio
+async def test_get_job_note_returns_existing_note(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note4")
+    job_id = ingest_resp["id"]
+    await test_client.put(f"/api/jobs/{job_id}/note", json={"body": "Persisted"})
+    resp = await test_client.get(f"/api/jobs/{job_id}/note")
+    assert resp.status_code == 200
+    assert resp.json()["body"] == "Persisted"
+
+
+@pytest.mark.asyncio
+async def test_delete_job_note_removes_note(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note5")
+    job_id = ingest_resp["id"]
+    await test_client.put(f"/api/jobs/{job_id}/note", json={"body": "To delete"})
+    resp = await test_client.delete(f"/api/jobs/{job_id}/note")
+    assert resp.status_code == 204
+    # Subsequent GET must return 404
+    resp = await test_client.get(f"/api/jobs/{job_id}/note")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_job_note_on_missing_note_returns_404(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note6")
+    job_id = ingest_resp["id"]
+    resp = await test_client.delete(f"/api/jobs/{job_id}/note")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# has_note field on job list (US2)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_jobs_has_note_false_when_no_note(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/hasnote1")
+    job_id = ingest_resp["id"]
+    resp = await test_client.get("/api/jobs")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    job = next(j for j in items if j["id"] == job_id)
+    assert job["has_note"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_has_note_true_after_note_created(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/hasnote2")
+    job_id = ingest_resp["id"]
+    await test_client.put(f"/api/jobs/{job_id}/note", json={"body": "Some note"})
+    resp = await test_client.get("/api/jobs")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    job = next(j for j in items if j["id"] == job_id)
+    assert job["has_note"] is True

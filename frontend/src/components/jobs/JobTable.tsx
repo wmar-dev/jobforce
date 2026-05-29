@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { JobListing } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
 import Link from "next/link";
+import { StickyNote } from "lucide-react";
 
 type SortKey = "title" | "company" | "location" | "status" | "fit_score" | "captured";
 type SortDir = "asc" | "desc";
@@ -102,9 +103,12 @@ export function JobTable({ jobs }: JobTableProps) {
               <td className="py-3 pr-4">
                 <Link
                   href={`/jobs/${job.id}`}
-                  className="text-emerald-400 hover:text-emerald-300 font-medium"
+                  className="text-emerald-400 hover:text-emerald-300 font-medium inline-flex items-center gap-1.5"
                 >
                   {job.title}
+                  {job.has_note && (
+                    <StickyNote size={12} className="text-yellow-500 flex-shrink-0" />
+                  )}
                 </Link>
               </td>
               <td className="py-3 pr-4 text-gray-300">{job.company.name}</td>

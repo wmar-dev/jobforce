@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from jobforce.db.engine import get_session
-from jobforce.db.models import JobListing
+from jobforce.db.models import JobListing, MeetingNote
+from jobforce.db.models import _now as _db_now
 from jobforce.services.scout import transition_status
 
 router = APIRouter(tags=["jobs"])
@@ -41,6 +42,7 @@ class JobListingOut(BaseModel):
     fit_confidence: str | None
     crawled_at: str | None
     created_at: str
+    has_note: bool = False
 
 
 class JobListingDetail(JobListingOut):
@@ -75,7 +77,19 @@ class StatusPatchResponse(BaseModel):
     transitioned_at: str
 
 
-def _to_out(job: JobListing) -> JobListingOut:
+class JobNoteOut(BaseModel):
+    id: int
+    job_listing_id: int
+    body: str
+    created_at: str
+    updated_at: str
+
+
+class JobNoteUpsert(BaseModel):
+    body: str
+
+
+def _to_out(job: JobListing, *, has_note: bool = False) -> JobListingOut:
     return JobListingOut(
         id=job.id,
         title=job.title,
@@ -89,6 +103,7 @@ def _to_out(job: JobListing) -> JobListingOut:
         fit_confidence=job.fit_confidence,
         crawled_at=job.crawled_at,
         created_at=job.created_at,
+        has_note=has_note,
     )
 
 
@@ -126,7 +141,21 @@ async def get_jobs(
     result = await session.execute(stmt)
     jobs = result.scalars().all()
 
-    return JobListPage(total=total, items=[_to_out(j) for j in jobs])
+    # Fetch which job IDs have a note in one query.
+    if jobs:
+        job_ids = [j.id for j in jobs]
+        note_stmt = select(MeetingNote.job_listing_id).where(
+            MeetingNote.job_listing_id.in_(job_ids)
+        )
+        note_result = await session.execute(note_stmt)
+        jobs_with_note: set[int] = {row[0] for row in note_result.all()}
+    else:
+        jobs_with_note = set()
+
+    return JobListPage(
+        total=total,
+        items=[_to_out(j, has_note=j.id in jobs_with_note) for j in jobs],
+    )
 
 
 @router.get("/jobs/{job_id}", response_model=JobListingDetail)
@@ -230,3 +259,79 @@ async def patch_job_status(
             content={"detail": str(exc), "code": "INVALID_TRANSITION"},
         )
     return StatusPatchResponse(**result)
+
+
+async def _get_job_note(job_id: int, session: AsyncSession) -> MeetingNote | None:
+    result = await session.execute(
+        select(MeetingNote).where(MeetingNote.job_listing_id == job_id)
+    )
+    return result.scalar_one_or_none()
+
+
+@router.get("/jobs/{job_id}/note", response_model=JobNoteOut)
+async def get_job_note(
+    job_id: int,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> JobNoteOut:
+    job = await session.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+    note = await _get_job_note(job_id, session)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return JobNoteOut(
+        id=note.id,
+        job_listing_id=job_id,
+        body=note.body,
+        created_at=note.created_at,
+        updated_at=note.updated_at,
+    )
+
+
+@router.put("/jobs/{job_id}/note", response_model=JobNoteOut)
+async def upsert_job_note(
+    job_id: int,
+    body: JobNoteUpsert,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> JobNoteOut:
+    job = await session.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+    note = await _get_job_note(job_id, session)
+    now = _db_now()
+    if note is None:
+        note = MeetingNote(
+            company_id=job.company_id,
+            job_listing_id=job_id,
+            body=body.body,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(note)
+    else:
+        note.body = body.body
+        note.updated_at = now
+    await session.commit()
+    await session.refresh(note)
+    return JobNoteOut(
+        id=note.id,
+        job_listing_id=job_id,
+        body=note.body,
+        created_at=note.created_at,
+        updated_at=note.updated_at,
+    )
+
+
+@router.delete("/jobs/{job_id}/note", status_code=204)
+async def delete_job_note(
+    job_id: int,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    job = await session.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+    note = await _get_job_note(job_id, session)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    await session.delete(note)
+    await session.commit()

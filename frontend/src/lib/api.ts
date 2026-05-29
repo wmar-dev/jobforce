@@ -2,6 +2,7 @@ import type {
   JobListing,
   JobListingDetail,
   JobListPage,
+  JobNote,
   OracleRankResponse,
   OracleRankResult,
   Resume,
@@ -67,6 +68,22 @@ export function patchJobStatus(
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+}
+
+// Job notes
+export function getJobNote(jobId: number): Promise<JobNote> {
+  return apiFetch<JobNote>(`/api/jobs/${jobId}/note`);
+}
+
+export function upsertJobNote(jobId: number, body: string): Promise<JobNote> {
+  return apiFetch<JobNote>(`/api/jobs/${jobId}/note`, {
+    method: "PUT",
+    body: JSON.stringify({ body }),
+  });
+}
+
+export function deleteJobNote(jobId: number): Promise<void> {
+  return apiFetch<void>(`/api/jobs/${jobId}/note`, { method: "DELETE" });
 }
 
 // Ingest

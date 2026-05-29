@@ -175,6 +175,7 @@ class MeetingNote(Base):
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
+    updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 
     company: Mapped[Company] = relationship("Company", back_populates="meeting_notes")
     job_listing: Mapped[JobListing | None] = relationship(
