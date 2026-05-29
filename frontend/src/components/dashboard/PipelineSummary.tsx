@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { PipelineStatus } from "@/lib/types";
 
 const STATUS_CONFIG: Record<
@@ -49,13 +50,14 @@ export function PipelineSummary({ counts }: PipelineSummaryProps) {
         const cfg = STATUS_CONFIG[status];
         const count = counts[status] ?? 0;
         return (
-          <div
+          <Link
             key={status}
-            className={`${cfg.bg} border ${cfg.border} rounded-lg p-3 text-center`}
+            href={`/jobs?status=${status}`}
+            className={`${cfg.bg} border ${cfg.border} rounded-lg p-3 text-center hover:brightness-125 transition-all`}
           >
             <div className={`text-2xl font-bold font-mono ${cfg.text}`}>{count}</div>
             <div className="text-xs text-gray-500 mt-1">{cfg.label}</div>
-          </div>
+          </Link>
         );
       })}
     </div>

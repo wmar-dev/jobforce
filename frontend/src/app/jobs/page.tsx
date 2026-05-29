@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useJobs } from "@/hooks/useJobs";
 import { JobTable } from "@/components/jobs/JobTable";
 import type { PipelineStatus, RoleType } from "@/lib/types";
+
+const VALID_STATUSES = new Set<PipelineStatus>([
+  "saved", "applied", "interviewing", "offer", "rejected", "withdrawn",
+]);
 
 const STATUS_TABS: Array<{ value: PipelineStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -16,7 +21,12 @@ const STATUS_TABS: Array<{ value: PipelineStatus | "all"; label: string }> = [
 ];
 
 export default function JobsPage() {
-  const [status, setStatus] = useState<PipelineStatus | "all">("all");
+  const searchParams = useSearchParams();
+  const initialStatus = ((): PipelineStatus | "all" => {
+    const s = searchParams.get("status");
+    return s && VALID_STATUSES.has(s as PipelineStatus) ? (s as PipelineStatus) : "all";
+  })();
+  const [status, setStatus] = useState<PipelineStatus | "all">(initialStatus);
   const [location, setLocation] = useState("");
   const [roleType, setRoleType] = useState<RoleType | "">("");
 
