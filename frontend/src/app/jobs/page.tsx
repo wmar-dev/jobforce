@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useJobs } from "@/hooks/useJobs";
 import { JobTable } from "@/components/jobs/JobTable";
@@ -20,7 +20,7 @@ const STATUS_TABS: Array<{ value: PipelineStatus | "all"; label: string }> = [
   { value: "withdrawn", label: "Withdrawn" },
 ];
 
-export default function JobsPage() {
+function JobsPageInner() {
   const searchParams = useSearchParams();
   const initialStatus = ((): PipelineStatus | "all" => {
     const s = searchParams.get("status");
@@ -107,5 +107,13 @@ export default function JobsPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense>
+      <JobsPageInner />
+    </Suspense>
   );
 }
