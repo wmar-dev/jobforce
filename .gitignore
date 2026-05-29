@@ -43,6 +43,8 @@ config/resume.json
 
 # SQLite database and raw HTML snapshots
 backend/data/jobforce.db
+backend/data/jobforce.db-shm
+backend/data/jobforce.db-wal
 backend/data/pages/
 backend/backend/
 
