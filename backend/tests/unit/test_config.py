@@ -61,3 +61,26 @@ def test_extra_fields_ignored(tmp_path: Path) -> None:
     )
     cfg = load_config(str(cfg_path))
     assert cfg.search.queries[0].query == "Engineer"
+
+
+def test_company_config_careers_url(tmp_path: Path) -> None:
+    cfg_path = write_config(
+        tmp_path,
+        """
+        search:
+          queries:
+            - query: "Engineer"
+          target_companies:
+            - name: "Acme Corp"
+              domain: "acme.com"
+              careers_url: "https://boards.greenhouse.io/acme"
+            - name: "No URL Corp"
+              domain: "nourls.com"
+        """,
+    )
+    cfg = load_config(str(cfg_path))
+    acme = cfg.search.target_companies[0]
+    assert acme.name == "Acme Corp"
+    assert acme.careers_url == "https://boards.greenhouse.io/acme"
+    no_url = cfg.search.target_companies[1]
+    assert no_url.careers_url == ""

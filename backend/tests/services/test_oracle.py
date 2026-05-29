@@ -20,9 +20,7 @@ def _make_resume(structured_data: dict) -> MagicMock:
 _RESUME_DATA = {
     "name": "Jane Doe",
     "skills": ["Python", "FastAPI", "SQLAlchemy"],
-    "experience": [
-        {"company": "Acme Corp", "title": "Senior Engineer", "dates": "2020-2024"}
-    ],
+    "experience": [{"company": "Acme Corp", "title": "Senior Engineer", "dates": "2020-2024"}],
 }
 
 

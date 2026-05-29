@@ -15,6 +15,7 @@ def _read(name: str) -> str:
 # slug_to_location
 # ---------------------------------------------------------------------------
 
+
 def test_slug_to_location_known_city() -> None:
     from jobforce.services.parse import slug_to_location
 
@@ -37,6 +38,7 @@ def test_slug_to_location_unknown_returns_none() -> None:
 # merge
 # ---------------------------------------------------------------------------
 
+
 def test_merge_override_wins_when_non_null() -> None:
     from jobforce.services.parse import merge
 
@@ -58,6 +60,7 @@ def test_merge_base_wins_when_override_null() -> None:
 # ---------------------------------------------------------------------------
 # run_adapter
 # ---------------------------------------------------------------------------
+
 
 def test_run_adapter_catches_field_error() -> None:
     from bs4 import BeautifulSoup
@@ -83,6 +86,7 @@ def test_run_adapter_returns_values() -> None:
 # ---------------------------------------------------------------------------
 # parse_html — generic adapter
 # ---------------------------------------------------------------------------
+
 
 def test_parse_html_generic_extracts_title() -> None:
     from jobforce.services.parse import parse_html
@@ -119,6 +123,7 @@ def test_parse_html_generic_detects_full_time() -> None:
 # ---------------------------------------------------------------------------
 # parse_html — OpenAI site adapter
 # ---------------------------------------------------------------------------
+
 
 def test_parse_html_openai_company_name() -> None:
     from jobforce.services.parse import parse_html
@@ -166,6 +171,7 @@ def test_parse_html_missing_field_is_null() -> None:
 # US2: Parity — OpenAI adapter field-for-field match (T019)
 # ---------------------------------------------------------------------------
 
+
 def test_openai_adapter_parity_title() -> None:
     """OpenAI adapter must return title from main h2, not h1."""
     from jobforce.services.parse import parse_html
@@ -199,6 +205,7 @@ def test_openai_adapter_slug_fallback_location() -> None:
 # ---------------------------------------------------------------------------
 # US2: Parity — generic adapter produces non-null title and role_type (T020)
 # ---------------------------------------------------------------------------
+
 
 def test_generic_adapter_non_null_title() -> None:
     from jobforce.services.parse import parse_html

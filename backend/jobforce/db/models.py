@@ -29,6 +29,7 @@ class Company(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     domain: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    careers_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
 

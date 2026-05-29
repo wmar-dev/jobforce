@@ -20,6 +20,7 @@ class SearchQueryConfig(BaseModel):
 class CompanyConfig(BaseModel):
     name: str
     domain: str = ""
+    careers_url: str = ""
 
 
 class UserConfig(BaseModel):

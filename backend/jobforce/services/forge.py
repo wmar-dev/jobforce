@@ -97,5 +97,3 @@ async def render_pdf(structured_data: dict[str, Any]) -> bytes:
             raise RuntimeError("PDF file was not produced by LaTeX")
 
         return pdf_path.read_bytes()
-
-

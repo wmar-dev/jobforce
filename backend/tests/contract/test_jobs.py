@@ -145,6 +145,7 @@ async def test_get_jobs_pagination_limit_offset(test_client: AsyncClient) -> Non
 # Job note endpoints (US1 + US3)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_job_note_returns_404_when_no_note(test_client: AsyncClient) -> None:
     ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note1")
@@ -209,6 +210,7 @@ async def test_delete_job_note_on_missing_note_returns_404(test_client: AsyncCli
 # ---------------------------------------------------------------------------
 # has_note field on job list (US2)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_get_jobs_has_note_false_when_no_note(test_client: AsyncClient) -> None:

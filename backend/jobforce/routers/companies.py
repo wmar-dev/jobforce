@@ -1,4 +1,4 @@
-"""Companies router — GET /api/companies/{id}, POST/GET /api/companies/{id}/notes."""
+"""Companies router — GET /api/companies, GET /api/companies/{id}, PATCH /api/companies/{id}, POST/GET /api/companies/{id}/notes."""
 
 from __future__ import annotations
 
@@ -14,6 +14,17 @@ from jobforce.db.engine import get_session
 from jobforce.db.models import Company, MeetingNote
 
 router = APIRouter(prefix="/companies", tags=["companies"])
+
+
+class CompanyListItem(BaseModel):
+    id: int
+    name: str
+    domain: str | None
+    careers_url: str | None
+
+
+class CompanyPatch(BaseModel):
+    careers_url: str
 
 
 class JobListingSummary(BaseModel):
@@ -42,6 +53,43 @@ class CompanyDetail(BaseModel):
 
 class NoteCreate(BaseModel):
     content: str
+
+
+@router.get("", response_model=list[CompanyListItem])
+async def list_companies(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> list[CompanyListItem]:
+    result = await session.execute(select(Company).order_by(Company.name))
+    companies = result.scalars().all()
+    return [
+        CompanyListItem(
+            id=c.id,
+            name=c.name,
+            domain=c.domain,
+            careers_url=c.careers_url,
+        )
+        for c in companies
+    ]
+
+
+@router.patch("/{company_id}", response_model=CompanyListItem)
+async def patch_company(
+    company_id: int,
+    body: CompanyPatch,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> CompanyListItem:
+    company = await session.get(Company, company_id)
+    if company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    company.careers_url = body.careers_url
+    await session.commit()
+    await session.refresh(company)
+    return CompanyListItem(
+        id=company.id,
+        name=company.name,
+        domain=company.domain,
+        careers_url=company.careers_url,
+    )
 
 
 @router.get("/{company_id}", response_model=CompanyDetail)

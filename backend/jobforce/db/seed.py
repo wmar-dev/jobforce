@@ -28,9 +28,19 @@ async def _seed_companies(session: AsyncSession, config: AppConfig) -> None:
     for company_cfg in config.search.target_companies:
         normalised = company_cfg.name.strip().lower()
         result = await session.execute(select(Company).where(Company.name.ilike(normalised)))
-        if result.scalar_one_or_none() is None:
-            session.add(Company(name=company_cfg.name.strip(), domain=company_cfg.domain or None))
+        existing = result.scalar_one_or_none()
+        if existing is None:
+            session.add(
+                Company(
+                    name=company_cfg.name.strip(),
+                    domain=company_cfg.domain or None,
+                    careers_url=company_cfg.careers_url or None,
+                )
+            )
             logger.info("Seeded company: %s", company_cfg.name)
+        elif company_cfg.careers_url:
+            existing.careers_url = company_cfg.careers_url
+            logger.info("Updated careers_url for company: %s", company_cfg.name)
 
 
 async def _seed_base_resume(session: AsyncSession) -> None:

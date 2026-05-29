@@ -13,9 +13,7 @@ from jobforce.services.oracle import _build_profile_text
 _RESUME_DATA = {
     "name": "Alice Engineer",
     "skills": ["Go", "Kubernetes", "gRPC"],
-    "experience": [
-        {"company": "CloudCo", "title": "Platform Engineer", "dates": "2021-2024"}
-    ],
+    "experience": [{"company": "CloudCo", "title": "Platform Engineer", "dates": "2021-2024"}],
     "summary": "Platform engineer specialising in distributed systems.",
 }
 

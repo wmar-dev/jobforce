@@ -25,7 +25,10 @@ async def _fetch_and_parse(url: str) -> dict:  # type: ignore[type-arg]
                 await page.goto(url, wait_until="domcontentloaded", timeout=_TIMEOUT_MS)
                 await page.wait_for_selector("main h2", timeout=10_000)
             except PlaywrightTimeout:
-                print(f"error: page load timed out after {_TIMEOUT_MS // 1000}s: {url}", file=sys.stderr)
+                print(
+                    f"error: page load timed out after {_TIMEOUT_MS // 1000}s: {url}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             html = await page.evaluate("document.documentElement.outerHTML")
         finally:

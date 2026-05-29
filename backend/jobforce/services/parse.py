@@ -12,8 +12,14 @@ from bs4 import BeautifulSoup, Tag
 logger = logging.getLogger(__name__)
 
 _CITIES = [
-    "san-francisco", "new-york", "london", "seattle",
-    "remote", "boston", "chicago", "austin",
+    "san-francisco",
+    "new-york",
+    "london",
+    "seattle",
+    "remote",
+    "boston",
+    "chicago",
+    "austin",
 ]
 
 
@@ -35,6 +41,7 @@ def _text(el: Tag | None) -> str | None:
 # ---------------------------------------------------------------------------
 # Generic adapter — equivalent to genericAdapter in content.js
 # ---------------------------------------------------------------------------
+
 
 def _generic_title(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("h1")
@@ -98,6 +105,7 @@ GENERIC_ADAPTER: dict[str, Any] = {
 # OpenAI site adapter — equivalent to openaiAdapter in content.js
 # ---------------------------------------------------------------------------
 
+
 def _openai_location(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("main h2 + p, main h2 ~ p")
     if el and (t := _text(el)):
@@ -131,7 +139,9 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": lambda doc, url: "OpenAI",
         "title": lambda doc, url: _text(doc.select_one("main h2")),
         "location": _openai_location,
-        "description": lambda doc, url: _text(doc.select_one("main article, main section, main div")),
+        "description": lambda doc, url: _text(
+            doc.select_one("main article, main section, main div")
+        ),
         "compensation": _openai_compensation,
     },
     "boards.greenhouse.io": {
@@ -147,6 +157,7 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
 # ---------------------------------------------------------------------------
 # Framework
 # ---------------------------------------------------------------------------
+
 
 def run_adapter(adapter: dict[str, Any], doc: BeautifulSoup, url: str) -> dict[str, Any]:
     result: dict[str, Any] = {}

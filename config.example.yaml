@@ -20,8 +20,10 @@ search:
   target_companies:
     - name: "Acme Corp"
       domain: "acme.com"
+      careers_url: ""  # Optional: direct careers page URL (e.g. ATS-hosted); auto-discovered if blank
     - name: "Example Inc"
       domain: "example.com"
+      careers_url: "https://boards.greenhouse.io/exampleinc"  # ATS-hosted, set explicitly
 
 # User profile — used by Oracle for scoring and Forge for PDF generation
 user:

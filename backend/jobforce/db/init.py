@@ -13,12 +13,12 @@ async def create_all() -> None:
         # Idempotent migration: add updated_at to meeting_notes for existing DBs.
         # SQLite raises OperationalError if the column already exists; safe to ignore.
         try:
-            await conn.execute(text(
-                "ALTER TABLE meeting_notes ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''"
-            ))
-            await conn.execute(text(
-                "UPDATE meeting_notes SET updated_at = created_at WHERE updated_at = ''"
-            ))
+            await conn.execute(
+                text("ALTER TABLE meeting_notes ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''")
+            )
+            await conn.execute(
+                text("UPDATE meeting_notes SET updated_at = created_at WHERE updated_at = ''")
+            )
         except Exception:  # noqa: BLE001
             pass
 
