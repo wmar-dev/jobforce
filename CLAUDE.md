@@ -1,5 +1,141 @@
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan at:
-specs/007-oracle-forge-resume/plan.md
-<!-- SPECKIT END -->
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What This Project Is
+
+Jobforce is a personal job search assistant. It has three components:
+
+- **Backend** — FastAPI async service (Python 3.12, SQLite/SQLAlchemy, uv)
+- **Frontend** — Next.js 15 dashboard (React 18, Tailwind, SWR)
+- **Chrome Extension** — Manifest V3, captures job listings while browsing
+
+AI reasoning runs in Claude Code skills (`.claude/skills/`), not in the backend. The only exception is Coach (`backend/jobforce/services/coach.py`), which calls the Anthropic SDK directly. All other AI work (Oracle ranking, Forge tailoring) happens in skills.
+
+**Verify this invariant**: `grep -r "import anthropic" backend/` → zero results (except `services/coach.py`).
+
+---
+
+## Commands
+
+### Root
+
+```bash
+make install   # Install backend + frontend deps
+make dev       # Start backend (:8000) + frontend (:3000) concurrently
+make check     # All quality gates (lint + typecheck + test)
+make seed      # Seed DB from config.yaml + config/resume.json
+```
+
+### Backend (`cd backend`)
+
+```bash
+make dev       # uvicorn --reload on :8000
+make check     # lint + typecheck + test (must all pass)
+make lint      # ruff check + ruff format --check
+make typecheck # mypy strict
+make test      # pytest with coverage
+make sync      # uv sync (lock/sync pyproject.toml)
+
+# Single test
+uv run pytest tests/unit/test_forge.py::test_compute_diff -xvs
+```
+
+### Frontend (`cd frontend`)
+
+```bash
+npm run dev    # Next.js dev server on :3000
+npm run build  # Production build
+npm run lint   # ESLint + TS check
+npm test       # Jest
+npm test -- --watch  # Jest watch
+```
+
+### Database
+
+```bash
+cd backend && uv run python -m jobforce.db.init  # Create schema
+cd backend && uv run python -m jobforce.db.seed  # Seed from config
+```
+
+API docs: <http://localhost:8000/docs>
+
+---
+
+## Architecture
+
+### Skill-Driven AI (the key pattern)
+
+```text
+User → /oracle-rank skill → GET /api/jobs + GET /api/resume/base
+                          → Claude reasons, scores jobs
+                          → PATCH /api/jobs/{id} with fit_score/rationale
+                          → Frontend displays ranked jobs
+```
+
+Skills are in `.claude/skills/{name}/SKILL.md`. They fetch from the API, reason in-context, then write results back.
+
+### Backend Structure
+
+```text
+backend/jobforce/
+├── main.py          # FastAPI app + lifespan hook
+├── config.py        # YAML config (Pydantic)
+├── db/
+│   ├── models.py    # 8 SQLAlchemy tables (see below)
+│   ├── engine.py    # Async session factory
+│   ├── init.py      # create_all()
+│   └── seed.py      # Seed from config.yaml + resume.json
+├── routers/         # One file per domain (jobs, forge, oracle, coach, ingest, dashboard, companies)
+└── services/        # Business logic; routers stay thin
+```
+
+### Key DB Tables
+
+| Table                | Purpose                                                                        |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `job_listings`       | Captured postings; `fit_score`, `fit_rationale` written by Oracle skill        |
+| `resumes`            | `is_base=1` is canonical profile; `is_base=0` rows are tailored (per job)      |
+| `status_transitions` | Audit trail for pipeline moves                                                 |
+| `companies`          | Company targets + recruiter notes                                              |
+| `meeting_notes`      | Notes per company/job from recruiter calls                                     |
+| `interview_sessions` | Coach-generated prep questions                                                 |
+
+Resume `structured_data` is a JSON string with keys: `headline`, `skills`, `experience` (company/title/duration/bullets), `education`.
+
+### Frontend Structure
+
+```text
+frontend/src/
+├── app/             # Next.js App Router pages (page.tsx per route)
+├── components/      # UI grouped by domain (jobs/, forge/, dashboard/, etc.)
+├── hooks/           # SWR data hooks (useJobs, useJob, useDashboard, useProfile)
+└── lib/             # api.ts (fetch wrappers), types.ts
+```
+
+SWR polls every 30s. Backend CORS allows `localhost:3000` only.
+
+### Chrome Extension
+
+Content scripts in `chrome-extension/content.js` have per-domain extractors. When a job page is open, the extension posts to `POST /api/jobs/ingest`. No AI in the extraction path — deterministic parsing only.
+
+---
+
+## Configuration
+
+Two gitignored files are required at runtime:
+
+- `config.yaml` — copy from `config.example.yaml`; sets DB path, search queries, user preferences
+- `config/resume.json` — copy from `config/resume.example.json`; seeded as the base resume on startup
+
+---
+
+## Current Feature Context
+
+The active feature spec is at [specs/007-oracle-forge-resume/plan.md](specs/007-oracle-forge-resume/plan.md).
+
+This feature replaced `UserProfile` with the base `Resume` as the canonical candidate profile for Oracle and Forge. Key changes:
+
+- `backend/jobforce/routers/profile.py` deleted
+- `services/forge.py` no longer imports Anthropic — tailoring moved to the `/forge-tailor` skill
+- `services/oracle.py`'s `_build_profile_text()` now reads from `Resume(is_base=1)`
