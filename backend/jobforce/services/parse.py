@@ -200,6 +200,28 @@ def _ashby_description(doc: BeautifulSoup, url: str) -> str | None:
     return _text(el)
 
 
+# ---------------------------------------------------------------------------
+# Databricks site adapter — databricks.com/company/careers/...
+# ---------------------------------------------------------------------------
+
+
+def _databricks_location(doc: BeautifulSoup, url: str) -> str | None:
+    h1 = doc.select_one("h1")
+    if h1:
+        sib = h1.find_next_sibling()
+        if sib:
+            # Remove the "Apply now" button text
+            for btn in sib.find_all("button"):
+                btn.decompose()
+            return _text(sib)
+    return None
+
+
+def _databricks_description(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("main")
+    return _text(el)
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "openai.com": {
         "company_name": lambda doc, url: "OpenAI",
@@ -229,6 +251,11 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "title": _ashby_title,
         "location": _ashby_location,
         "description": _ashby_description,
+    },
+    "databricks.com": {
+        "company_name": lambda doc, url: "Databricks",
+        "location": _databricks_location,
+        "description": _databricks_description,
     },
 }
 
