@@ -86,7 +86,8 @@ def _generic_role_type(doc: BeautifulSoup, url: str) -> str | None:
         return "full-time"
     if "part-time" in t or "part time" in t:
         return "part-time"
-    if "contract" in t:
+    # Use word boundary to avoid matching "contractor" / "government contractor"
+    if re.search(r"\bcontract\b", t):
         return "contract"
     if "internship" in t or "intern" in t:
         return "internship"

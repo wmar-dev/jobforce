@@ -34,15 +34,24 @@ Capture a job listing from a URL and ingest it into Jobforce using a determinist
    - `description`
    - `compensation` (optional)
 
-4. POST to the Jobforce ingest API:
+4. POST to the Jobforce ingest API by piping the scout_fetch output through Python — never construct the JSON by hand, as descriptions can be very long:
    ```bash
-   curl -s -X POST http://localhost:8000/api/ingest \
-     -H "Content-Type: application/json" \
-     -d '<json from step 3 minus compensation field>'
+   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<URL>" 2>/dev/null | \
+     python3 -c "
+   import json, sys, urllib.request, urllib.error
+   data = json.load(sys.stdin)
+   payload = {k: data.get(k) for k in ('source_url','title','company_name','location','role_type','description')}
+   payload['html'] = ''
+   body = json.dumps(payload).encode()
+   req = urllib.request.Request('http://localhost:8000/api/ingest', data=body, headers={'Content-Type': 'application/json'}, method='POST')
+   try:
+       resp = urllib.request.urlopen(req)
+       print(resp.status, resp.read().decode())
+   except urllib.error.HTTPError as e:
+       print(e.code, e.read().decode())
+   "
    ```
    The ingest API accepts: `source_url`, `html` (pass empty string `""`), `title`, `company_name`, `location`, `role_type`, `description`.
-
-   Build the payload from the parsed JSON, excluding `compensation` (not in ingest schema).
 
 5. Report result:
    - **201**: "✅ Captured: [title] at [company] — Job #[id]"
