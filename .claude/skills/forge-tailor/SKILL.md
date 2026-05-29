@@ -1,13 +1,14 @@
 ---
 name: forge-tailor
-description: Tailor your base resume to a specific job listing and optionally export a PDF. Fetches your base resume, posts to the tailor endpoint, shows a diff of changes, then saves the PDF locally. Use when preparing a resume for a specific job application.
+description: Tailor your base resume to a specific job listing and optionally export a PDF. Fetches your base resume, reasons about tailoring here in Claude Code, posts the result to the backend, shows a diff of changes, then saves the PDF locally. Use when preparing a resume for a specific job application.
 argument-hint: "<job_id>"
 user-invocable: true
 ---
 
 # Forge Tailor — Resume Tailoring Skill
 
-Tailor your base resume to a specific job listing and download the PDF.
+Tailor your base resume to a specific job listing. All AI reasoning happens
+here in Claude Code — no backend SDK calls are made.
 
 ## Usage
 
@@ -17,40 +18,102 @@ Tailor your base resume to a specific job listing and download the PDF.
 
 ## Steps
 
-1. Fetch the base resume:
-   ```
-   GET http://localhost:8000/api/resume/base
-   ```
-   If 404: "No base resume found. Upload via PUT /api/resume/base first."
+### Step 1: Validate backend is reachable
 
-2. POST to tailor endpoint:
-   ```json
-   POST http://localhost:8000/api/resume/tailor
-   {
-     "job_id": <job_id>,
-     "base_resume_id": <base_id>
-   }
-   ```
+```
+GET http://localhost:8000/api/jobs?limit=1
+```
 
-3. Display diff summary:
-   ```
-   ⚒️ Tailored Resume #<id> for Job #<job_id>
-   
-   Changes (3 fields):
-   - skills: added "FastAPI", "SQLAlchemy"
-   - work_history[0].bullets: adjusted emphasis
-   - summary: updated to highlight relevant experience
-   ```
+If this fails, print:
 
-4. Export PDF (optional):
-   ```
-   POST http://localhost:8000/api/resume/<tailored_id>/export
-   ```
-   Save to `./resume_job_<job_id>.pdf`
-   - **200**: "✅ PDF saved to ./resume_job_<job_id>.pdf"
-   - **503**: "LaTeX not installed — install texlive to generate PDFs"
+```
+❌ Backend not reachable at http://localhost:8000 — run: cd backend && make dev
+```
+
+Then stop.
+
+---
+
+### Step 2: Fetch base resume and job listing
+
+```
+GET http://localhost:8000/api/resume/base
+GET http://localhost:8000/api/jobs/<job_id>
+```
+
+If base resume returns 404:
+```
+❌ No base resume found. Add config/resume.json and restart the backend.
+```
+
+If job returns 404:
+```
+❌ Job #<job_id> not found.
+```
+
+Then stop in either case.
+
+---
+
+### Step 3: Tailor the resume
+
+Using the base resume's `structured_data` and the job's `title` and `description`,
+reason about which fields to adjust to better match the role.
+
+Rules:
+1. ONLY adjust emphasis, keywords, and bullet phrasing
+2. Do NOT add work history entries, companies, dates, or degrees that don't exist
+3. Keep all factual information accurate
+4. Return the full adjusted `structured_data` object
+
+Produce the tailored version of the resume JSON in memory — do not write any files.
+
+---
+
+### Step 4: Save the tailored resume
+
+```json
+POST http://localhost:8000/api/resume/tailor
+{
+  "job_id": <job_id>,
+  "structured_data": <tailored structured_data object>
+}
+```
+
+The backend stores the result and returns the resume ID and a field-level diff.
+
+---
+
+### Step 5: Display diff summary
+
+```
+⚒️ Tailored Resume #<id> for Job #<job_id> — <job title>
+
+Changes (<n> fields):
+- summary: updated to highlight relevant experience
+- work_history[0].bullets: adjusted emphasis on distributed systems
+- skills: reordered to surface Python and FastAPI first
+```
+
+If no fields changed, print:
+```
+⚒️ Resume already well-matched — no changes needed.
+```
+
+---
+
+### Step 6: Export PDF (optional)
+
+```
+POST http://localhost:8000/api/resume/<tailored_id>/export
+```
+
+Save to `./resume_job_<job_id>.pdf`
+- **200**: "✅ PDF saved to ./resume_job_<job_id>.pdf"
+- **503**: "⚠ LaTeX not installed — install texlive to generate PDFs"
 
 ## Notes
 
 - Backend must be running: `cd backend && make dev`
-- Base resume must be uploaded via the Forge UI or PUT /api/resume/base before running
+- Base resume is loaded from `config/resume.json` on startup (see `config/resume.example.json`)
+- Scores are not re-run automatically — run `/oracle-rank` after tailoring if you want updated fit scores

@@ -79,7 +79,7 @@ def create_app() -> FastAPI:
         return response
 
     # Routers registered here — imported lazily to avoid circular imports
-    from jobforce.routers import coach, companies, dashboard, forge, ingest, jobs, oracle, profile
+    from jobforce.routers import coach, companies, dashboard, forge, ingest, jobs, oracle
 
     app.include_router(ingest.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
@@ -88,7 +88,6 @@ def create_app() -> FastAPI:
     app.include_router(coach.router, prefix="/api")
     app.include_router(dashboard.router, prefix="/api")
     app.include_router(companies.router, prefix="/api")
-    app.include_router(profile.router, prefix="/api")
 
     return app
 

@@ -66,15 +66,14 @@ Then stop.
 
 ---
 
-### Step 3: Fetch user profile
+### Step 3: Fetch base resume
 
 ```
-GET http://localhost:8000/api/profile
+GET http://localhost:8000/api/resume/base
 ```
 
-If the profile has no `full_name`, `skills`, or `experience` fields set,
-note this as "No profile configured" — scores will still be produced but
-with `confidence: low`.
+If this returns 404, note "No base resume configured" — scores will still
+be produced but with `confidence: low`.
 
 ---
 
@@ -82,7 +81,7 @@ with `confidence: low`.
 
 For each job, reason about fit based on:
 
-- **Candidate profile**: full_name, headline, skills, experience, preferences
+- **Candidate resume**: the structured JSON from `GET /api/resume/base`
 - **Job listing**: title, location, role_type, description
 
 Produce:
@@ -98,8 +97,8 @@ Produce:
 - `warning` (optional): "Job description is too sparse for reliable scoring"
   if description < 100 chars
 
-If no profile is configured, score with `confidence: low` for all jobs and
-note "No profile configured — set up your profile for accurate scoring."
+If no base resume is configured, score with `confidence: low` for all jobs and
+note "No base resume found — add config/resume.json and restart the backend."
 
 ---
 
@@ -149,7 +148,7 @@ Total ranked: 2  |  High: 1  |  Medium: 1  |  Low: 0
 ## Notes
 
 - Backend must be running: `cd backend && make dev`
-- Set up your profile for accurate scoring: `PUT http://localhost:8000/api/profile`
-- Scores are overwritten on each run — re-run after updating your profile
+- Add your resume at `config/resume.json` (see `config/resume.example.json`) and restart for accurate scoring
+- Scores are overwritten on each run — re-run after updating your resume
 - The Oracle UI at http://localhost:3000/oracle displays stored scores from
   previously completed ranking sessions

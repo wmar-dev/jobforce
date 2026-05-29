@@ -182,18 +182,6 @@ class MeetingNote(Base):
     )
 
 
-class UserProfile(Base):
-    __tablename__ = "user_profiles"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
-    headline: Mapped[str | None] = mapped_column(Text, nullable=True)
-    skills: Mapped[str | None] = mapped_column(Text, nullable=True)
-    experience: Mapped[str | None] = mapped_column(Text, nullable=True)
-    preferences: Mapped[str | None] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[str] = mapped_column(Text, nullable=False, default=_now, onupdate=_now)
-
-
 class SearchConfigRecord(Base):
     __tablename__ = "search_configs"
 

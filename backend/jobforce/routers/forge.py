@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.engine import get_session
 from jobforce.db.models import JobListing, Resume
-from jobforce.services.forge import render_pdf, tailor_resume
+from jobforce.services.forge import compute_diff, render_pdf
 
 router = APIRouter(prefix="/resume", tags=["forge"])
 
@@ -40,7 +40,8 @@ class TailoredResumeOut(ResumeOut):
 
 class TailorRequest(BaseModel):
     job_id: int
-    base_resume_id: int
+    structured_data: Any
+    base_resume_id: int | None = None
 
 
 def _to_out(resume: Resume) -> ResumeOut:
@@ -97,21 +98,26 @@ async def post_tailor(
     body: TailorRequest,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> TailoredResumeOut:
+    """Save a tailored resume produced by the /forge-tailor skill.
+
+    The skill performs AI tailoring and sends the result here.
+    This endpoint stores it and returns the diff vs the base resume.
+    """
     job = await session.get(JobListing, body.job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job listing not found")
 
-    base_resume = await session.get(Resume, body.base_resume_id)
+    result_q = await session.execute(select(Resume).where(Resume.is_base == 1).limit(1))
+    base_resume = result_q.scalar_one_or_none()
     if base_resume is None:
-        raise HTTPException(status_code=404, detail="Base resume not found")
+        raise HTTPException(
+            status_code=404,
+            detail="No base resume found — upload one via PUT /api/resume/base first",
+        )
 
-    try:
-        result = await tailor_resume(session, body.base_resume_id, body.job_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-    tailored_data = result["structured_data"]
-    diff_raw = result["diff"]
+    base_data: dict[str, Any] = json.loads(base_resume.structured_data)
+    tailored_data: dict[str, Any] = body.structured_data
+    diff_raw = compute_diff(base_data, tailored_data)
 
     tailored_resume = Resume(
         label=f"Tailored for {job.title}",

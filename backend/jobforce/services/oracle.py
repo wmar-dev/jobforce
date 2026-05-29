@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Any
 
-from jobforce.db.models import JobListing, UserProfile
+from jobforce.db.models import JobListing, Resume
 
 logger = logging.getLogger(__name__)
 
@@ -28,21 +28,14 @@ def _confidence_label(score: float) -> str:
     return "low"
 
 
-def _build_profile_text(profile: UserProfile | None) -> str:
-    if profile is None:
-        return "No profile set up yet."
-    parts: list[str] = []
-    if profile.full_name:
-        parts.append(f"Name: {profile.full_name}")
-    if profile.headline:
-        parts.append(f"Headline: {profile.headline}")
-    if profile.skills:
-        parts.append(f"Skills: {profile.skills}")
-    if profile.experience:
-        parts.append(f"Experience: {profile.experience}")
-    if profile.preferences:
-        parts.append(f"Preferences: {profile.preferences}")
-    return "\n".join(parts) if parts else "No profile details provided."
+def _build_profile_text(resume: Resume | None) -> str:
+    if resume is None:
+        return "No resume configured."
+    try:
+        data: dict[str, Any] = json.loads(resume.structured_data)
+    except (json.JSONDecodeError, ValueError):
+        return "Resume data could not be read."
+    return json.dumps(data, indent=2)
 
 
 def _build_ranking_prompt(profile_text: str, job: JobListing, description: str) -> str:

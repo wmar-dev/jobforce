@@ -1,4 +1,8 @@
-"""Forge service — tailor resumes and render PDFs using Claude + LaTeX."""
+"""Forge service — resume diff computation and PDF rendering via LaTeX.
+
+AI tailoring is performed by Claude Code via the /forge-tailor skill.
+This module retains compute_diff and render_pdf for use by the router.
+"""
 
 from __future__ import annotations
 
@@ -10,12 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import anthropic
-from anthropic.types import TextBlock
 from jinja2 import Environment, FileSystemLoader
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from jobforce.db.models import JobListing, Resume
 
 logger = logging.getLogger(__name__)
 
@@ -34,51 +33,6 @@ def _get_jinja_env() -> Environment:
         trim_blocks=True,
         autoescape=False,
     )
-
-
-async def _call_claude(prompt: str) -> str:
-    client = anthropic.AsyncAnthropic()
-    message = await client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    for block in message.content:
-        if isinstance(block, TextBlock):
-            return block.text
-    return "{}"
-
-
-async def tailor_resume(
-    session: AsyncSession,
-    resume_id: int,
-    job_id: int,
-) -> dict[str, Any]:
-    """Tailor a resume to a job listing. Returns {structured_data, diff}."""
-    resume = await session.get(Resume, resume_id)
-    if resume is None:
-        raise ValueError(f"Resume {resume_id} not found")
-
-    job = await session.get(JobListing, job_id)
-    if job is None:
-        raise ValueError(f"Job listing {job_id} not found")
-
-    base_data: dict[str, Any] = json.loads(resume.structured_data)
-    description = (job.description or "").strip() or f"{job.title} role"
-
-    prompt = _build_tailor_prompt(base_data, job.title, description)
-
-    try:
-        raw = await _call_claude(prompt)
-        parsed = _parse_tailor_response(raw, base_data)
-    except Exception as exc:
-        logger.warning("Forge tailoring failed: %s", exc)
-        parsed = {"structured_data": base_data}
-
-    tailored_data = parsed.get("structured_data", base_data)
-    diff = compute_diff(base_data, tailored_data)
-
-    return {"structured_data": tailored_data, "diff": diff}
 
 
 def compute_diff(original: dict[str, Any], tailored: dict[str, Any]) -> list[dict[str, Any]]:
@@ -145,35 +99,3 @@ async def render_pdf(structured_data: dict[str, Any]) -> bytes:
         return pdf_path.read_bytes()
 
 
-def _build_tailor_prompt(base_data: dict[str, Any], job_title: str, description: str) -> str:
-    return f"""You are Forge, a resume tailoring agent. Adjust the resume to better match the job description.
-
-## Rules
-1. ONLY adjust emphasis, keywords, and bullet phrasing
-2. Do NOT add work history entries that don't exist
-3. Do NOT fabricate companies, dates, or degrees
-4. Keep all factual information accurate
-
-## Job
-Title: {job_title}
-Description: {description}
-
-## Current Resume
-{json.dumps(base_data, indent=2)}
-
-## Instructions
-Return a JSON object with one key "structured_data" containing the adjusted resume.
-Respond ONLY with valid JSON, no additional text."""
-
-
-def _parse_tailor_response(raw: str, fallback: dict[str, Any]) -> dict[str, Any]:
-    raw = raw.strip()
-    if "```" in raw:
-        lines = raw.split("\n")
-        raw = "\n".join(line for line in lines if line.strip() not in ("```json", "```", ""))
-    try:
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except (json.JSONDecodeError, ValueError):
-        logger.warning("Failed to parse Forge response, using original")
-        return {"structured_data": fallback}
