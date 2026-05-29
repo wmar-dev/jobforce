@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useJob } from "@/hooks/useJob";
@@ -27,9 +27,10 @@ function formatDate(iso: string) {
 export default function JobDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const jobId = parseInt(params.id, 10);
+  const { id } = use(params);
+  const jobId = parseInt(id, 10);
   const router = useRouter();
   const { data: job, mutate, error, isLoading } = useJob(jobId);
   const { data: note, mutate: mutateNote } = useJobNote(jobId);
