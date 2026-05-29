@@ -72,30 +72,30 @@ Then stop.
 GET http://localhost:8000/api/resume/base
 ```
 
-If this returns 404, note "No base resume configured" — scores will still
+Store the structured JSON. If this returns 404, note "No base resume configured" — scores will still
 be produced but with `confidence: low`.
 
 ---
 
-### Step 4: Score each job
+### Step 4: Score jobs in batches of 5
 
-For each job, reason about fit based on:
+**Do not load all job descriptions into context at once.** Process in batches to keep context small.
 
-- **Candidate resume**: the structured JSON from `GET /api/resume/base`
-- **Job listing**: title, location, role_type, description
+For each batch of up to 5 jobs:
 
-Produce:
-
-- `score`: float between 0.0 (no fit) and 1.0 (perfect fit)
-  - Clamp to [0.0, 1.0] — never store out-of-range values
-- `confidence`: one of "high", "medium", "low"
-  - score ≥ 0.7 → "high"
-  - score ≥ 0.4 → "medium"
-  - score < 0.4 → "low"
-  - If description is fewer than 100 characters → always "low" regardless of score
-- `rationale`: 1–2 sentences explaining the score
-- `warning` (optional): "Job description is too sparse for reliable scoring"
-  if description < 100 chars
+1. Load only the job fields needed for scoring: `id`, `title`, `company_name`, `location`, `role_type`, `description` (first 2000 chars only — truncate longer descriptions).
+2. For each job in the batch, reason about fit against the resume and produce:
+   - `score`: float between 0.0 (no fit) and 1.0 (perfect fit), clamped to [0.0, 1.0]
+   - `confidence`:
+     - score ≥ 0.7 → "high"
+     - score ≥ 0.4 → "medium"
+     - score < 0.4 → "low"
+     - description < 100 chars → always "low" regardless of score
+   - `rationale`: 1–2 sentences explaining the score
+   - `warning` (optional): "Job description is too sparse for reliable scoring" if description < 100 chars
+3. Immediately PATCH each scored job (Step 5 below).
+4. After writing all scores for the batch, **discard the job description text** — retain only the compact score record: `{id, title, company_name, score, confidence}`.
+5. Print a one-line progress update: `Scored batch N/M (jobs X–Y)` then move to the next batch.
 
 If no base resume is configured, score with `confidence: low` for all jobs and
 note "No base resume found — add config/resume.json and restart the backend."
@@ -104,7 +104,7 @@ note "No base resume found — add config/resume.json and restart the backend."
 
 ### Step 5: Write each score to the backend
 
-For each job scored, immediately after scoring (do not batch):
+For each job scored, immediately after scoring (do not wait for the full batch to finish):
 
 ```
 PATCH http://localhost:8000/api/jobs/{job_id}
@@ -125,7 +125,7 @@ next job. Do not abort the entire session.
 
 ### Step 6: Print ranked summary
 
-Sort all successfully scored jobs by `score` descending and print:
+After all batches are complete, sort all scored jobs by `score` descending using only the compact records retained from Step 4. Print:
 
 ```
 🔮 Oracle Ranking Complete
