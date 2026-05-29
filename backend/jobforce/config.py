@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 from pydantic import BaseModel, field_validator
+from pydantic_settings import BaseSettings
 
 
 class DatabaseConfig(BaseModel):
@@ -52,6 +53,22 @@ class AppConfig(BaseModel):
     user: UserConfig = UserConfig()
 
 
+class _EnvSettings(BaseSettings):
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    jobforce_db_path: str = ""
+
+
+def _load_env_settings() -> _EnvSettings:
+    """Load env settings, searching for .env from CWD up to repo root."""
+    here = Path(__file__).parent
+    for candidate in [Path.cwd(), here, here.parent, here.parent.parent]:
+        env_file = candidate / ".env"
+        if env_file.exists():
+            return _EnvSettings(_env_file=str(env_file))  # type: ignore[call-arg]
+    return _EnvSettings()
+
+
 def _find_config(path: str) -> Path:
     config_path = Path(path)
     if config_path.is_absolute():
@@ -78,7 +95,16 @@ def load_config(path: str = "config.yaml") -> AppConfig:
         )
     with config_path.open() as f:
         raw = yaml.safe_load(f) or {}
-    return AppConfig.model_validate(raw)
+    cfg = AppConfig.model_validate(raw)
+    # JOBFORCE_DB_PATH env var (or .env file) overrides database.path from config.yaml
+    env = _load_env_settings()
+    if env.jobforce_db_path:
+        cfg.database.path = env.jobforce_db_path
+    elif not Path(cfg.database.path).is_absolute():
+        # Resolve relative DB path against the config file's directory so it's
+        # CWD-independent regardless of where uvicorn is launched from.
+        cfg.database.path = str((config_path.parent / cfg.database.path).resolve())
+    return cfg
 
 
 _config: AppConfig | None = None

@@ -12,7 +12,7 @@ htmlcov/
 # Virtual environments
 .venv
 .env
-.env.*
+.env.local
 
 # Tool directories
 .claude/projects/

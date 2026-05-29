@@ -1,9 +1,14 @@
-.PHONY: dev check seed install
+.PHONY: dev stop check seed install
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
 	@cd backend && uv run uvicorn jobforce.main:app --reload --port 8000 &
 	@cd frontend && npm run dev
+
+stop:
+	@echo "Stopping Jobforce dev servers..."
+	@pkill -f "uvicorn" 2>/dev/null || true
+	@pkill -f "next dev" 2>/dev/null || true
 
 check:
 	@echo "=== Backend quality gates ==="
