@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from jobforce.db.engine import get_session
-from jobforce.db.models import JobListing, MeetingNote
+from jobforce.db.models import Company, JobListing, MeetingNote
 from jobforce.db.models import _now as _db_now
 from jobforce.services.scout import transition_status
 
@@ -107,6 +107,15 @@ def _to_out(job: JobListing, *, has_note: bool = False) -> JobListingOut:
     )
 
 
+_SORT_COLUMNS: dict[str, Any] = {
+    "fit_score": JobListing.fit_score,
+    "created_at": JobListing.created_at,
+    "title": JobListing.title,
+    "status": JobListing.status,
+    "company": Company.name,
+}
+
+
 @router.get("/jobs", response_model=JobListPage)
 async def get_jobs(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -115,6 +124,8 @@ async def get_jobs(
     min_score: float | None = Query(None),
     location: str | None = Query(None),
     role_type: str | None = Query(None),
+    sort_by: str = Query("fit_score", pattern="^(fit_score|created_at|title|status|company)$"),
+    sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> JobListPage:
@@ -134,11 +145,13 @@ async def get_jobs(
     total_result = await session.execute(count_stmt)
     total = total_result.scalar_one()
 
+    if sort_by == "company":
+        stmt = stmt.join(Company, JobListing.company_id == Company.id)
+    col = _SORT_COLUMNS[sort_by]
+    primary_order = col.desc().nulls_last() if sort_dir == "desc" else col.asc().nulls_last()
+    # Always break ties by created_at desc so order is stable across pages.
     stmt = (
-        stmt.order_by(
-            JobListing.fit_score.desc().nulls_last(),
-            JobListing.created_at.desc(),
-        )
+        stmt.order_by(primary_order, JobListing.created_at.desc())
         .offset(offset)
         .limit(limit)
     )

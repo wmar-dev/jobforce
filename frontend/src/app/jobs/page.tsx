@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useJobs } from "@/hooks/useJobs";
 import { JobTable } from "@/components/jobs/JobTable";
 import type { PipelineStatus, RoleType } from "@/lib/types";
+import type { JobSortKey, SortDir } from "@/lib/api";
 
 const VALID_STATUSES = new Set<PipelineStatus>([
   "saved", "applied", "interviewing", "offer", "rejected", "withdrawn",
@@ -20,6 +21,8 @@ const STATUS_TABS: Array<{ value: PipelineStatus | "all"; label: string }> = [
   { value: "withdrawn", label: "Withdrawn" },
 ];
 
+const PAGE_SIZE = 50;
+
 function JobsPageInner() {
   const searchParams = useSearchParams();
   const initialStatus = ((): PipelineStatus | "all" => {
@@ -29,12 +32,33 @@ function JobsPageInner() {
   const [status, setStatus] = useState<PipelineStatus | "all">(initialStatus);
   const [location, setLocation] = useState("");
   const [roleType, setRoleType] = useState<RoleType | "">("");
+  const [sortBy, setSortBy] = useState<JobSortKey>("fit_score");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(0);
+
+  function resetPage() { setPage(0); }
 
   const { data, isLoading, error } = useJobs({
     status: status === "all" ? undefined : status,
     location: location || undefined,
     role_type: roleType || undefined,
+    sort_by: sortBy,
+    sort_dir: sortDir,
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
   });
+
+  const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
+
+  function handleSort(key: JobSortKey) {
+    if (key === sortBy) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir(key === "fit_score" || key === "created_at" ? "desc" : "asc");  // title/company/status → asc
+    }
+    resetPage();
+  }
 
   return (
     <div>
@@ -54,7 +78,7 @@ function JobsPageInner() {
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => setStatus(tab.value)}
+            onClick={() => { setStatus(tab.value); resetPage(); }}
             className={`px-3 py-2 text-sm rounded-t transition-colors ${
               status === tab.value
                 ? "bg-gray-800 text-emerald-400 border-b-2 border-emerald-400"
@@ -72,12 +96,12 @@ function JobsPageInner() {
           type="text"
           placeholder="Filter by location..."
           value={location}
-          onChange={(e) => setLocation(e.target.value)}
+          onChange={(e) => { setLocation(e.target.value); resetPage(); }}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500 w-48"
         />
         <select
           value={roleType}
-          onChange={(e) => setRoleType(e.target.value as RoleType | "")}
+          onChange={(e) => { setRoleType(e.target.value as RoleType | ""); resetPage(); }}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-500"
         >
           <option value="">All role types</option>
@@ -100,10 +124,39 @@ function JobsPageInner() {
       )}
       {data && (
         <>
-          <div className="text-xs text-gray-500 mb-3">
-            {data.total} listing{data.total !== 1 ? "s" : ""}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500">
+              {data.total} listing{data.total !== 1 ? "s" : ""}
+              {totalPages > 1 && ` · page ${page + 1} of ${totalPages}`}
+            </span>
           </div>
-          <JobTable jobs={data.items} />
+          <JobTable
+            jobs={data.items}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={handleSort}
+          />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Prev
+              </button>
+              <span className="text-xs text-gray-500 tabular-nums">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

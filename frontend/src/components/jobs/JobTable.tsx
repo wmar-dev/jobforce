@@ -1,38 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import type { JobListing } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
 import Link from "next/link";
 import { StickyNote } from "lucide-react";
-
-type SortKey = "title" | "company" | "location" | "status" | "fit_score" | "captured";
-type SortDir = "asc" | "desc";
-
-function sortJobs(jobs: JobListing[], key: SortKey, dir: SortDir): JobListing[] {
-  return [...jobs].sort((a, b) => {
-    let av: string | number | null, bv: string | number | null;
-    switch (key) {
-      case "title":    av = a.title;          bv = b.title;          break;
-      case "company":  av = a.company.name;   bv = b.company.name;   break;
-      case "location": av = a.location ?? ""; bv = b.location ?? ""; break;
-      case "status":   av = a.status;         bv = b.status;         break;
-      case "fit_score":
-        // nulls last regardless of direction
-        if (a.fit_score == null && b.fit_score == null) return 0;
-        if (a.fit_score == null) return 1;
-        if (b.fit_score == null) return -1;
-        av = a.fit_score; bv = b.fit_score; break;
-      case "captured":
-        av = a.crawled_at ?? a.created_at;
-        bv = b.crawled_at ?? b.created_at;
-        break;
-    }
-    if (av! < bv!) return dir === "asc" ? -1 : 1;
-    if (av! > bv!) return dir === "asc" ? 1 : -1;
-    return 0;
-  });
-}
+import type { JobSortKey, SortDir } from "@/lib/api";
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="ml-1 text-gray-700">↕</span>;
@@ -41,22 +13,12 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 interface JobTableProps {
   jobs: JobListing[];
+  sortBy: JobSortKey;
+  sortDir: SortDir;
+  onSort: (key: JobSortKey) => void;
 }
 
-export function JobTable({ jobs }: JobTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("fit_score");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "fit_score" || key === "captured" ? "desc" : "asc");
-    }
-  }
-
-  const sorted = sortJobs(jobs, sortKey, sortDir);
+export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
 
   if (jobs.length === 0) {
     return (
@@ -70,13 +32,13 @@ export function JobTable({ jobs }: JobTableProps) {
     );
   }
 
-  function Th({ col, label, last }: { col: SortKey; label: string; last?: boolean }) {
+  function Th({ col, label, sortable, last }: { col: JobSortKey | null; label: string; sortable?: boolean; last?: boolean }) {
     return (
       <th
-        className={`pb-3 ${last ? "" : "pr-4"} font-medium cursor-pointer select-none hover:text-white transition-colors`}
-        onClick={() => handleSort(col)}
+        className={`pb-3 ${last ? "" : "pr-4"} font-medium ${sortable && col ? "cursor-pointer select-none hover:text-white transition-colors" : ""}`}
+        onClick={() => sortable && col && onSort(col)}
       >
-        {label}<SortIcon active={sortKey === col} dir={sortDir} />
+        {label}{sortable && col && <SortIcon active={sortBy === col} dir={sortDir} />}
       </th>
     );
   }
@@ -86,16 +48,16 @@ export function JobTable({ jobs }: JobTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-800 text-gray-400 text-left">
-            <Th col="title"     label="Title" />
-            <Th col="company"   label="Company" />
-            <Th col="location"  label="Location" />
-            <Th col="status"    label="Status" />
-            <Th col="fit_score" label="Fit Score" />
-            <Th col="captured"  label="Captured" last />
+            <Th col="title"      label="Title"     sortable />
+            <Th col="company"    label="Company"   sortable />
+            <Th col={null}       label="Location" />
+            <Th col="status"     label="Status"    sortable />
+            <Th col="fit_score"  label="Fit Score" sortable />
+            <Th col="created_at" label="Captured"  sortable last />
           </tr>
         </thead>
         <tbody>
-          {sorted.map((job) => (
+          {jobs.map((job) => (
             <tr
               key={job.id}
               className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
