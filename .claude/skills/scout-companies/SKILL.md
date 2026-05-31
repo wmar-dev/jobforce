@@ -206,6 +206,51 @@ For each URL that passed the anchor-text filter in 4d:
    - **409**: count as duplicate (skip)
    - Other: log as error and continue
 
+### 4g: Verify location parsed correctly
+
+After ingesting a batch of jobs for a company, spot-check that `location` is non-null on the ingested records:
+
+```bash
+curl -s "http://localhost:8000/api/jobs?limit=50" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+bad=[j for j in d['items'] if j.get('company',{}).get('name','')=='<company_name>' and not j.get('location')]
+print(f'{len(bad)} jobs missing location')
+for j in bad[:5]: print(f'  id={j[\"id\"]} {j[\"title\"]}')
+"
+```
+
+If any jobs are missing location, the site adapter's location selector is broken (e.g. ATS updated its CSS classes). Fix it before continuing:
+
+1. **Inspect the live page** — fetch one failing URL with scout_fetch and check what came back:
+   ```bash
+   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<failing_url>" 2>/dev/null
+   ```
+   If `location` is null, the adapter selector needs updating.
+
+2. **Capture a fixture** — save a minimal but representative HTML snippet from the broken page as a new fixture file in `backend/tests/fixtures/`. Name it `<ats>_<company>_job.html` (e.g. `ashby_decagon_job.html`). Include enough markup to exercise the location selector: the `<h1>` title element, the location container, and the description container. Strip unrelated boilerplate.
+
+3. **Add failing tests first** — in `backend/tests/unit/test_parse_service.py`, add tests using the new fixture that assert the correct `location` value. Run them to confirm they fail:
+   ```bash
+   cd backend && uv run pytest tests/unit/test_parse_service.py -q -k "new_fixture_name"
+   ```
+
+4. **Fix the adapter** — update the relevant `_<ats>_location()` function in `backend/jobforce/services/parse.py`. Keep the old selector as a fallback so existing fixtures continue to pass. Add a comment explaining what changed and why.
+
+5. **Run all parse tests** — confirm all fixtures pass (new and old):
+   ```bash
+   cd backend && uv run pytest tests/unit/test_parse_service.py -q
+   ```
+
+6. **Backfill locations** — update the already-ingested jobs missing location via PATCH:
+   ```bash
+   curl -s -X PATCH "http://localhost:8000/api/jobs/<id>" \
+     -H "Content-Type: application/json" \
+     -d '{"location": "<location>"}'
+   ```
+
+7. **Commit** — include the fixture, the tests, and the parse fix in one commit.
+
 ## Step 5: Print per-company summary and final totals
 
 For each company processed, print:

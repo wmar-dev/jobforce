@@ -399,6 +399,56 @@ def test_parse_html_ashby_hyphenated_company_capitalized() -> None:
 
 
 # ---------------------------------------------------------------------------
+# parse_html — Ashby new markup (ashby_decagon_job.html)
+# Fixture captured from jobs.ashbyhq.com/decagon when location was returning
+# None due to Ashby renaming .ashby-job-posting-brief-description-item to
+# a left-pane labeled-section layout (<h2>Location</h2><p>…</p>).
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_ashby_new_markup_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_decagon_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/decagon/75f544ae")
+    assert result["title"] == "Senior Software Engineer, Agent Orchestration"
+
+
+def test_parse_html_ashby_new_markup_company_from_url() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_decagon_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/decagon/75f544ae")
+    assert result["company_name"] == "Decagon"
+
+
+def test_parse_html_ashby_new_markup_location_from_labeled_section() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_decagon_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/decagon/75f544ae")
+    assert result["location"] == "San Francisco"
+
+
+def test_parse_html_ashby_new_markup_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_decagon_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/decagon/75f544ae")
+    assert result["description"] is not None
+    assert "orchestration" in result["description"].lower()
+
+
+def test_parse_html_ashby_old_markup_location_still_works() -> None:
+    """Fallback to legacy .ashby-job-posting-brief-description-item still works."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/figma/abc-123")
+    assert result["location"] == "New York, NY"
+
+
+# ---------------------------------------------------------------------------
 # parse_html — Anthropic via job-boards.greenhouse.io
 # ---------------------------------------------------------------------------
 
