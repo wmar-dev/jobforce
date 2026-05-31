@@ -2,9 +2,11 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
 import { useJobs } from "@/hooks/useJobs";
 import { JobTable } from "@/components/jobs/JobTable";
-import type { PipelineStatus, RoleType } from "@/lib/types";
+import { getCompanies } from "@/lib/api";
+import type { PipelineStatus, RoleType, Company } from "@/lib/types";
 import type { JobSortKey, SortDir } from "@/lib/api";
 
 const VALID_STATUSES = new Set<PipelineStatus>([
@@ -30,6 +32,7 @@ function JobsPageInner() {
     return s && VALID_STATUSES.has(s as PipelineStatus) ? (s as PipelineStatus) : "all";
   })();
   const [status, setStatus] = useState<PipelineStatus | "all">(initialStatus);
+  const [companyId, setCompanyId] = useState<number | "">("");
   const [location, setLocation] = useState("");
   const [roleType, setRoleType] = useState<RoleType | "">("");
   const [sortBy, setSortBy] = useState<JobSortKey>("fit_score");
@@ -38,8 +41,11 @@ function JobsPageInner() {
 
   function resetPage() { setPage(0); }
 
+  const { data: companies } = useSWR<Company[]>("companies", getCompanies);
+
   const { data, isLoading, error } = useJobs({
     status: status === "all" ? undefined : status,
+    company_id: companyId || undefined,
     location: location || undefined,
     role_type: roleType || undefined,
     sort_by: sortBy,
@@ -91,7 +97,17 @@ function JobsPageInner() {
       </div>
 
       {/* Secondary filters */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <select
+          value={companyId}
+          onChange={(e) => { setCompanyId(e.target.value ? Number(e.target.value) : ""); resetPage(); }}
+          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-500 w-44"
+        >
+          <option value="">All companies</option>
+          {companies?.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
         <input
           type="text"
           placeholder="Filter by location..."

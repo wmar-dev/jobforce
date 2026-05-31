@@ -177,6 +177,10 @@ export function getDashboard(): Promise<DashboardSummary> {
 }
 
 // Companies
+export function getCompanies(): Promise<Company[]> {
+  return apiFetch<Company[]>("/api/companies");
+}
+
 export function getCompany(companyId: number): Promise<CompanyDetail> {
   return apiFetch<CompanyDetail>(`/api/companies/${companyId}`);
 }
