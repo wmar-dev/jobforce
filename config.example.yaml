@@ -39,6 +39,10 @@ user:
     target_roles:
       - "Senior Backend Engineer"
       - "Staff Engineer"
+    target_locations:          # Optional: filter scout-companies to these locations (case-insensitive substring match)
+      - "San Francisco"
+      - "San Francisco, CA"
+      - "Remote"
     locations:
       - "Remote"
       - "San Francisco, CA"

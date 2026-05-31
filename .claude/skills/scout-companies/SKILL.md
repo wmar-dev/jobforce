@@ -37,15 +37,18 @@ cd backend && uv run python -c "
 import json
 from jobforce.config import load_config
 cfg = load_config()
+prefs = cfg.user.preferences if cfg.user and cfg.user.preferences else {}
+get = lambda k: prefs.get(k, []) if isinstance(prefs, dict) else getattr(prefs, k, [])
 out = {
   'companies': [{'name': c.name, 'domain': c.domain, 'careers_url': c.careers_url} for c in cfg.search.target_companies],
-  'target_roles': cfg.user.preferences.target_roles if cfg.user and cfg.user.preferences else [],
+  'target_roles': get('target_roles'),
+  'target_locations': get('target_locations'),
 }
 print(json.dumps(out))
 "
 ```
 
-Parse the JSON object. Store `companies` list and `target_roles` list for use in filtering later.
+Parse the JSON object. Store `companies`, `target_roles`, and `target_locations` lists for use in filtering later.
 
 If `companies` is empty, stop and print:
 ```
@@ -55,6 +58,11 @@ If `companies` is empty, stop and print:
 If `target_roles` is empty, print a warning and proceed without title filtering:
 ```
 ⚠ No target_roles set in config.yaml — all job titles will be ingested.
+```
+
+If `target_locations` is empty, print a warning and proceed without location filtering:
+```
+⚠ No target_locations set in config.yaml — all locations will be ingested.
 ```
 
 **If an argument was provided** (e.g. `/scout-companies "Acme Corp"`):
@@ -122,13 +130,23 @@ Deduplicate by href. If the list is empty, report:
 🏢 <name> (<careers_url>) — no job listings found
 ```
 
-**Pre-filter by anchor text** (skip this step if `target_roles` is empty): For each `(anchor_text, href)` pair, apply the same relevance check used in 4f against the anchor text before calling `scout_fetch`. If the anchor text does not plausibly match any target role, log and skip immediately — do not call `scout_fetch` at all:
-```
-  ⏭ skipped (off-target): <anchor_text> — <url>
-```
-Count these in the off-target total. Only pass URLs whose anchor text passes the filter on to step 4f.
+**Pre-filter by anchor text and location** (skip title check if `target_roles` is empty; skip location check if `target_locations` is empty):
 
-> **Note**: anchor text on most ATS platforms (Greenhouse, Lever, Workday, Ashby) is the verbatim job title. If a page uses generic link labels like "View role" or "Apply", the anchor text will not match and the URL will be skipped — in that case, disable pre-filtering for that company and fall back to fetching all URLs.
+For each `(anchor_text, location_text, href)` tuple (where `location_text` is any visible location label near the link):
+
+1. **Title check**: if `target_roles` is non-empty and the anchor text does not plausibly match any target role, skip immediately:
+   ```
+     ⏭ skipped (off-target title): <anchor_text> — <url>
+   ```
+
+2. **Location check**: if `target_locations` is non-empty and the location text does not contain any entry from `target_locations` (case-insensitive substring match, also treat "Remote" as matching), skip immediately:
+   ```
+     ⏭ skipped (off-target location): <anchor_text> @ <location_text> — <url>
+   ```
+
+Count all skipped entries in the off-target total. Only pass URLs that pass both filters to step 4f.
+
+> **Note**: anchor text on most ATS platforms (Greenhouse, Lever, Workday, Ashby) is the verbatim job title. If a page uses generic link labels like "View role" or "Apply", the anchor text will not match and the URL will be skipped — in that case, disable pre-filtering for that company and fall back to fetching all URLs. If location is not visible in the snapshot near the link, skip the location check for that entry and fetch it anyway.
 
 ### 4e: Write back the discovered careers_url (only if auto-discovered in 4b)
 
@@ -150,10 +168,15 @@ For each URL that passed the anchor-text filter in 4d:
 
 2. If scout_fetch fails or returns non-JSON output, log: `  ❌ fetch failed: <url>` and continue.
 
-3. Parse the JSON output. **Confirm title relevance**: re-apply the same relevance check against the extracted `title` (the fetched title may differ slightly from the anchor text). If it no longer matches, log and skip:
-   ```
-     ⏭ skipped (off-target): <title> — <url>
-   ```
+3. Parse the JSON output. **Confirm title and location relevance**:
+   - Re-apply the title check against the extracted `title`. If it no longer matches, log and skip:
+     ```
+       ⏭ skipped (off-target title): <title> — <url>
+     ```
+   - If `target_locations` is non-empty, check the extracted `location` against `target_locations`. If it doesn't match, log and skip:
+     ```
+       ⏭ skipped (off-target location): <title> @ <location> — <url>
+     ```
    Count skipped-off-target separately from duplicates.
 
 4. Build the ingest payload for matching titles (exclude `compensation`):
@@ -213,10 +236,14 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | Login-gated page | Skip company, report "requires login" |
 | No job links found on page | Report, continue to next company |
 | scout_fetch fails for a URL | Log error for that URL, continue |
-| Anchor text doesn't match target_roles | Log as off-target, skip scout_fetch entirely, continue |
-| Fetched title doesn't match target_roles | Log as off-target, skip ingest, continue |
-| All anchor texts are generic (e.g. "View role") | Disable pre-filtering, fall back to fetching all URLs |
-| No target_roles in config | Warn once, skip pre-filtering, ingest all titles |
+| Anchor text doesn't match target_roles | Log as off-target (title), skip scout_fetch entirely, continue |
+| Location text doesn't match target_locations | Log as off-target (location), skip scout_fetch entirely, continue |
+| Fetched title doesn't match target_roles | Log as off-target (title), skip ingest, continue |
+| Fetched location doesn't match target_locations | Log as off-target (location), skip ingest, continue |
+| All anchor texts are generic (e.g. "View role") | Disable title pre-filtering, fall back to fetching all URLs |
+| Location not visible near link in snapshot | Skip location pre-filter for that entry, fetch it anyway |
+| No target_roles in config | Warn once, skip title filtering, ingest all titles |
+| No target_locations in config | Warn once, skip location filtering, ingest all locations |
 
 ## Notes
 
