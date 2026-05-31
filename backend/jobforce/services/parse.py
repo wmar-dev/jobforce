@@ -183,12 +183,19 @@ def _ashby_company(doc: BeautifulSoup, url: str) -> str | None:
 
 
 def _ashby_title(doc: BeautifulSoup, url: str) -> str | None:
-    el = doc.select_one(".ashby-job-posting-brief-description h1")
+    el = doc.select_one(".ashby-job-posting-heading, .ashby-job-posting-brief-description h1")
     return _text(el)
 
 
 def _ashby_location(doc: BeautifulSoup, url: str) -> str | None:
-    # First brief-description item contains location
+    # Current markup: left pane has <h2>Location</h2><p>San Francisco</p> sections
+    for section in doc.select(".ashby-job-posting-left-pane ._section_101oc_37, .ashby-job-posting-left-pane [class*='_section']"):
+        h2 = section.find("h2")
+        if h2 and "location" in (h2.get_text() or "").lower():
+            p = section.find("p")
+            if p and (t := _text(p)):
+                return t
+    # Fallback: legacy brief-description items
     items = doc.select(".ashby-job-posting-brief-description-item")
     if items:
         return _text(items[0])
