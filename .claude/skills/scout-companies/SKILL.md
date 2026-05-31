@@ -38,11 +38,13 @@ import json
 from jobforce.config import load_config
 cfg = load_config()
 prefs = cfg.user.preferences if cfg.user and cfg.user.preferences else {}
-get = lambda k: prefs.get(k, []) if isinstance(prefs, dict) else getattr(prefs, k, [])
+get_pref = lambda k: prefs.get(k, []) if isinstance(prefs, dict) else getattr(prefs, k, [])
+search = cfg.search
+get_search = lambda k: getattr(search, k, None) or []
 out = {
-  'companies': [{'name': c.name, 'domain': c.domain, 'careers_url': c.careers_url} for c in cfg.search.target_companies],
-  'target_roles': get('target_roles'),
-  'target_locations': get('target_locations'),
+  'companies': [{'name': c.name, 'domain': c.domain, 'careers_url': c.careers_url} for c in search.target_companies],
+  'target_roles': get_pref('target_roles'),
+  'target_locations': get_search('target_locations'),
 }
 print(json.dumps(out))
 "

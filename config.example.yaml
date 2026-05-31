@@ -16,6 +16,12 @@ search:
       location: "San Francisco, CA"
       source: "greenhouse"
 
+  # Locations to filter scout-companies results (case-insensitive substring match)
+  target_locations:          # Optional: omit to ingest all locations
+    - "San Francisco"
+    - "San Francisco, CA"
+    - "Remote"
+
   # Companies to pre-seed in the database (optional)
   target_companies:
     - name: "Acme Corp"
@@ -39,10 +45,6 @@ user:
     target_roles:
       - "Senior Backend Engineer"
       - "Staff Engineer"
-    target_locations:          # Optional: filter scout-companies to these locations (case-insensitive substring match)
-      - "San Francisco"
-      - "San Francisco, CA"
-      - "Remote"
     locations:
       - "Remote"
       - "San Francisco, CA"

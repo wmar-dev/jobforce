@@ -33,6 +33,7 @@ class UserConfig(BaseModel):
 
 class SearchConfig(BaseModel):
     queries: list[SearchQueryConfig] = []
+    target_locations: list[str] = []
     target_companies: list[CompanyConfig] = []
 
     @field_validator("queries", mode="before")
