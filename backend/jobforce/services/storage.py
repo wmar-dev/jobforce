@@ -43,6 +43,16 @@ async def store_snapshot(
             size_bytes=size,
         )
 
+    # Delete any stale snapshot for this job_listing_id (can exist if SQLite
+    # recycled an id after a row was deleted from job_listings).
+    existing = await session.execute(
+        select(PageSnapshot).where(PageSnapshot.job_listing_id == job_listing_id)
+    )
+    stale = existing.scalar_one_or_none()
+    if stale is not None:
+        await session.delete(stale)
+        await session.flush()
+
     session.add(snapshot)
     await session.flush()
     return snapshot
