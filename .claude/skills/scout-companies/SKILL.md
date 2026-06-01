@@ -146,7 +146,7 @@ For each `(anchor_text, location_text, href)` tuple (where `location_text` is an
      ⏭ skipped (off-target location): <anchor_text> @ <location_text> — <url>
    ```
 
-Count all skipped entries in the off-target total. Only pass URLs that pass both filters to step 4f.
+Count all skipped entries in the off-target total. Only pass URLs that pass both filters to step 4g.
 
 > **Note**: anchor text on most ATS platforms (Greenhouse, Lever, Workday, Ashby) is the verbatim job title. If a page uses generic link labels like "View role" or "Apply", the anchor text will not match and the URL will be skipped — in that case, disable pre-filtering for that company and fall back to fetching all URLs. If location is not visible in the snapshot near the link, skip the location check for that entry and fetch it anyway.
 
@@ -159,7 +159,33 @@ curl -s -X PATCH http://localhost:8000/api/companies/<id> \
   -d '{"careers_url": "<discovered_url>"}'
 ```
 
-### 4f: Ingest each pre-filtered job listing URL
+### 4f: Parse-sanity check on the first URL before batch
+
+Before ingesting the full list, do a dry-run parse on the first URL to confirm the adapter works:
+
+```bash
+cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<first_url>"
+```
+
+Inspect the JSON output:
+- If `title` is empty or null → stop this company and report:
+  ```
+  🏢 <name> — parse check failed: title not extracted from <first_url>
+    ⚠ Skipped batch. Fix the site adapter in backend/jobforce/services/parse.py before re-running.
+  ```
+- If `location` is null and `target_locations` is non-empty → warn but continue (location check will fall back to per-URL skipping):
+  ```
+    ⚠ location not extracted — location filtering will be skipped for this site
+  ```
+- If the command fails or returns non-JSON → stop this company and report:
+  ```
+  🏢 <name> — parse check failed: scout_fetch error on <first_url>
+    ⚠ Skipped batch.
+  ```
+
+If the parse check passes, proceed to ingest the full list (including the first URL).
+
+### 4g: Ingest each pre-filtered job listing URL
 
 For each URL that passed the anchor-text filter in 4d:
 
@@ -206,7 +232,7 @@ For each URL that passed the anchor-text filter in 4d:
    - **409**: count as duplicate (skip)
    - Other: log as error and continue
 
-### 4g: Verify location parsed correctly
+### 4h: Verify location parsed correctly
 
 After ingesting a batch of jobs for a company, spot-check that `location` is non-null on the ingested records:
 
