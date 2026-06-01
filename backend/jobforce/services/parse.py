@@ -553,7 +553,34 @@ def _pinterest_description(doc: BeautifulSoup, url: str) -> str | None:
     return _text(el)
 
 
+# ---------------------------------------------------------------------------
+# AdaL (adalagent.ai) — custom React SPA; location in subtitle paragraph
+# ---------------------------------------------------------------------------
+
+
+def _adal_location(doc: BeautifulSoup, url: str) -> str | None:
+    # Subtitle: "SylphAI. San Francisco, United States." — drop the company prefix
+    el = doc.select_one("p.text-adal-text-secondary, p.italic")
+    if not el:
+        return None
+    text = _text(el) or ""
+    # Strip leading "SylphAI. " (or any "Word. " prefix before the location)
+    parts = text.split(". ", 1)
+    location = parts[1] if len(parts) == 2 else text
+    return location.rstrip(".").strip() or None
+
+
+def _adal_description(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("main")
+    return _text(el)
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
+    "adalagent.ai": {
+        "company_name": lambda doc, url: "AdaL",
+        "location": _adal_location,
+        "description": _adal_description,
+    },
     "jobs.lever.co": {
         "company_name": _lever_company,
         "title": _lever_title,
