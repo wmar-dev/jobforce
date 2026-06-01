@@ -632,3 +632,87 @@ def test_validate_url_rejects_empty_netloc() -> None:
 
     with pytest.raises(argparse.ArgumentTypeError):
         _validate_url("https://")
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Cursor adapter (cursor.com/careers/<slug>)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_cursor_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cursor_job.html")
+    result = parse_html(html, "https://cursor.com/careers/software-engineer-ml-infrastructure")
+    assert result["title"] == "Software Engineer, ML Infrastructure"
+
+
+def test_parse_html_cursor_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cursor_job.html")
+    result = parse_html(html, "https://cursor.com/careers/software-engineer-ml-infrastructure")
+    assert result["company_name"] == "Cursor"
+
+
+def test_parse_html_cursor_location_from_header_p() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cursor_job.html")
+    result = parse_html(html, "https://cursor.com/careers/software-engineer-ml-infrastructure")
+    assert result["location"] == "San Francisco; New York"
+
+
+def test_parse_html_cursor_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cursor_job.html")
+    result = parse_html(html, "https://cursor.com/careers/software-engineer-ml-infrastructure")
+    assert result["description"] is not None
+    assert "ML Infrastructure" in result["description"]
+
+
+def test_parse_html_cursor_role_type_full_time() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cursor_job.html")
+    result = parse_html(html, "https://cursor.com/careers/software-engineer-ml-infrastructure")
+    assert result["role_type"] == "full-time"
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Pinecone adapter (pinecone.io/careers/<uuid>/)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_pinecone_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("pinecone_job.html")
+    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    assert result["title"] == "Senior/Staff Software Engineer, Database Team"
+
+
+def test_parse_html_pinecone_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("pinecone_job.html")
+    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    assert result["company_name"] == "Pinecone"
+
+
+def test_parse_html_pinecone_location_from_at_p() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("pinecone_job.html")
+    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    assert result["location"] == "New York City"
+
+
+def test_parse_html_pinecone_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("pinecone_job.html")
+    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    assert result["description"] is not None
+    assert "Pinecone" in result["description"]

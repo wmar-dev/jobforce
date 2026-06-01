@@ -221,6 +221,68 @@ def _ashby_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Cursor site adapter — cursor.com/careers/<slug>
+# Page structure: main > article > div > header > h1 + p (dept·type·location)
+#                                       div > div.prose (description)
+# ---------------------------------------------------------------------------
+
+
+def _cursor_location(doc: BeautifulSoup, url: str) -> str | None:
+    # "Engineering · Full-time · San Francisco; New York" — take last segment
+    p = doc.select_one("main article header p")
+    if p and (t := _text(p)):
+        parts = [x.strip() for x in t.split("·")]
+        if len(parts) >= 3:
+            return parts[-1] or None
+    return None
+
+
+def _cursor_description(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one(".prose")
+    return _text(el)
+
+
+# ---------------------------------------------------------------------------
+# Pinecone site adapter — pinecone.io/careers/<uuid>/
+# Page structure: main > div > div > div.container.py-50 >
+#                   a(All Jobs), h1, p("at Company, Location"), div(desc), div(apply)
+# ---------------------------------------------------------------------------
+
+
+def _pinecone_company(doc: BeautifulSoup, url: str) -> str | None:
+    # "at Pinecone, New York City" — extract company name
+    p = doc.select_one("main p")
+    if p and (t := _text(p)):
+        m = re.match(r"at\s+(.+?),\s+.+", t.strip())
+        if m:
+            return m.group(1).strip() or None
+    return "Pinecone"
+
+
+def _pinecone_location(doc: BeautifulSoup, url: str) -> str | None:
+    # "at Pinecone, New York City" — extract location after company
+    p = doc.select_one("main p")
+    if p and (t := _text(p)):
+        m = re.match(r"at\s+.+?,\s+(.+)", t.strip())
+        if m:
+            return m.group(1).strip() or None
+    return None
+
+
+def _pinecone_description(doc: BeautifulSoup, url: str) -> str | None:
+    # Job body is the first non-apply div child inside the container
+    # Structure: container > [a(All Jobs), h1, p(at...), div(body), div(apply/share)]
+    container = doc.select_one("main div.container, main div[class*='py-50']")
+    if container:
+        for div in container.find_all("div", recursive=False):
+            t = _text(div)
+            # Skip the apply/share div (short, no real content)
+            if t and len(t) > 100:
+                return t
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Databricks site adapter — databricks.com/company/careers/...
 # ---------------------------------------------------------------------------
 
@@ -276,6 +338,16 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": lambda doc, url: "Databricks",
         "location": _databricks_location,
         "description": _databricks_description,
+    },
+    "cursor.com": {
+        "company_name": lambda doc, url: "Cursor",
+        "location": _cursor_location,
+        "description": _cursor_description,
+    },
+    "pinecone.io": {
+        "company_name": _pinecone_company,
+        "location": _pinecone_location,
+        "description": _pinecone_description,
     },
 }
 
