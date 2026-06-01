@@ -159,7 +159,7 @@ export default function JobDetailPage({
                 FIT_CONFIDENCE_CLASSES[job.fit_confidence ?? ""] ?? "text-gray-300"
               }`}
             >
-              {job.fit_score}
+              {Math.round(job.fit_score * 100)}
               <span className="text-xs font-normal text-gray-500 ml-1">/ 100</span>
             </span>
             {job.fit_confidence && (
