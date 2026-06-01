@@ -762,3 +762,49 @@ def test_parse_html_lever_description_non_null() -> None:
     result = parse_html(html, "https://jobs.lever.co/mistral/c79ff8ed-6689-4dda-aec6-979a5dc767d0")
     assert result["description"] is not None
     assert "Mistral" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Workable adapter (jobs.workable.com)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_workable_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_job.html")
+    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    assert result["title"] == "Senior Full-stack Software Engineer"
+
+
+def test_parse_html_workable_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_job.html")
+    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    assert result["company_name"] == "Kettle"
+
+
+def test_parse_html_workable_location_with_remote() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_job.html")
+    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    assert result["location"] == "San Francisco (Remote)"
+
+
+def test_parse_html_workable_role_type_full_time() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_job.html")
+    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    assert result["role_type"] == "full-time"
+
+
+def test_parse_html_workable_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_job.html")
+    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    assert result["description"] is not None
+    assert "Kettle" in result["description"]

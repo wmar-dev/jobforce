@@ -350,6 +350,69 @@ def _pinecone_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Workable site adapter — jobs.workable.com/en/view/<id>/<slug>
+# All fields live in a JSON-LD <script type="application/ld+json"> block.
+# employmentType values: FULL_TIME, PART_TIME, CONTRACTOR, INTERN
+# jobLocationType: TELECOMMUTE → "Remote"
+# ---------------------------------------------------------------------------
+
+
+def _workable_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
+    import json as _json
+
+    for s in doc.find_all("script", type="application/ld+json"):
+        try:
+            d = _json.loads(s.string or "")
+            if d.get("@type") == "JobPosting":
+                return d
+        except Exception:
+            pass
+    return {}
+
+
+def _workable_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _workable_jsonld(doc).get("title") or None
+
+
+def _workable_company(doc: BeautifulSoup, url: str) -> str | None:
+    d = _workable_jsonld(doc)
+    return (d.get("hiringOrganization") or {}).get("name") or None
+
+
+def _workable_location(doc: BeautifulSoup, url: str) -> str | None:
+    d = _workable_jsonld(doc)
+    if d.get("jobLocationType") == "TELECOMMUTE":
+        addr = (d.get("jobLocation") or {}).get("address") or {}
+        city = addr.get("addressLocality", "")
+        return f"{city} (Remote)" if city else "Remote"
+    addr = (d.get("jobLocation") or {}).get("address") or {}
+    city = addr.get("addressLocality", "")
+    region = addr.get("addressRegion", "")
+    if city and region:
+        return f"{city}, {region}"
+    return city or region or None
+
+
+def _workable_description(doc: BeautifulSoup, url: str) -> str | None:
+    d = _workable_jsonld(doc)
+    raw = d.get("description") or ""
+    if not raw:
+        return None
+    return BeautifulSoup(raw, "lxml").get_text(separator=" ").strip() or None
+
+
+def _workable_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    d = _workable_jsonld(doc)
+    emp = (d.get("employmentType") or "").upper()
+    return {
+        "FULL_TIME": "full-time",
+        "PART_TIME": "part-time",
+        "CONTRACTOR": "contract",
+        "INTERN": "internship",
+    }.get(emp)
+
+
+# ---------------------------------------------------------------------------
 # Databricks site adapter — databricks.com/company/careers/...
 # ---------------------------------------------------------------------------
 
@@ -422,6 +485,13 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": _pinecone_company,
         "location": _pinecone_location,
         "description": _pinecone_description,
+    },
+    "jobs.workable.com": {
+        "company_name": _workable_company,
+        "title": _workable_title,
+        "location": _workable_location,
+        "description": _workable_description,
+        "role_type": _workable_role_type,
     },
 }
 
