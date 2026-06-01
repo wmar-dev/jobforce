@@ -23,7 +23,10 @@ export default function CoachPage() {
   const [isMockMode, setIsMockMode] = useState(false);
 
   useEffect(() => {
-    getJobs({ limit: 50 }).then((data) => setJobs(data.items));
+    Promise.all([
+      getJobs({ status: "interviewing", limit: 50 }),
+      getJobs({ status: "applied", limit: 50 }),
+    ]).then(([a, b]) => setJobs([...a.items, ...b.items]));
   }, []);
 
   const handleGeneratePrep = async () => {
