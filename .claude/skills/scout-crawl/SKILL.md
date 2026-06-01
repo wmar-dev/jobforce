@@ -20,48 +20,27 @@ Capture a job listing from a URL and ingest it into Jobforce using a determinist
    ```bash
    cd backend && uv run python -m jobforce.cli.scout_fetch --url "<URL>"
    ```
-   This fetches the page headlessly and parses it using site-specific adapters.
+   This fetches the page headlessly, parses it using site-specific adapters, and writes directly to the database. The backend does not need to be running.
 
 2. If the command fails with a login-related error, stop and tell the user:
    "This page requires authentication. Please log in manually and re-run once the page is accessible without login."
 
 3. Parse the JSON printed to stdout. It contains:
-   - `source_url`
-   - `title`
-   - `company_name`
-   - `location`
-   - `role_type`
-   - `description`
-   - `compensation` (optional)
+   - `source_url`, `title`, `company_name`, `location`, `role_type`, `description`
+   - `id` — the database row id of the job listing
+   - `status` — pipeline status (always `"saved"` on first capture)
+   - `duplicate` — `true` if this URL was already in the database
 
-4. POST to the Jobforce ingest API by piping the scout_fetch output through Python — never construct the JSON by hand, as descriptions can be very long:
-   ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<URL>" 2>/dev/null | \
-     python3 -c "
-   import json, sys, urllib.request, urllib.error
-   data = json.load(sys.stdin)
-   payload = {k: data.get(k) for k in ('source_url','title','company_name','location','role_type','description')}
-   payload['html'] = ''
-   body = json.dumps(payload).encode()
-   req = urllib.request.Request('http://localhost:8000/api/ingest', data=body, headers={'Content-Type': 'application/json'}, method='POST')
-   try:
-       resp = urllib.request.urlopen(req)
-       print(resp.status, resp.read().decode())
-   except urllib.error.HTTPError as e:
-       print(e.code, e.read().decode())
-   "
-   ```
-   The ingest API accepts: `source_url`, `html` (pass empty string `""`), `title`, `company_name`, `location`, `role_type`, `description`.
-
-5. Report result:
-   - **201**: "✅ Captured: [title] at [company] — Job #[id]"
-   - **409**: "Already saved — this listing is in your board (Job #[id])"
-   - **Error**: "❌ Ingest failed: [error detail]"
+4. Report result:
+   - **`duplicate: false`**: "✅ Captured: [title] at [company] — Job #[id]"
+   - **`duplicate: true`**: "Already saved — this listing is in your board (Job #[id])"
+   - **Command error / non-zero exit**: "❌ Ingest failed: [stderr detail]"
 
 ## Notes
 
-- Backend must be running: `make dev`
+- The backend does not need to be running — `scout_fetch` writes directly to the SQLite database.
 - `playwright` and Chromium must be installed: `cd backend && uv sync && uv run playwright install chromium`
-- The parser uses site-specific adapters (starting with OpenAI). For unsupported sites the generic adapter runs.
+- The parser uses site-specific adapters. For unsupported sites the generic adapter runs.
 - Login-gated pages are not supported; the tool will time out or return incomplete data.
-- To add a new site adapter, edit `backend/jobforce/services/parse.py` — see `quickstart.md` in the feature spec.
+- To add a new site adapter, edit `backend/jobforce/services/parse.py`.
+- Use `--dry-run` to parse without writing to the database.

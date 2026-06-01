@@ -1,4 +1,4 @@
-"""CLI tool: fetch a job page headlessly and parse it into structured JSON."""
+"""CLI tool: fetch a job page headlessly, parse it, and ingest into the database."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from jobforce.services.parse import parse_html
 _TIMEOUT_MS = 30_000
 
 
-async def _fetch_and_parse(url: str) -> dict:  # type: ignore[type-arg]
+async def _fetch_html(url: str) -> str:
     from playwright.async_api import TimeoutError as PlaywrightTimeout
     from playwright.async_api import async_playwright
 
@@ -30,11 +30,42 @@ async def _fetch_and_parse(url: str) -> dict:  # type: ignore[type-arg]
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            html = await page.evaluate("document.documentElement.outerHTML")
+            return await page.evaluate("document.documentElement.outerHTML")
         finally:
             await browser.close()
 
-    return parse_html(html, url)
+
+async def _ingest(url: str, html: str, parsed: dict) -> dict:  # type: ignore[type-arg]
+    from jobforce.config import load_config
+    from jobforce.db.engine import build_engine, build_session_factory
+    from jobforce.services.scout import IngestPayload, ingest_listing
+
+    cfg = load_config()
+    engine = build_engine(cfg.database.path)
+    factory = build_session_factory(engine)
+    try:
+        async with factory() as session:
+            payload = IngestPayload(
+                source_url=url,
+                html=html,
+                title=parsed.get("title", ""),
+                company_name=parsed.get("company_name", ""),
+                location=parsed.get("location"),
+                role_type=parsed.get("role_type"),
+                description=parsed.get("description"),
+            )
+            return await ingest_listing(session, payload)
+    finally:
+        await engine.dispose()
+
+
+async def _run(url: str, dry_run: bool) -> dict:  # type: ignore[type-arg]
+    html = await _fetch_html(url)
+    parsed = parse_html(html, url)
+    if dry_run:
+        return parsed
+    result = await _ingest(url, html, parsed)
+    return {**parsed, **result}
 
 
 def _validate_url(url: str) -> str:
@@ -45,11 +76,12 @@ def _validate_url(url: str) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fetch and parse a job listing URL")
+    parser = argparse.ArgumentParser(description="Fetch, parse, and ingest a job listing URL")
     parser.add_argument("--url", required=True, type=_validate_url, help="Job listing URL to fetch")
+    parser.add_argument("--dry-run", action="store_true", help="Parse only, do not write to database")
     args = parser.parse_args()
 
-    result = asyncio.run(_fetch_and_parse(args.url))
+    result = asyncio.run(_run(args.url, args.dry_run))
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
