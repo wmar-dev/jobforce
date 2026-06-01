@@ -221,6 +221,73 @@ def _ashby_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Lever site adapter — jobs.lever.co/<company>/<job-id>
+# Page structure: div.posting-headline > h2 (title) + div.posting-categories
+#                   > div[0]=location, div[1]=team, div[2]=commitment, div[3]=worktype
+#                 div.section-wrapper > (job description sections)
+# Note: Lever escapes class names in HTML so CSS selectors fail; navigate by position.
+# ---------------------------------------------------------------------------
+
+
+def _lever_company(doc: BeautifulSoup, url: str) -> str | None:
+    # Prefer "Company - Job Title" in <title> tag for canonical casing
+    title_tag = doc.find("title")
+    if title_tag:
+        raw = (title_tag.get_text() or "").strip()
+        parts = raw.split(" - ", 1)
+        if len(parts) == 2:
+            return parts[0].strip() or None
+    # Fallback: extract from URL path jobs.lever.co/<company>/<id>
+    parts = urlparse(url).path.strip("/").split("/")
+    if parts and parts[0]:
+        return " ".join(w.capitalize() for w in parts[0].replace("-", " ").split())
+    return None
+
+
+def _lever_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.find("h2"))
+
+
+def _lever_location(doc: BeautifulSoup, url: str) -> str | None:
+    h2 = doc.find("h2")
+    if h2:
+        cats = h2.find_next_sibling("div")
+        if cats:
+            divs = cats.find_all("div", recursive=False)
+            if divs:
+                return _text(divs[0])
+    return None
+
+
+def _lever_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    h2 = doc.find("h2")
+    if h2:
+        cats = h2.find_next_sibling("div")
+        if cats:
+            divs = cats.find_all("div", recursive=False)
+            if len(divs) >= 3:
+                raw = _text(divs[2]) or ""
+                raw = raw.rstrip(" /").lower()
+                if "full" in raw:
+                    return "full-time"
+                if "part" in raw:
+                    return "part-time"
+                if "contract" in raw:
+                    return "contract"
+                if "intern" in raw:
+                    return "internship"
+    return None
+
+
+def _lever_description(doc: BeautifulSoup, url: str) -> str | None:
+    for div in doc.find_all("div"):
+        classes = " ".join(str(c) for c in div.get("class", []))
+        if "section-wrapper" in classes:
+            return _text(div)
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Cursor site adapter — cursor.com/careers/<slug>
 # Page structure: main > article > div > header > h1 + p (dept·type·location)
 #                                       div > div.prose (description)
@@ -305,6 +372,13 @@ def _databricks_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
+    "jobs.lever.co": {
+        "company_name": _lever_company,
+        "title": _lever_title,
+        "location": _lever_location,
+        "role_type": _lever_role_type,
+        "description": _lever_description,
+    },
     "openai.com": {
         "company_name": lambda doc, url: "OpenAI",
         "title": lambda doc, url: _text(doc.select_one("main h2")),
