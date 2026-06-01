@@ -228,6 +228,24 @@ def test_openai_adapter_real_layout_compensation() -> None:
     assert result.get("compensation") == "$230K – $385K + Offers Equity"
 
 
+def test_openai_team_desc_layout_falls_back_to_slug() -> None:
+    """Regression: first <p> after title h2 is a team description, not a location — must fall back to slug."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("openai_job_team_desc_layout.html")
+    result = parse_html(html, "https://openai.com/careers/software-engineer-accelerators-san-francisco/")
+    assert result["location"] == "San Francisco"
+
+
+def test_openai_team_desc_layout_does_not_use_team_desc_as_location() -> None:
+    """Team description paragraph must not be stored as the location."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("openai_job_team_desc_layout.html")
+    result = parse_html(html, "https://openai.com/careers/software-engineer-accelerators-san-francisco/")
+    assert "Kernels team" not in (result["location"] or "")
+
+
 # ---------------------------------------------------------------------------
 # US2: Parity — generic adapter produces non-null title and role_type (T020)
 # ---------------------------------------------------------------------------

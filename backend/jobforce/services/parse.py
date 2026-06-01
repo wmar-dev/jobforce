@@ -25,7 +25,11 @@ _CITIES = [
 
 def slug_to_location(pathname: str) -> str | None:
     seg = pathname.rstrip("/").split("/")[-1] or ""
+    # Check suffix match first (e.g. "...-san-francisco")
     hit = next((c for c in _CITIES if seg.endswith(c)), None)
+    if not hit:
+        # Also match city anywhere in slug (e.g. "...-remote-us")
+        hit = next((c for c in _CITIES if f"-{c}-" in seg or seg.startswith(f"{c}-")), None)
     if not hit:
         return None
     return " ".join(w.capitalize() for w in hit.split("-"))
@@ -107,13 +111,22 @@ GENERIC_ADAPTER: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 
+_LOCATION_KEYWORDS = re.compile(
+    r"\b(san francisco|new york|seattle|london|boston|chicago|austin|remote)\b",
+    re.IGNORECASE,
+)
+
+
 def _openai_location(doc: BeautifulSoup, url: str) -> str | None:
     # First h2 in main is the job title; its next sibling p is the dept/location line
+    # e.g. "Robotics - San Francisco" or "Applied AI Engineering - San Francisco and Seattle"
+    # Guard: some pages put a team description <p> before the location — skip those.
     title_h2 = doc.select_one("main h2")
     if title_h2:
         el = title_h2.find_next_sibling("p")
         if el and (t := _text(el)):
-            return t
+            if _LOCATION_KEYWORDS.search(t):
+                return t
     return slug_to_location(urlparse(url).path)
 
 
