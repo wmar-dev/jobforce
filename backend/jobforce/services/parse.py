@@ -202,7 +202,9 @@ def _ashby_title(doc: BeautifulSoup, url: str) -> str | None:
 
 def _ashby_location(doc: BeautifulSoup, url: str) -> str | None:
     # Current markup: left pane has <h2>Location</h2><p>San Francisco</p> sections
-    for section in doc.select(".ashby-job-posting-left-pane ._section_101oc_37, .ashby-job-posting-left-pane [class*='_section']"):
+    for section in doc.select(
+        ".ashby-job-posting-left-pane ._section_101oc_37, .ashby-job-posting-left-pane [class*='_section']"
+    ):
         h2 = section.find("h2")
         if h2 and "location" in (h2.get_text() or "").lower():
             p = section.find("p")
@@ -281,7 +283,7 @@ def _lever_role_type(doc: BeautifulSoup, url: str) -> str | None:
 
 def _lever_description(doc: BeautifulSoup, url: str) -> str | None:
     for div in doc.find_all("div"):
-        classes = " ".join(str(c) for c in div.get("class", []))
+        classes = " ".join(str(c) for c in div.get("class", None) or [])
         if "section-wrapper" in classes:
             return _text(div)
     return None
@@ -364,7 +366,7 @@ def _workable_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
         try:
             d = _json.loads(s.string or "")
             if d.get("@type") == "JobPosting":
-                return d
+                return d  # type: ignore[no-any-return]
         except Exception:
             pass
     return {}
@@ -446,17 +448,32 @@ def _databricks_description(doc: BeautifulSoup, url: str) -> str | None:
 #   - Description: .notion-page-content text (starts after property block)
 # ---------------------------------------------------------------------------
 
-_NOTION_PROPERTY_NAMES = {"Department", "Employment Type", "Location", "Created", "Last edited time"}
+_NOTION_PROPERTY_NAMES = {
+    "Department",
+    "Employment Type",
+    "Location",
+    "Created",
+    "Last edited time",
+}
 
 _NOTION_PROPERTY_HEADINGS = {
-    "What we do", "What we want", "What you want", "What you've done",
-    "About the role", "About us", "About you", "Requirements", "Responsibilities",
-    "Qualifications", "Benefits", "Compensation",
+    "What we do",
+    "What we want",
+    "What you want",
+    "What you've done",
+    "About the role",
+    "About us",
+    "About you",
+    "Requirements",
+    "Responsibilities",
+    "Qualifications",
+    "Benefits",
+    "Compensation",
 }
 
 
 def _notion_text_lines(doc: BeautifulSoup) -> list[str]:
-    return [l.strip() for l in doc.get_text(separator="\n").split("\n") if l.strip()]
+    return [line.strip() for line in doc.get_text(separator="\n").split("\n") if line.strip()]
 
 
 def _notion_company(doc: BeautifulSoup, url: str) -> str | None:
@@ -466,7 +483,9 @@ def _notion_company(doc: BeautifulSoup, url: str) -> str | None:
         page_block = topbar.select_one(".notion-page-block")
         if page_block and (t := _text(page_block)):
             # "ParadeDB Job Board" → strip trailing " Job Board" / " Careers" etc.
-            name = re.sub(r"\s+(Job Board|Careers?|Jobs?|Opportunities)\s*$", "", t, flags=re.IGNORECASE)
+            name = re.sub(
+                r"\s+(Job Board|Careers?|Jobs?|Opportunities)\s*$", "", t, flags=re.IGNORECASE
+            )
             if name:
                 return name.strip()
     # Fallback: subdomain of notion.site URL

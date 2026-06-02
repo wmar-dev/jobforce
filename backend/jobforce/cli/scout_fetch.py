@@ -30,7 +30,7 @@ async def _fetch_html(url: str) -> str:
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            return await page.evaluate("document.documentElement.outerHTML")
+            return str(await page.evaluate("document.documentElement.outerHTML"))
         finally:
             await browser.close()
 
@@ -78,7 +78,9 @@ def _validate_url(url: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch, parse, and ingest a job listing URL")
     parser.add_argument("--url", required=True, type=_validate_url, help="Job listing URL to fetch")
-    parser.add_argument("--dry-run", action="store_true", help="Parse only, do not write to database")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Parse only, do not write to database"
+    )
     args = parser.parse_args()
 
     result = asyncio.run(_run(args.url, args.dry_run))

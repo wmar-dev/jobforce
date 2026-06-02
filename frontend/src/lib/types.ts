@@ -4,7 +4,9 @@ export type PipelineStatus =
   | "interviewing"
   | "offer"
   | "rejected"
-  | "withdrawn";
+  | "withdrawn"
+  | "archived"
+  | "shortlisted";
 
 export type FitConfidence = "high" | "medium" | "low";
 

@@ -26,7 +26,8 @@ export default function CoachPage() {
     Promise.all([
       getJobs({ status: "interviewing", limit: 50 }),
       getJobs({ status: "applied", limit: 50 }),
-    ]).then(([a, b]) => setJobs([...a.items, ...b.items]));
+      getJobs({ status: "shortlisted", limit: 50 }),
+    ]).then(([a, b, c]) => setJobs([...a.items, ...b.items, ...c.items]));
   }, []);
 
   const handleGeneratePrep = async () => {

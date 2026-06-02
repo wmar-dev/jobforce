@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from jobforce.db.engine import get_session
 from jobforce.db.models import Company, JobListing, MeetingNote
 from jobforce.db.models import _now as _db_now
-from jobforce.services.scout import transition_status
+from jobforce.services.scout import bulk_archive_low_score, transition_status
 
 router = APIRouter(tags=["jobs"])
 
@@ -132,6 +132,8 @@ async def get_jobs(
     stmt = select(JobListing).options(selectinload(JobListing.company))
     if status:
         stmt = stmt.where(JobListing.status == status)
+    else:
+        stmt = stmt.where(JobListing.status != "archived")
     if company_id:
         stmt = stmt.where(JobListing.company_id == company_id)
     if min_score is not None:
@@ -150,11 +152,7 @@ async def get_jobs(
     col = _SORT_COLUMNS[sort_by]
     primary_order = col.desc().nulls_last() if sort_dir == "desc" else col.asc().nulls_last()
     # Always break ties by created_at desc so order is stable across pages.
-    stmt = (
-        stmt.order_by(primary_order, JobListing.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    stmt = stmt.order_by(primary_order, JobListing.created_at.desc()).offset(offset).limit(limit)
     result = await session.execute(stmt)
     jobs = result.scalars().all()
 
@@ -173,6 +171,15 @@ async def get_jobs(
         total=total,
         items=[_to_out(j, has_note=j.id in jobs_with_note) for j in jobs],
     )
+
+
+@router.post("/jobs/bulk-archive")
+async def bulk_archive_jobs(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    company_id: int | None = Query(None),
+) -> dict[str, int]:
+    count = await bulk_archive_low_score(session, company_id=company_id)
+    return {"archived_count": count}
 
 
 @router.get("/jobs/{job_id}", response_model=JobListingDetail)

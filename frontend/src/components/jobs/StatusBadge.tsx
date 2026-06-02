@@ -2,6 +2,8 @@ import type { PipelineStatus } from "@/lib/types";
 
 const STATUS_CONFIG: Record<PipelineStatus, { label: string; classes: string }> = {
   saved: { label: "Saved", classes: "bg-gray-700 text-gray-200" },
+  archived: { label: "Archived", classes: "bg-gray-800 text-gray-500" },
+  shortlisted: { label: "Shortlisted", classes: "bg-amber-900 text-amber-200" },
   applied: { label: "Applied", classes: "bg-blue-900 text-blue-200" },
   interviewing: { label: "Interviewing", classes: "bg-yellow-900 text-yellow-200" },
   offer: { label: "Offer", classes: "bg-green-900 text-green-200" },

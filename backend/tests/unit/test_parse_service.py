@@ -207,7 +207,10 @@ def test_openai_adapter_real_layout_location_from_dom() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("openai_job_real_layout.html")
-    result = parse_html(html, "https://openai.com/careers/software-engineer-monetization-product-and-platform-san-francisco/")
+    result = parse_html(
+        html,
+        "https://openai.com/careers/software-engineer-monetization-product-and-platform-san-francisco/",
+    )
     assert result["location"] == "Applied AI Engineering - San Francisco and Seattle"
 
 
@@ -216,7 +219,10 @@ def test_openai_adapter_real_layout_does_not_grab_team_description() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("openai_job_real_layout.html")
-    result = parse_html(html, "https://openai.com/careers/software-engineer-monetization-product-and-platform-san-francisco/")
+    result = parse_html(
+        html,
+        "https://openai.com/careers/software-engineer-monetization-product-and-platform-san-francisco/",
+    )
     assert "cross-functional group" not in (result["location"] or "")
 
 
@@ -224,7 +230,10 @@ def test_openai_adapter_real_layout_compensation() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("openai_job_real_layout.html")
-    result = parse_html(html, "https://openai.com/careers/software-engineer-monetization-product-and-platform-san-francisco/")
+    result = parse_html(
+        html,
+        "https://openai.com/careers/software-engineer-monetization-product-and-platform-san-francisco/",
+    )
     assert result.get("compensation") == "$230K – $385K + Offers Equity"
 
 
@@ -233,7 +242,9 @@ def test_openai_team_desc_layout_falls_back_to_slug() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("openai_job_team_desc_layout.html")
-    result = parse_html(html, "https://openai.com/careers/software-engineer-accelerators-san-francisco/")
+    result = parse_html(
+        html, "https://openai.com/careers/software-engineer-accelerators-san-francisco/"
+    )
     assert result["location"] == "San Francisco"
 
 
@@ -242,7 +253,9 @@ def test_openai_team_desc_layout_does_not_use_team_desc_as_location() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("openai_job_team_desc_layout.html")
-    result = parse_html(html, "https://openai.com/careers/software-engineer-accelerators-san-francisco/")
+    result = parse_html(
+        html, "https://openai.com/careers/software-engineer-accelerators-san-francisco/"
+    )
     assert "Kernels team" not in (result["location"] or "")
 
 
@@ -334,7 +347,10 @@ def test_parse_html_workday_title_from_automation_id() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workday_job.html")
-    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    result = parse_html(
+        html,
+        "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001",
+    )
     assert result["title"] == "Senior Software Engineer"
 
 
@@ -342,7 +358,10 @@ def test_parse_html_workday_location_from_automation_id() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workday_job.html")
-    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    result = parse_html(
+        html,
+        "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001",
+    )
     assert result["location"] == "Austin, TX"
 
 
@@ -350,7 +369,10 @@ def test_parse_html_workday_company_from_subdomain() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workday_job.html")
-    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    result = parse_html(
+        html,
+        "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001",
+    )
     assert result["company_name"] == "Acme"
 
 
@@ -358,7 +380,10 @@ def test_parse_html_workday_description_non_null() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workday_job.html")
-    result = parse_html(html, "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001")
+    result = parse_html(
+        html,
+        "https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Austin/Senior-Software-Engineer_JR-001",
+    )
     assert result["description"] is not None
     assert "platform" in result["description"].lower()
 
@@ -523,7 +548,10 @@ def test_parse_html_databricks_title() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("databricks_job.html")
-    result = parse_html(html, "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002")
+    result = parse_html(
+        html,
+        "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002",
+    )
     assert result["title"] == "Senior Software Engineer - Backend"
 
 
@@ -531,7 +559,10 @@ def test_parse_html_databricks_company_name() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("databricks_job.html")
-    result = parse_html(html, "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002")
+    result = parse_html(
+        html,
+        "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002",
+    )
     assert result["company_name"] == "Databricks"
 
 
@@ -539,7 +570,10 @@ def test_parse_html_databricks_location_strips_apply_button() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("databricks_job.html")
-    result = parse_html(html, "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002")
+    result = parse_html(
+        html,
+        "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002",
+    )
     assert result["location"] == "San Francisco, CA"
 
 
@@ -547,7 +581,10 @@ def test_parse_html_databricks_description_non_null() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("databricks_job.html")
-    result = parse_html(html, "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002")
+    result = parse_html(
+        html,
+        "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002",
+    )
     assert result["description"] is not None
     assert "distributed" in result["description"].lower()
 
@@ -556,7 +593,10 @@ def test_parse_html_databricks_role_type_full_time() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("databricks_job.html")
-    result = parse_html(html, "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002")
+    result = parse_html(
+        html,
+        "https://www.databricks.com/company/careers/engineering/senior-software-engineer---backend-8320183002",
+    )
     assert result["role_type"] == "full-time"
 
 
@@ -592,13 +632,19 @@ def test_match_adapter_www_prefix_stripped_by_caller() -> None:
 def test_validate_url_accepts_https() -> None:
     from jobforce.cli.scout_fetch import _validate_url
 
-    assert _validate_url("https://jobs.example.com/posting/123") == "https://jobs.example.com/posting/123"
+    assert (
+        _validate_url("https://jobs.example.com/posting/123")
+        == "https://jobs.example.com/posting/123"
+    )
 
 
 def test_validate_url_accepts_http() -> None:
     from jobforce.cli.scout_fetch import _validate_url
 
-    assert _validate_url("http://jobs.example.com/posting/123") == "http://jobs.example.com/posting/123"
+    assert (
+        _validate_url("http://jobs.example.com/posting/123")
+        == "http://jobs.example.com/posting/123"
+    )
 
 
 def test_validate_url_rejects_no_scheme() -> None:
@@ -689,7 +735,9 @@ def test_parse_html_pinecone_title() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinecone_job.html")
-    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    result = parse_html(
+        html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/"
+    )
     assert result["title"] == "Senior/Staff Software Engineer, Database Team"
 
 
@@ -697,7 +745,9 @@ def test_parse_html_pinecone_company_name() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinecone_job.html")
-    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    result = parse_html(
+        html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/"
+    )
     assert result["company_name"] == "Pinecone"
 
 
@@ -705,7 +755,9 @@ def test_parse_html_pinecone_location_from_at_p() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinecone_job.html")
-    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    result = parse_html(
+        html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/"
+    )
     assert result["location"] == "New York City"
 
 
@@ -713,7 +765,9 @@ def test_parse_html_pinecone_description_non_null() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinecone_job.html")
-    result = parse_html(html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/")
+    result = parse_html(
+        html, "https://www.pinecone.io/careers/4ef4269b-94c4-4c7c-93ee-15a882caa767/"
+    )
     assert result["description"] is not None
     assert "Pinecone" in result["description"]
 
@@ -773,7 +827,10 @@ def test_parse_html_pinterest_title() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinterest_job.html")
-    result = parse_html(html, "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034")
+    result = parse_html(
+        html,
+        "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034",
+    )
     assert result["title"] == "Staff Machine Learning Engineer, Ads Conversion"
 
 
@@ -781,7 +838,10 @@ def test_parse_html_pinterest_company_name() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinterest_job.html")
-    result = parse_html(html, "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034")
+    result = parse_html(
+        html,
+        "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034",
+    )
     assert result["company_name"] == "Pinterest"
 
 
@@ -789,7 +849,10 @@ def test_parse_html_pinterest_location_from_first_li() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinterest_job.html")
-    result = parse_html(html, "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034")
+    result = parse_html(
+        html,
+        "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034",
+    )
     assert result["location"] == "San Francisco / Palo Alto / Seattle"
 
 
@@ -797,7 +860,10 @@ def test_parse_html_pinterest_role_type_full_time() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinterest_job.html")
-    result = parse_html(html, "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034")
+    result = parse_html(
+        html,
+        "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034",
+    )
     assert result["role_type"] == "full-time"
 
 
@@ -805,7 +871,10 @@ def test_parse_html_pinterest_description_non_null() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("pinterest_job.html")
-    result = parse_html(html, "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034")
+    result = parse_html(
+        html,
+        "https://www.pinterestcareers.com/jobs/7902034/staff-machine-learning-engineer-ads-conversion/?gh_jid=7902034",
+    )
     assert result["description"] is not None
     assert "Machine Learning" in result["description"]
 
@@ -819,7 +888,10 @@ def test_parse_html_workable_title() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workable_job.html")
-    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    result = parse_html(
+        html,
+        "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle",
+    )
     assert result["title"] == "Senior Full-stack Software Engineer"
 
 
@@ -827,7 +899,10 @@ def test_parse_html_workable_company_name() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workable_job.html")
-    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    result = parse_html(
+        html,
+        "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle",
+    )
     assert result["company_name"] == "Kettle"
 
 
@@ -835,7 +910,10 @@ def test_parse_html_workable_location_with_remote() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workable_job.html")
-    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    result = parse_html(
+        html,
+        "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle",
+    )
     assert result["location"] == "San Francisco (Remote)"
 
 
@@ -843,7 +921,10 @@ def test_parse_html_workable_role_type_full_time() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workable_job.html")
-    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    result = parse_html(
+        html,
+        "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle",
+    )
     assert result["role_type"] == "full-time"
 
 
@@ -851,7 +932,10 @@ def test_parse_html_workable_description_non_null() -> None:
     from jobforce.services.parse import parse_html
 
     html = _read("workable_job.html")
-    result = parse_html(html, "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle")
+    result = parse_html(
+        html,
+        "https://jobs.workable.com/en/view/jo82yMiX7GNRYQ4RpFWFaN/hybrid-senior-full-stack-software-engineer-in-san-francisco-at-kettle",
+    )
     assert result["description"] is not None
     assert "Kettle" in result["description"]
 

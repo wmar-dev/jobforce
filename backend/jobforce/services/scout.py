@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Valid pipeline state machine transitions
 _VALID_TRANSITIONS: dict[str, list[str]] = {
-    "saved": ["applied", "rejected", "withdrawn"],
+    "saved": ["applied", "rejected", "withdrawn", "archived", "shortlisted"],
+    "archived": ["saved"],
+    "shortlisted": ["applied", "rejected", "withdrawn", "archived", "saved"],
     "applied": ["interviewing", "rejected", "withdrawn"],
     "interviewing": ["offer", "rejected", "withdrawn"],
     "offer": [],
@@ -89,6 +91,32 @@ async def ingest_listing(
         "company_id": company.id,
         "duplicate": False,
     }
+
+
+async def bulk_archive_low_score(session: AsyncSession, company_id: int | None = None) -> int:
+    """Archive saved jobs with fit_score < 0.50. Optionally scoped to one company."""
+    conditions = [
+        JobListing.status == "saved",
+        JobListing.fit_score.is_not(None),
+        JobListing.fit_score < 0.50,
+    ]
+    if company_id is not None:
+        conditions.append(JobListing.company_id == company_id)
+    result = await session.execute(select(JobListing).where(*conditions))
+    jobs = result.scalars().all()
+    for job in jobs:
+        old_status = job.status
+        job.status = "archived"
+        session.add(
+            StatusTransition(
+                job_listing_id=job.id,
+                from_status=old_status,
+                to_status="archived",
+            )
+        )
+    await session.commit()
+    logger.info("Bulk archived %d low-score jobs", len(jobs))
+    return len(jobs)
 
 
 async def transition_status(session: AsyncSession, job_id: int, new_status: str) -> dict[str, Any]:

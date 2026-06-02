@@ -5,6 +5,8 @@ import { StatusBadge } from "./StatusBadge";
 import Link from "next/link";
 import { StickyNote } from "lucide-react";
 import type { JobSortKey, SortDir } from "@/lib/api";
+import { patchJobStatus } from "@/lib/api";
+import { useSWRConfig } from "swr";
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="ml-1 text-gray-700">↕</span>;
@@ -19,6 +21,12 @@ interface JobTableProps {
 }
 
 export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
+  const { mutate } = useSWRConfig();
+
+  async function handleAction(jobId: number, action: "archived" | "shortlisted" | "saved") {
+    await patchJobStatus(jobId, action);
+    mutate(([key]: [string]) => key === "/api/jobs", undefined, { revalidate: true });
+  }
 
   if (jobs.length === 0) {
     return (
@@ -53,7 +61,8 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
             <Th col={null}       label="Location" />
             <Th col="status"     label="Status"    sortable />
             <Th col="fit_score"  label="Fit Score" sortable />
-            <Th col="created_at" label="Captured"  sortable last />
+            <Th col="created_at" label="Captured"  sortable />
+            <Th col={null}       label=""          last />
           </tr>
         </thead>
         <tbody>
@@ -92,10 +101,50 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   <span className="text-gray-600 text-xs">Not scored</span>
                 )}
               </td>
-              <td className="py-3 text-gray-500 text-xs">
+              <td className="py-3 pr-4 text-gray-500 text-xs">
                 {job.crawled_at
                   ? new Date(job.crawled_at).toLocaleDateString()
                   : new Date(job.created_at).toLocaleDateString()}
+              </td>
+              <td className="py-3 text-right">
+                <span className="inline-flex gap-1">
+                  {job.status !== "shortlisted" && job.status !== "applied" && job.status !== "interviewing" && job.status !== "offer" && job.status !== "rejected" && job.status !== "withdrawn" && (
+                    <button
+                      onClick={() => handleAction(job.id, "shortlisted")}
+                      className="px-1.5 py-0.5 text-xs rounded bg-amber-900/50 text-amber-300 hover:bg-amber-800/60 transition-colors"
+                      title="Shortlist this job"
+                    >
+                      ★
+                    </button>
+                  )}
+                  {job.status === "shortlisted" && (
+                    <button
+                      onClick={() => handleAction(job.id, "saved")}
+                      className="px-1.5 py-0.5 text-xs rounded bg-amber-800 text-amber-200 hover:bg-amber-700 transition-colors"
+                      title="Remove from shortlist"
+                    >
+                      ★
+                    </button>
+                  )}
+                  {job.status !== "archived" && job.status !== "applied" && job.status !== "interviewing" && job.status !== "offer" && job.status !== "rejected" && job.status !== "withdrawn" && (
+                    <button
+                      onClick={() => handleAction(job.id, "archived")}
+                      className="px-1.5 py-0.5 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
+                      title="Archive this job"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  {job.status === "archived" && (
+                    <button
+                      onClick={() => handleAction(job.id, "saved")}
+                      className="px-1.5 py-0.5 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
+                      title="Restore from archive"
+                    >
+                      ↩
+                    </button>
+                  )}
+                </span>
               </td>
             </tr>
           ))}

@@ -75,6 +75,11 @@ export function patchJobStatus(
   });
 }
 
+export function bulkArchive(companyId?: number): Promise<{ archived_count: number }> {
+  const qs = companyId !== undefined ? `?company_id=${companyId}` : "";
+  return apiFetch(`/api/jobs/bulk-archive${qs}`, { method: "POST" });
+}
+
 // Job notes
 export function getJobNote(jobId: number): Promise<JobNote> {
   return apiFetch<JobNote>(`/api/jobs/${jobId}/note`);

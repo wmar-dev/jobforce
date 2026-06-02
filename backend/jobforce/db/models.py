@@ -41,7 +41,9 @@ class Company(Base):
     )
 
 
-_VALID_STATUSES = "('saved','applied','interviewing','offer','rejected','withdrawn')"
+_VALID_STATUSES = (
+    "('saved','applied','interviewing','offer','rejected','withdrawn','archived','shortlisted')"
+)
 
 
 class JobListing(Base):
