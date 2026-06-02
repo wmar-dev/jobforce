@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { getJobs, getLatestCoachSession } from "@/lib/api";
 import { QuestionCard } from "@/components/coach/QuestionCard";
-import { MockInterviewPanel } from "@/components/coach/MockInterviewPanel";
 import type { JobListing, InterviewSession, QuestionItem } from "@/lib/types";
 
 const CATEGORIES: Array<{ key: QuestionItem["category"]; label: string; icon: string }> = [
@@ -20,7 +19,6 @@ export default function CoachPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<QuestionItem["category"] | "all">("all");
-  const [isMockMode, setIsMockMode] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -30,7 +28,7 @@ export default function CoachPage() {
     ]).then(([a, b, c]) => setJobs([...a.items, ...b.items, ...c.items]));
   }, []);
 
-  const handleGeneratePrep = async () => {
+  const handleLoadSession = async () => {
     if (!selectedJobId) return;
     setIsLoading(true);
     setError(null);
@@ -39,7 +37,6 @@ export default function CoachPage() {
       const result = await getLatestCoachSession(selectedJobId);
       setSession(result);
       setActiveCategory("all");
-      setIsMockMode(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No prep session found — run /coach-prep <job_id> in Claude Code first");
     } finally {
@@ -79,7 +76,7 @@ export default function CoachPage() {
           ))}
         </select>
         <button
-          onClick={handleGeneratePrep}
+          onClick={handleLoadSession}
           disabled={isLoading || !selectedJobId}
           className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
         >
@@ -93,65 +90,46 @@ export default function CoachPage() {
 
       {session && (
         <>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-1">
-              <button
-                onClick={() => setActiveCategory("all")}
-                className={`px-3 py-1.5 text-xs rounded transition-colors ${
-                  activeCategory === "all"
-                    ? "bg-gray-700 text-white"
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                All ({session.questions.length})
-              </button>
-              {CATEGORIES.map((cat) => {
-                const count = session.questions.filter((q) => q.category === cat.key).length;
-                if (count === 0) return null;
-                return (
-                  <button
-                    key={cat.key}
-                    onClick={() => setActiveCategory(cat.key)}
-                    className={`px-3 py-1.5 text-xs rounded transition-colors ${
-                      activeCategory === cat.key
-                        ? "bg-gray-700 text-white"
-                        : "text-gray-500 hover:text-gray-300"
-                    }`}
-                  >
-                    {cat.icon} {cat.label} ({count})
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex gap-1 mb-4">
             <button
-              onClick={() => setIsMockMode(!isMockMode)}
-              className={`text-xs px-3 py-1.5 rounded border transition-colors ${
-                isMockMode
-                  ? "border-blue-600 bg-blue-950 text-blue-300"
-                  : "border-gray-700 text-gray-500 hover:text-gray-300"
+              onClick={() => setActiveCategory("all")}
+              className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                activeCategory === "all"
+                  ? "bg-gray-700 text-white"
+                  : "text-gray-500 hover:text-gray-300"
               }`}
             >
-              {isMockMode ? "📋 Study Mode" : "🎭 Mock Interview"}
+              All ({session.questions.length})
             </button>
+            {CATEGORIES.map((cat) => {
+              const count = session.questions.filter((q) => q.category === cat.key).length;
+              if (count === 0) return null;
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                    activeCategory === cat.key
+                      ? "bg-gray-700 text-white"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  {cat.icon} {cat.label} ({count})
+                </button>
+              );
+            })}
           </div>
 
-          {isMockMode ? (
-            <MockInterviewPanel
-              sessionId={session.session_id}
-              questions={session.questions}
-            />
-          ) : (
-            <div className="space-y-3">
-              {filteredQuestions.map((q) => (
-                <QuestionCard key={q.id} question={q} />
-              ))}
-              {filteredQuestions.length === 0 && (
-                <div className="text-gray-600 text-sm py-4 text-center">
-                  No questions in this category.
-                </div>
-              )}
-            </div>
-          )}
+          <div className="space-y-3">
+            {filteredQuestions.map((q) => (
+              <QuestionCard key={q.id} question={q} />
+            ))}
+            {filteredQuestions.length === 0 && (
+              <div className="text-gray-600 text-sm py-4 text-center">
+                No questions in this category.
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

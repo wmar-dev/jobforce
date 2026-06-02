@@ -8,8 +8,6 @@ import type {
   Resume,
   TailoredResumeResponse,
   InterviewSession,
-  AnswerFeedback,
-  SessionSummary,
   DashboardSummary,
   CompanyDetail,
   MeetingNote,
@@ -159,21 +157,6 @@ export async function exportResumePdf(resumeId: number): Promise<Blob> {
 // Coach
 export function getLatestCoachSession(jobId: number): Promise<InterviewSession> {
   return apiFetch(`/api/coach/jobs/${jobId}/latest-session`);
-}
-
-export function submitAnswer(
-  sessionId: number,
-  questionId: string,
-  answer: string
-): Promise<AnswerFeedback> {
-  return apiFetch(`/api/coach/sessions/${sessionId}/answer`, {
-    method: "POST",
-    body: JSON.stringify({ question_id: questionId, answer }),
-  });
-}
-
-export function getSessionSummary(sessionId: number): Promise<SessionSummary> {
-  return apiFetch<SessionSummary>(`/api/coach/sessions/${sessionId}/summary`);
 }
 
 // Dashboard

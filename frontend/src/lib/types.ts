@@ -159,19 +159,6 @@ export interface InterviewSession {
   questions: QuestionItem[];
 }
 
-export interface AnswerFeedback {
-  question_id: string;
-  feedback: string;
-  score: number;
-}
-
-export interface SessionSummary {
-  session_id: number;
-  overall_score: number;
-  summary: string;
-  areas_to_improve: string[];
-}
-
 export interface MeetingNote {
   id: number;
   company_id: number;
