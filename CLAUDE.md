@@ -132,16 +132,14 @@ Two gitignored files are required at runtime:
 
 ## Current Feature Context
 
-Feature 009 (company careers search) is **complete**. The `/scout-companies` skill is live.
+Feature 011 (coach skill migration) is **complete**. The `anthropic` Python package has been removed from the backend.
 
-Key changes shipped on branch `009-company-careers-search`:
+Key changes:
 
-- `backend/jobforce/config.py` — `CompanyConfig` gains optional `careers_url: str = ""` field
-- `backend/jobforce/db/models.py` — `Company` model gains nullable `careers_url TEXT` column
-- `backend/jobforce/db/seed.py` — `_seed_companies()` upserts `careers_url` from config onto existing rows
-- `backend/jobforce/db/migrations/009_add_careers_url.sql` — SQLite migration (run manually on existing DBs)
-- `backend/jobforce/routers/companies.py` — `GET /api/companies` list + `PATCH /api/companies/{id}` endpoints
-- `.claude/skills/scout-companies/SKILL.md` — new skill: probes careers pages, extracts job URLs, ingests via `scout_fetch`
-- `config.example.yaml` — `careers_url` example added to `target_companies`
+- `backend/pyproject.toml` — `anthropic>=0.105.0` dependency removed; `uv.lock` regenerated
+- `backend/jobforce/services/coach.py` — rewritten: SDK removed; `store_prep_pack()` replaces `generate_prep_pack()`; `evaluate_answer()` is now a stub
+- `backend/jobforce/routers/coach.py` — `PrepRequest` now requires a `questions: list[QuestionIn]` field; backend stores questions provided by the skill, no AI call on the backend path
+- `backend/tests/contract/test_coach.py` — updated: no more mock patches; tests POST real question lists
+- `.claude/skills/coach-prep/SKILL.md` — rewritten: skill generates questions via in-context Claude reasoning (Pro subscription), then POSTs them to the backend; sessions appear in the web UI unchanged
 
-**Run migration on existing DB**: `sqlite3 backend/data/jobforce.db < backend/jobforce/db/migrations/009_add_careers_url.sql`
+**Verify invariant**: `grep -r "import anthropic" backend/` → zero results

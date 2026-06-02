@@ -2,25 +2,37 @@
 
 from __future__ import annotations
 
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.engine import get_session
-from jobforce.db.models import JobListing
+from jobforce.db.models import InterviewSession, JobListing
 from jobforce.services.coach import (
     evaluate_answer,
-    generate_prep_pack,
     get_session_summary_data,
+    store_prep_pack,
 )
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
 
+class QuestionIn(BaseModel):
+    id: str
+    category: str
+    text: str
+    source_url: str | None = None
+    leetcode_url: str | None = None
+    guidance: str | None = None
+
+
 class PrepRequest(BaseModel):
     job_id: int
+    questions: list[QuestionIn]
 
 
 class QuestionOut(BaseModel):
@@ -65,15 +77,40 @@ async def post_prep(
     if job is None:
         raise HTTPException(status_code=404, detail="Job listing not found")
 
-    try:
-        result = await generate_prep_pack(session, body.job_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    questions = [q.model_dump() for q in body.questions]
+    result = await store_prep_pack(session, body.job_id, questions)
 
     return PrepSessionOut(
         session_id=result["session_id"],
         job_id=result["job_id"],
         questions=[QuestionOut(**q) for q in result["questions"]],
+    )
+
+
+@router.get("/jobs/{job_id}/latest-session", response_model=PrepSessionOut)
+async def get_latest_session(
+    job_id: int,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> PrepSessionOut:
+    job = await session.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+
+    result = await session.execute(
+        select(InterviewSession)
+        .where(InterviewSession.job_listing_id == job_id)
+        .order_by(InterviewSession.id.desc())
+        .limit(1)
+    )
+    interview = result.scalar_one_or_none()
+    if interview is None:
+        raise HTTPException(status_code=404, detail="No prep session found for this job")
+
+    questions = json.loads(interview.questions)
+    return PrepSessionOut(
+        session_id=interview.id,
+        job_id=job_id,
+        questions=[QuestionOut(**q) for q in questions],
     )
 
 

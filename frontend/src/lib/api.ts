@@ -157,8 +157,8 @@ export async function exportResumePdf(resumeId: number): Promise<Blob> {
 }
 
 // Coach
-export function createCoachPrep(jobId: number): Promise<InterviewSession> {
-  return apiFetch("/api/coach/prep", { method: "POST", body: JSON.stringify({ job_id: jobId }) });
+export function getLatestCoachSession(jobId: number): Promise<InterviewSession> {
+  return apiFetch(`/api/coach/jobs/${jobId}/latest-session`);
 }
 
 export function submitAnswer(

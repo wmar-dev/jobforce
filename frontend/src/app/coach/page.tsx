@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getJobs, createCoachPrep } from "@/lib/api";
+import { getJobs, getLatestCoachSession } from "@/lib/api";
 import { QuestionCard } from "@/components/coach/QuestionCard";
 import { MockInterviewPanel } from "@/components/coach/MockInterviewPanel";
 import type { JobListing, InterviewSession, QuestionItem } from "@/lib/types";
@@ -36,12 +36,12 @@ export default function CoachPage() {
     setError(null);
     setSession(null);
     try {
-      const result = await createCoachPrep(selectedJobId);
+      const result = await getLatestCoachSession(selectedJobId);
       setSession(result);
       setActiveCategory("all");
       setIsMockMode(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate prep pack");
+      setError(err instanceof Error ? err.message : "No prep session found — run /coach-prep <job_id> in Claude Code first");
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +60,7 @@ export default function CoachPage() {
           <span className="text-gray-500">Interview Prep</span>
         </div>
         <p className="text-gray-400 text-sm ml-9">
-          AI-powered interview prep with LeetCode recommendations and mock interview mode.
+          Interview prep powered by Claude Code. Run /coach-prep &lt;job_id&gt; to generate a session, then load it here.
         </p>
       </div>
 
@@ -83,7 +83,7 @@ export default function CoachPage() {
           disabled={isLoading || !selectedJobId}
           className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
         >
-          {isLoading ? "Generating..." : "🎯 Generate Prep Pack"}
+          {isLoading ? "Loading..." : "🎯 Load Prep Pack"}
         </button>
       </div>
 
