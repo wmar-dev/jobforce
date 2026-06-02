@@ -38,7 +38,12 @@ export default function CoachPage() {
       setSession(result);
       setActiveCategory("all");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No prep session found — run /coach-prep <job_id> in Claude Code first");
+      const msg = err instanceof Error ? err.message : "";
+      setError(
+        msg.toLowerCase().includes("no prep session")
+          ? `No prep session found — run /coach-prep ${selectedJobId} in Claude Code first, then reload.`
+          : msg || "Failed to load session"
+      );
     } finally {
       setIsLoading(false);
     }
