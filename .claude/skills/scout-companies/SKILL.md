@@ -68,11 +68,34 @@ If `target_locations` is empty, print a warning and proceed without location fil
 ```
 
 **If an argument was provided** (e.g. `/scout-companies "Acme Corp"`):
-- Filter the `companies` list to entries whose `name` matches the argument (case-insensitive)
-- If no match found, stop and print:
-  ```
-  ❌ Company not found in config.yaml: "<argument>"
-  ```
+- If the argument looks like a URL (starts with `http://` or `https://`):
+  - Treat it as a `careers_url` for an unknown company
+  - Infer `name` from the URL (e.g. `listenlabs` from `jobs.ashbyhq.com/listenlabs` → `Listen Labs`; use the path segment or hostname)
+  - Infer `domain` as the base domain of the URL (e.g. `listenlabs.ai`) — if it's an ATS-hosted URL (ashbyhq.com, greenhouse.io, lever.co, etc.) leave `domain` blank
+  - Set `careers_url` to the provided URL
+  - Proceed to Step 2b to check if this company is already in config before adding
+- Else: filter the `companies` list to entries whose `name` matches the argument (case-insensitive)
+  - If no match found, proceed to Step 2b to add it
+
+## Step 2b: Add new company to config.yaml if not already present
+
+If the argument-provided company (by name or URL) was **not found** in the existing `companies` list:
+
+1. Confirm the inferred `name`, `domain`, and `careers_url` with a one-line print:
+   ```
+   ➕ New company: <name> | domain: <domain> | careers_url: <careers_url>
+   ```
+
+2. Append the new entry to `config.yaml` under `search.target_companies`. Read the current config.yaml, find the `target_companies:` block, and append at the end in the same YAML format used by existing entries:
+   ```yaml
+       - name: "<name>"
+         domain: "<domain>"
+         careers_url: "<careers_url>"
+   ```
+
+3. Add the new company to the in-memory `companies` list so the current run processes it.
+
+4. If the argument was a name with no URL (not a URL argument), set `careers_url` to `""` and `domain` to `""` — the skill will probe common paths in step 4b.
 
 ## Step 3: Look up company IDs and existing careers_url from the DB
 
@@ -303,7 +326,8 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | --------- | --------- |
 | Backend not reachable | Fail immediately with instructions |
 | No companies in config | Fail with message |
-| Named company not found | Fail with message |
+| Named company not found in config | Add to config.yaml and proceed |
+| URL argument provided | Infer company name/domain, add to config.yaml if new, proceed |
 | No domain or careers_url | Skip company, report |
 | Careers page not found after probing | Skip company, report |
 | Login-gated page | Skip company, report "requires login" |
@@ -323,5 +347,6 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 - Backend must be running: `make dev`
 - Playwright and Chromium must be installed: `cd backend && uv run playwright install chromium`
 - The `careers_url` is written back to the DB after first auto-discovery — subsequent runs skip probing
+- New companies (from a URL or unknown name argument) are appended to `config.yaml` automatically so they persist for future runs
 - This skill uses Playwright MCP for browser interaction; no Python browser code
 - Job extraction uses Claude's judgment — page layouts vary across ATS platforms
