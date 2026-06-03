@@ -5,7 +5,9 @@ import { patchJobStatus } from "@/lib/api";
 import type { PipelineStatus } from "@/lib/types";
 
 const VALID_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
-  saved: ["applied", "rejected", "withdrawn"],
+  saved: ["applied", "rejected", "withdrawn", "archived", "shortlisted"],
+  shortlisted: ["applied", "rejected", "withdrawn", "archived", "saved"],
+  archived: ["saved"],
   applied: ["interviewing", "rejected", "withdrawn"],
   interviewing: ["offer", "rejected", "withdrawn"],
   offer: [],
