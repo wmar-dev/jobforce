@@ -70,8 +70,8 @@ If `target_locations` is empty, print a warning and proceed without location fil
 **If an argument was provided** (e.g. `/scout-companies "Acme Corp"`):
 - If the argument looks like a URL (starts with `http://` or `https://`):
   - Treat it as a `careers_url` for an unknown company
-  - Infer `name` from the URL (e.g. `decagon` from `jobs.ashbyhq.com/decagon` → `Decagon`; use the path segment or hostname)
-  - Infer `domain` as the base domain of the URL (e.g. `decagon.ai`) — if it's an ATS-hosted URL (ashbyhq.com, greenhouse.io, lever.co, etc.) leave `domain` blank
+  - Infer `name` from the URL (e.g. `anthropic` from `jobs.ashbyhq.com/anthropic` → `Anthropic`; use the path segment or hostname)
+  - Infer `domain` as the base domain of the URL (e.g. `anthropic.com`) — if it's an ATS-hosted URL (ashbyhq.com, greenhouse.io, lever.co, etc.) leave `domain` blank
   - Set `careers_url` to the provided URL
   - Proceed to Step 2b to check if this company is already in config before adding
 - Else: filter the `companies` list to entries whose `name` matches the argument (case-insensitive)
