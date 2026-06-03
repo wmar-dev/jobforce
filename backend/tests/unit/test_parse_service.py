@@ -1035,3 +1035,43 @@ def test_parse_html_adal_description_non_null() -> None:
     result = parse_html(html, _ADAL_URL)
     assert result["description"] is not None
     assert "Production Quality" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Discord (discord.com/jobs/<id>)
+# ---------------------------------------------------------------------------
+
+_DISCORD_URL = "https://discord.com/jobs/8136321002"
+
+
+def test_parse_html_discord_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("discord_job.html")
+    result = parse_html(html, _DISCORD_URL)
+    assert result["title"] == "Senior Software Engineer - Platform Infrastructure"
+
+
+def test_parse_html_discord_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("discord_job.html")
+    result = parse_html(html, _DISCORD_URL)
+    assert result["company_name"] == "Discord"
+
+
+def test_parse_html_discord_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("discord_job.html")
+    result = parse_html(html, _DISCORD_URL)
+    assert result["location"] == "San Francisco Bay Area"
+
+
+def test_parse_html_discord_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("discord_job.html")
+    result = parse_html(html, _DISCORD_URL)
+    assert result["description"] is not None
+    assert "distributed systems" in result["description"]

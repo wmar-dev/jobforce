@@ -594,11 +594,33 @@ def _adal_description(doc: BeautifulSoup, url: str) -> str | None:
     return _text(el)
 
 
+# ---------------------------------------------------------------------------
+# Discord (discord.com/jobs/<id>) — custom React SPA
+# ---------------------------------------------------------------------------
+
+
+def _discord_location(doc: BeautifulSoup, url: str) -> str | None:
+    # Location lives in a div with class containing "heroLocation"
+    el = doc.select_one('[class*="heroLocation"]')
+    return _text(el)
+
+
+def _discord_description(doc: BeautifulSoup, url: str) -> str | None:
+    # Job body container has class "body-" and "section-" and "document-"
+    el = doc.select_one('[class*="body-"][class*="section-"]')
+    return _text(el)
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "adalagent.ai": {
         "company_name": lambda doc, url: "AdaL",
         "location": _adal_location,
         "description": _adal_description,
+    },
+    "discord.com": {
+        "company_name": lambda doc, url: "Discord",
+        "location": _discord_location,
+        "description": _discord_description,
     },
     "jobs.lever.co": {
         "company_name": _lever_company,
