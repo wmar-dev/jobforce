@@ -21,7 +21,7 @@ Bulk-crawl careers pages for all target companies in `config.yaml` and ingest di
 
 Run:
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/jobs?limit=1
+curl -s -o /dev/null -w "%{http_code}" "http://localhost:8000/api/jobs?limit=1"
 ```
 
 If the response is not `200`, stop immediately and print:
