@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { useJobs } from "@/hooks/useJobs";
 import { JobTable } from "@/components/jobs/JobTable";
 import { getCompanies, bulkArchive } from "@/lib/api";
@@ -48,7 +48,7 @@ function JobsPageInner() {
 
   const { data: companies } = useSWR<Company[]>("companies", getCompanies);
 
-  const { data, isLoading, error } = useJobs({
+  const { data, isLoading, error, mutate: mutateJobs } = useJobs({
     status: status === "all" ? undefined : status,
     company_id: companyId || undefined,
     location: location || undefined,
@@ -77,7 +77,7 @@ function JobsPageInner() {
     try {
       const result = await bulkArchive(companyId || undefined);
       setBulkArchiveMsg(`Archived ${result.archived_count} low-score job${result.archived_count !== 1 ? "s" : ""}.`);
-      await mutate(["/api/jobs", { status: status === "all" ? undefined : status }]);
+      await mutateJobs();
     } catch {
       setBulkArchiveMsg("Bulk archive failed. Is the backend running?");
     } finally {
