@@ -8,6 +8,7 @@ const STATUS_CONFIG: Record<
   { label: string; bg: string; text: string; border: string }
 > = {
   saved: { label: "Saved", bg: "bg-gray-900", text: "text-gray-200", border: "border-gray-700" },
+  shortlisted: { label: "Shortlisted", bg: "bg-amber-950", text: "text-amber-300", border: "border-amber-800" },
   applied: { label: "Applied", bg: "bg-blue-950", text: "text-blue-300", border: "border-blue-800" },
   interviewing: {
     label: "Interviewing",
@@ -37,6 +38,7 @@ interface PipelineSummaryProps {
 export function PipelineSummary({ counts }: PipelineSummaryProps) {
   const statuses: PipelineStatus[] = [
     "saved",
+    "shortlisted",
     "applied",
     "interviewing",
     "offer",
@@ -45,7 +47,7 @@ export function PipelineSummary({ counts }: PipelineSummaryProps) {
   ];
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
       {statuses.map((status) => {
         const cfg = STATUS_CONFIG[status];
         const count = counts[status] ?? 0;
