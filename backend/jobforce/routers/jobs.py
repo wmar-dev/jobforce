@@ -12,7 +12,9 @@ from sqlalchemy.orm import selectinload
 from jobforce.db.engine import get_session
 from jobforce.db.models import Company, JobListing, MeetingNote
 from jobforce.db.models import _now as _db_now
+from jobforce.services.parse import parse_html
 from jobforce.services.scout import bulk_archive_low_score, transition_status
+from jobforce.services.storage import retrieve_snapshot
 
 router = APIRouter(tags=["jobs"])
 
@@ -267,6 +269,33 @@ async def delete_job(
         raise HTTPException(status_code=404, detail="Job listing not found")
     await session.delete(job)
     await session.commit()
+
+
+@router.post("/jobs/{job_id}/reparse", response_model=JobListingDetail)
+async def reparse_job(
+    job_id: int,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> Any:
+    """Re-extract fields from the stored HTML snapshot using the current site adapter.
+
+    Use this after improving a site adapter in `services/parse.py` to update
+    title, location, role_type, and description without re-crawling the page.
+    Returns 404 if the job or its snapshot does not exist.
+    """
+    job = await session.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+    html_bytes = await retrieve_snapshot(session, job_id)
+    if html_bytes is None:
+        raise HTTPException(status_code=404, detail="No HTML snapshot stored for this job")
+    parsed = parse_html(html_bytes.decode("utf-8", errors="replace"), job.source_url)
+    for field in ("title", "location", "role_type", "description"):
+        v = parsed.get(field)
+        if v is not None:
+            setattr(job, field, v)
+    await session.commit()
+    await session.refresh(job)
+    return await get_job(job_id, session)
 
 
 @router.patch("/jobs/{job_id}/status", response_model=StatusPatchResponse)

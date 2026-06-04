@@ -115,6 +115,12 @@ frontend/src/
 
 SWR polls every 30s. Backend CORS allows `localhost:3000` only.
 
+### Notable API Endpoints
+
+| Endpoint | Purpose |
+| -------- | ------- |
+| `POST /api/jobs/{id}/reparse` | Re-extract `title`, `location`, `role_type`, `description` from the stored HTML snapshot using the current site adapter in `services/parse.py`. Use after fixing or adding a site adapter to refresh already-ingested jobs without re-crawling. Returns 404 if no snapshot exists. |
+
 ### Chrome Extension
 
 Content scripts in `chrome-extension/content.js` have per-domain extractors. When a job page is open, the extension posts to `POST /api/jobs/ingest`. No AI in the extraction path — deterministic parsing only.
