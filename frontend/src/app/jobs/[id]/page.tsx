@@ -3,12 +3,42 @@
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { useJob } from "@/hooks/useJob";
 import { useJobNote } from "@/hooks/useJobNote";
 import { upsertJobNote, deleteJobNote } from "@/lib/api";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { StatusTransitionModal } from "@/components/jobs/StatusTransitionModal";
 import type { PipelineStatus } from "@/lib/types";
+
+function JobDescription({ text }: { text: string }) {
+  const isMarkdown = /[#*\-`\[\]]/.test(text);
+  if (isMarkdown) {
+    return (
+      <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+        <ReactMarkdown
+          components={{
+            h1: ({ children }) => <h3 className="text-base font-semibold text-emerald-400 mt-4 mb-2 first:mt-0">{children}</h3>,
+            h2: ({ children }) => <h3 className="text-sm font-semibold text-emerald-400 mt-4 mb-2 first:mt-0">{children}</h3>,
+            h3: ({ children }) => <h4 className="text-sm font-semibold text-gray-300 mt-3 mb-1">{children}</h4>,
+            p: ({ children }) => <p className="text-sm text-gray-300 leading-relaxed mb-3">{children}</p>,
+            ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>,
+            li: ({ children }) => <li className="text-sm text-gray-300 leading-relaxed">{children}</li>,
+            strong: ({ children }) => <strong className="text-gray-100 font-semibold">{children}</strong>,
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
+      <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{text}</p>
+    </div>
+  );
+}
 
 const FIT_CONFIDENCE_CLASSES: Record<string, string> = {
   high: "text-emerald-400",
@@ -180,11 +210,7 @@ export default function JobDetailPage({
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
             Description
           </h2>
-          <div className="prose prose-invert max-w-none">
-            <pre className="whitespace-pre-wrap text-sm text-gray-300 font-sans leading-relaxed bg-gray-900 border border-gray-800 rounded-lg p-4">
-              {job.description}
-            </pre>
-          </div>
+          <JobDescription text={job.description} />
         </div>
       )}
 

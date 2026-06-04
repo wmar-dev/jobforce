@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, Tag
+from markdownify import markdownify as md
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,13 @@ def _text(el: Tag | None) -> str | None:
         return None
     t = (el.get_text(separator=" ") or "").strip()
     return t or None
+
+
+def _to_markdown(el: Tag | None) -> str | None:
+    if el is None:
+        return None
+    result = md(str(el), heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
+    return result or None
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +88,7 @@ def _generic_location(doc: BeautifulSoup, url: str) -> str | None:
 
 def _generic_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one('[class*="description"], [class*="job-desc"], #job-description')
-    return _text(el)
+    return _to_markdown(el)
 
 
 def _generic_role_type(doc: BeautifulSoup, url: str) -> str | None:
@@ -178,7 +186,7 @@ def _workday_location(doc: BeautifulSoup, url: str) -> str | None:
 
 def _workday_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("[data-automation-id='job-posting-details']")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +227,7 @@ def _ashby_location(doc: BeautifulSoup, url: str) -> str | None:
 
 def _ashby_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one(".ashby-job-posting-description")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +293,7 @@ def _lever_description(doc: BeautifulSoup, url: str) -> str | None:
     for div in doc.find_all("div"):
         classes = " ".join(str(c) for c in div.get("class", None) or [])
         if "section-wrapper" in classes:
-            return _text(div)
+            return _to_markdown(div)
     return None
 
 
@@ -308,7 +316,7 @@ def _cursor_location(doc: BeautifulSoup, url: str) -> str | None:
 
 def _cursor_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one(".prose")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -339,15 +347,12 @@ def _pinecone_location(doc: BeautifulSoup, url: str) -> str | None:
 
 
 def _pinecone_description(doc: BeautifulSoup, url: str) -> str | None:
-    # Job body is the first non-apply div child inside the container
-    # Structure: container > [a(All Jobs), h1, p(at...), div(body), div(apply/share)]
     container = doc.select_one("main div.container, main div[class*='py-50']")
     if container:
         for div in container.find_all("div", recursive=False):
             t = _text(div)
-            # Skip the apply/share div (short, no real content)
             if t and len(t) > 100:
-                return t
+                return _to_markdown(div)
     return None
 
 
@@ -400,7 +405,7 @@ def _workable_description(doc: BeautifulSoup, url: str) -> str | None:
     raw = d.get("description") or ""
     if not raw:
         return None
-    return BeautifulSoup(raw, "lxml").get_text(separator=" ").strip() or None
+    return _to_markdown(BeautifulSoup(raw, "lxml"))
 
 
 def _workable_role_type(doc: BeautifulSoup, url: str) -> str | None:
@@ -433,7 +438,7 @@ def _databricks_location(doc: BeautifulSoup, url: str) -> str | None:
 
 def _databricks_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("main")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -532,7 +537,7 @@ def _notion_role_type(doc: BeautifulSoup, url: str) -> str | None:
 
 def _notion_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one(".notion-page-content")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -569,7 +574,7 @@ def _pinterest_role_type(doc: BeautifulSoup, url: str) -> str | None:
 
 def _pinterest_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("main")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +596,7 @@ def _adal_location(doc: BeautifulSoup, url: str) -> str | None:
 
 def _adal_description(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("main")
-    return _text(el)
+    return _to_markdown(el)
 
 
 # ---------------------------------------------------------------------------
@@ -608,7 +613,7 @@ def _discord_location(doc: BeautifulSoup, url: str) -> str | None:
 def _discord_description(doc: BeautifulSoup, url: str) -> str | None:
     # Job body container has class "body-" and "section-" and "document-"
     el = doc.select_one('[class*="body-"][class*="section-"]')
-    return _text(el)
+    return _to_markdown(el)
 
 
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
@@ -633,7 +638,7 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": lambda doc, url: "OpenAI",
         "title": lambda doc, url: _text(doc.select_one("main h2")),
         "location": _openai_location,
-        "description": lambda doc, url: _text(
+        "description": lambda doc, url: _to_markdown(
             doc.select_one("main article, main section, main div")
         ),
         "compensation": _openai_compensation,
