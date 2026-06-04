@@ -13,10 +13,12 @@ here in Claude Code — no backend SDK calls are made.
 ## Usage
 
 ```
-/oracle-rank [job_id ...]
+/oracle-rank [job_id ... | unscored]
 ```
 
-Omit job IDs to rank all active (saved/applied/interviewing) listings.
+- **No argument**: rank all active (saved/applied/interviewing) listings
+- **`unscored`**: rank only active listings where `fit_scored` is falsy
+- **Job IDs**: rank specific jobs by ID
 
 ## Steps
 
@@ -48,7 +50,21 @@ GET http://localhost:8000/api/jobs/7
 
 Fetch each by ID. Skip any that return 404.
 
-If no job IDs were provided:
+If the argument is `unscored` (case-insensitive, with or without punctuation):
+
+```
+GET http://localhost:8000/api/jobs?limit=200
+```
+
+Filter to jobs with `status` in `saved`, `applied`, `interviewing` **and** `fit_scored` is falsy. If none, print:
+
+```
+🔮 No unscored jobs — all active listings already have fit scores.
+```
+
+Then stop.
+
+If no argument was provided:
 
 ```
 GET http://localhost:8000/api/jobs?limit=200
