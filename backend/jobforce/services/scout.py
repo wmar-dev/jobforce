@@ -48,6 +48,9 @@ async def ingest_listing(
     )
     existing_job = existing.scalar_one_or_none()
     if existing_job is not None:
+        if payload.description:
+            existing_job.description = payload.description
+            await session.commit()
         return {
             "id": existing_job.id,
             "status": existing_job.status,
