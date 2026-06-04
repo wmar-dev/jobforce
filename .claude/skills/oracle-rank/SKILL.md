@@ -53,10 +53,10 @@ Fetch each by ID. Skip any that return 404.
 If the argument is `unscored` (case-insensitive, with or without punctuation):
 
 ```
-GET http://localhost:8000/api/jobs?limit=200
+GET http://localhost:8000/api/jobs?limit=200&fit_scored=false
 ```
 
-Filter to jobs with `status` in `saved`, `applied`, `interviewing` **and** `fit_scored` is falsy. If none, print:
+Filter to jobs with `status` in `saved`, `applied`, `interviewing`. If none, print:
 
 ```
 🔮 No unscored jobs — all active listings already have fit scores.
@@ -67,10 +67,12 @@ Then stop.
 If no argument was provided:
 
 ```
-GET http://localhost:8000/api/jobs?limit=200
+GET http://localhost:8000/api/jobs?limit=200&status=saved
+GET http://localhost:8000/api/jobs?limit=200&status=applied
+GET http://localhost:8000/api/jobs?limit=200&status=interviewing
 ```
 
-Filter the results to only jobs with `status` in: `saved`, `applied`, `interviewing`.
+Fetch all three status buckets separately (the default endpoint caps at 200 and excludes archived; fetching per-status avoids silently truncating). Merge and deduplicate by `id`.
 
 If no jobs are found, print:
 

@@ -121,6 +121,7 @@ async def get_jobs(
     session: Annotated[AsyncSession, Depends(get_session)],
     status: str | None = Query(None),
     company_id: int | None = Query(None),
+    fit_scored: bool | None = Query(None),
     min_score: float | None = Query(None),
     location: str | None = Query(None),
     role_type: str | None = Query(None),
@@ -136,6 +137,8 @@ async def get_jobs(
         stmt = stmt.where(JobListing.status != "archived")
     if company_id:
         stmt = stmt.where(JobListing.company_id == company_id)
+    if fit_scored is not None:
+        stmt = stmt.where(JobListing.fit_scored == (1 if fit_scored else 0))
     if min_score is not None:
         stmt = stmt.where(JobListing.fit_score >= min_score)
     if location:
