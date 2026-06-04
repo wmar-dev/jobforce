@@ -342,6 +342,16 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | No target_roles in config | Warn once, skip title filtering, ingest all titles |
 | No target_locations in config | Warn once, skip location filtering, ingest all locations |
 
+## Step 6: Run oracle-rank on newly ingested jobs
+
+After printing the final totals, invoke the oracle-rank skill to score the new listings:
+
+```
+/oracle-rank
+```
+
+This scores only unscored jobs, so it will pick up exactly what was just ingested without re-scoring existing records.
+
 ## Notes
 
 - Backend must be running: `make dev`
