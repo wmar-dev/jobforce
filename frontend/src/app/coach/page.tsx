@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { getJobs, getLatestCoachSession } from "@/lib/api";
 import { QuestionCard } from "@/components/coach/QuestionCard";
 import type { JobListing, InterviewSession, QuestionItem } from "@/lib/types";
@@ -13,6 +14,7 @@ const CATEGORIES: Array<{ key: QuestionItem["category"]; label: string; icon: st
 ];
 
 export default function CoachPage() {
+  const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [session, setSession] = useState<InterviewSession | null>(null);
@@ -28,26 +30,36 @@ export default function CoachPage() {
     ]).then(([a, b, c]) => setJobs([...a.items, ...b.items, ...c.items]));
   }, []);
 
-  const handleLoadSession = async () => {
-    if (!selectedJobId) return;
+  const handleLoadSession = useCallback(async (jobId?: number) => {
+    const id = jobId ?? selectedJobId;
+    if (!id) return;
     setIsLoading(true);
     setError(null);
     setSession(null);
     try {
-      const result = await getLatestCoachSession(selectedJobId);
+      const result = await getLatestCoachSession(id);
       setSession(result);
       setActiveCategory("all");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
       setError(
         msg.toLowerCase().includes("no prep session")
-          ? `No prep session found — run /coach-prep ${selectedJobId} in Claude Code first, then reload.`
+          ? `No prep session found — run /coach-prep ${id} in Claude Code first, then reload.`
           : msg || "Failed to load session"
       );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedJobId]);
+
+  useEffect(() => {
+    const jobParam = searchParams.get("job");
+    if (jobParam) {
+      const id = Number(jobParam);
+      setSelectedJobId(id);
+      handleLoadSession(id);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredQuestions = session?.questions.filter(
     (q) => activeCategory === "all" || q.category === activeCategory
@@ -70,7 +82,11 @@ export default function CoachPage() {
       <div className="flex items-center gap-3 mb-6">
         <select
           value={selectedJobId ?? ""}
-          onChange={(e) => setSelectedJobId(e.target.value ? Number(e.target.value) : null)}
+          onChange={(e) => {
+            const id = e.target.value ? Number(e.target.value) : null;
+            setSelectedJobId(id);
+            if (id) handleLoadSession(id);
+          }}
           className="flex-1 max-w-xs px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-blue-500"
         >
           <option value="">Select a job...</option>
@@ -80,13 +96,17 @@ export default function CoachPage() {
             </option>
           ))}
         </select>
-        <button
-          onClick={handleLoadSession}
-          disabled={isLoading || !selectedJobId}
-          className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
-        >
-          {isLoading ? "Loading..." : "🎯 Load Prep Pack"}
-        </button>
+        {isLoading && (
+          <span className="text-sm text-gray-500">Loading...</span>
+        )}
+        {selectedJobId && (
+          <a
+            href={`/jobs/${selectedJobId}`}
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View job →
+          </a>
+        )}
       </div>
 
       {error && (

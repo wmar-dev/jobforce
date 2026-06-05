@@ -7,7 +7,7 @@ user-invocable: true
 
 # Coach Prep — Interview Preparation Skill
 
-Generate a tailored interview prep pack by searching the web for real interview questions asked at the company and for the role type, then reasoning in-context to curate and supplement them. No Anthropic API key required in the backend.
+Generate a tailored interview prep pack by searching the web for real interview questions asked at the company and for the role type, then reasoning in-context to curate and supplement them. No Anthropic API key required in the backend. The session loads automatically when a job is selected in the web UI.
 
 ## Usage
 
@@ -80,73 +80,29 @@ Guidelines per category:
 
 ### 5. POST to backend to persist the session
 
-```
-POST http://localhost:8000/api/coach/prep
-Content-Type: application/json
+Write the full JSON payload to a temp file (e.g. `/tmp/coach_<job_id>.json`) and POST it with curl to avoid shell quoting issues with apostrophes and special characters in question text:
 
-{
-  "job_id": <job_id>,
-  "questions": [
-    {
-      "id": "q1",
-      "category": "behavioral",
-      "text": "...",
-      "source_url": "<url where this question was found, or null>",
-      "leetcode_url": null,
-      "guidance": "..."
-    },
-    ...
-  ]
-}
+```bash
+# Write payload to temp file first
+# Then POST:
+curl -s -X POST http://localhost:8000/api/coach/prep \
+  -H "Content-Type: application/json" \
+  -d @/tmp/coach_<job_id>.json
 ```
 
-Set `source_url` to the page URL where a question was found (Glassdoor, Blind, etc.) — this gives provenance. Set `leetcode_url` for coding questions.
+Set `source_url` to the page URL where a question was found (Glassdoor, Blind, etc.) — this gives provenance. Set `leetcode_url` for coding questions only when you have a URL from search results.
 
 Capture `session_id` from the response.
 
-### 6. Display prep pack
+### 6. Confirm completion
 
-Format output grouped by category:
+Output a single line:
 
 ```
-🎯 Interview Prep Pack — <Company> · <Title> (Job #<id>)
-Session #<session_id> saved — open http://localhost:3000/coach to study in the web UI
-
-Sources searched: <list URLs fetched>
-
-💬 Behavioral (<N> questions):
-
-Q1: <question text>
-    Tip: <guidance>
-
-...
-
-💻 Coding (<N> questions):   [technical roles only]
-
-Q1: <question text>
-    LeetCode: <url>
-    Tip: <guidance>
-
-...
-
-🏗️ System Design (<N> questions):   [technical roles only]
-
-Q1: <question text>
-    Tip: <guidance>
-
-...
-
-🎯 Role-Specific (<N> questions):
-
-Q1: <question text>
-    Tip: <guidance>
-
-...
-
-─────────────────────────────────
-Total: <N> questions  |  LeetCode links: <N>
-Session #<session_id> persisted to backend
+✅ Session #<session_id> saved — http://localhost:3000/coach?job=<job_id>
 ```
+
+Do not print the questions — they are in the UI.
 
 ## Notes
 
