@@ -110,6 +110,31 @@ Parse the JSON array. For each company in the filtered config list, find the mat
 
 For each company, work through the following sub-steps:
 
+### 4-HN: Hacker News thread detection (check first, before all other 4x steps)
+
+**If the company's `careers_url` contains `news.ycombinator.com`**, treat it as an HN "Who's Hiring" thread — do NOT use Playwright or the normal careers-page flow:
+
+1. Run the `hn_thread` CLI to extract all top-level comment URLs:
+   ```bash
+   cd backend && uv run python -m jobforce.cli.hn_thread "<careers_url>"
+   ```
+   Parse the JSON array printed to stdout. If the array is empty or the command fails (non-zero exit), report:
+   ```
+   🏢 <name> (<careers_url>) — hn_thread failed or returned 0 comments
+   ```
+   and skip to the next company.
+
+2. Print:
+   ```
+   🏢 <name> (HN thread) — found <N> comments
+   ```
+
+3. For each comment URL in the array, run scout_fetch and ingest it exactly as step 4g does for normal job URLs (re-use the same logic: run scout_fetch, parse JSON, apply title/location filters, POST to `/api/ingest`, track 201/409/error).
+
+4. Skip steps 4a through 4h entirely for this company — jump straight to the per-company summary in Step 5.
+
+---
+
 ### 4a: Determine the careers URL to use
 
 - If the DB record has a non-empty `careers_url` → use it directly (skip probing)

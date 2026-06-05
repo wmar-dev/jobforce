@@ -149,3 +149,7 @@ Key changes:
 - `.claude/skills/coach-prep/SKILL.md` — rewritten: skill generates questions via in-context Claude reasoning (Pro subscription), then POSTs them to the backend; sessions appear in the web UI unchanged
 
 **Verify invariant**: `grep -r "import anthropic" backend/` → zero results
+
+<!-- SPECKIT START -->
+Active feature plan: specs/012-hn-whos-hiring-parser/plan.md
+<!-- SPECKIT END -->
