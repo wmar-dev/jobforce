@@ -10,6 +10,10 @@ A personal job search assistant powered by Claude AI. Five specialized agents â€
 | **Coach**  | Blue    | Generate interview prep questions      |
 | **HQ**     | Red     | Dashboard overview of your pipeline    |
 
+## Inspiration
+
+I wanted to practice spec-driven design and ran out of tokens when I tried to use [career-ops](https://github.com/santifer/career-ops/issues/98).
+
 ## Stack
 
 - **Backend**: FastAPI + SQLAlchemy 2.0 async + aiosqlite (SQLite WAL)
