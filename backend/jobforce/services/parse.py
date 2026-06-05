@@ -290,9 +290,16 @@ def _lever_role_type(doc: BeautifulSoup, url: str) -> str | None:
 
 
 def _lever_description(doc: BeautifulSoup, url: str) -> str | None:
+    # Lever wraps job content in div.section-wrapper.page-full-width (not accent-section/main-header).
+    # class values may be HTML-escaped (e.g. '"section-wrapper"') in some fixtures; use substring match.
     for div in doc.find_all("div"):
-        classes = " ".join(str(c) for c in div.get("class", None) or [])
-        if "section-wrapper" in classes:
+        classes_str = " ".join(str(c) for c in div.get("class") or [])
+        if "section-wrapper" not in classes_str:
+            continue
+        if "accent-section" in classes_str or "main-header" in classes_str:
+            continue
+        text = div.get_text(strip=True)
+        if len(text) > 50:
             return _to_markdown(div)
     return None
 
