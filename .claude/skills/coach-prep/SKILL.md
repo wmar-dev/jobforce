@@ -44,7 +44,9 @@ Run **all searches in parallel** using the WebSearch tool. Use the actual compan
 - `"<company name>" system design interview questions`
 - `"<role title>" machine learning engineer interview questions` (adapt to actual title)
 
-Then **fetch the top 1–2 most relevant URLs** from the search results using WebFetch to get actual question content. Prioritize Glassdoor, Blind, LeetCode Discuss, levels.fyi, and engineering blogs.
+Then **fetch the top 1–2 most relevant URLs** from the search results using WebFetch to get actual question content. Prioritize Glassdoor, Blind, levels.fyi, and engineering blogs.
+
+**Do NOT WebFetch or construct leetcode.com URLs** — LeetCode requires JavaScript to render (WebFetch returns nothing useful), and slug guessing produces "Page Not Found" errors because LeetCode slugs don't always match the problem title. Instead, for each coding problem, run a WebSearch for `site:leetcode.com/problems "<problem title>"` and use the URL directly from the search result. Only set `leetcode_url` when you have a URL from search results — never construct one yourself.
 
 ### 4. Synthesize questions from search + in-context reasoning
 
@@ -61,8 +63,10 @@ Guidelines per category:
 - Write guidance that connects the question to what THIS company is looking for
 
 **Coding (technical roles, at least 3–4 questions):**
-- If search results surface specific problems asked at this company, use those
-- For each coding question, find the matching LeetCode problem URL (search if needed)
+- Only include problems you found by name in search results (e.g. from a Glassdoor/Blind thread listing what was asked) — do NOT invent problem names
+- For each problem name found, run `site:leetcode.com/problems "<problem name>"` via WebSearch; use the URL only if a result comes back with a matching leetcode.com/problems/ URL — omit `leetcode_url` entirely if no result is found
+- Never construct or guess a LeetCode URL — only use URLs that appeared verbatim in search results
+- System design topics (rate limiter, URL shortener, etc.) are NOT LeetCode problems; put them in system_design category, never assign a `leetcode_url`
 - Write guidance that ties the problem to the role's tech stack or scale requirements
 
 **System Design (technical roles, at least 2–3 questions):**
