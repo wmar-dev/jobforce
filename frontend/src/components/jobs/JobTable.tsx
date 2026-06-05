@@ -24,6 +24,16 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
   const { mutate } = useSWRConfig();
 
   async function handleAction(jobId: number, action: "archived" | "shortlisted" | "saved") {
+    // Optimistically remove/update the row so the list doesn't jump to the top on revalidation
+    mutate(
+      ([key]: [string]) => key === "/api/jobs",
+      (cached: { items: JobListing[]; total: number } | undefined) => {
+        if (!cached) return cached;
+        const items = cached.items.filter((j) => j.id !== jobId);
+        return { ...cached, items, total: cached.total - 1 };
+      },
+      { revalidate: false }
+    );
     await patchJobStatus(jobId, action);
     mutate(([key]: [string]) => key === "/api/jobs", undefined, { revalidate: true });
   }

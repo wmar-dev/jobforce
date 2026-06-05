@@ -160,7 +160,7 @@ function JobsPageInner() {
       </div>
 
       {/* Results */}
-      {isLoading && (
+      {isLoading && !data && (
         <div className="text-gray-500 text-sm py-8 text-center">Loading jobs...</div>
       )}
       {error && (

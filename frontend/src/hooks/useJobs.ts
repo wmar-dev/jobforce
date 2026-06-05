@@ -6,5 +6,6 @@ export function useJobs(filters: JobFilters = {}) {
   const key = ["/api/jobs", filters] as const;
   return useSWR<JobListPage>(key, () => getJobs(filters), {
     refreshInterval: 30_000,
+    keepPreviousData: true,
   });
 }
