@@ -17,7 +17,10 @@ export default function ForgePage() {
   const [rawJson, setRawJson] = useState("");
 
   useEffect(() => {
-    getJobs({ status: "saved", limit: 50 }).then((data) => setJobs(data.items));
+    Promise.all([
+      getJobs({ status: "shortlisted", limit: 50, sort_by: "fit_score", sort_dir: "desc" }),
+      getJobs({ status: "saved", limit: 50, sort_by: "fit_score", sort_dir: "desc" }),
+    ]).then(([shortlisted, saved]) => setJobs([...shortlisted.items, ...saved.items]));
     getBaseResume()
       .then((r) => {
         setBaseResume(r);
@@ -142,11 +145,32 @@ export default function ForgePage() {
               className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-amber-500"
             >
               <option value="">Select a job...</option>
-              {jobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.title} @ {job.company.name}
-                </option>
-              ))}
+              {(() => {
+                const shortlisted = jobs.filter((j) => j.status === "shortlisted");
+                const saved = jobs.filter((j) => j.status === "saved");
+                return (
+                  <>
+                    {shortlisted.length > 0 && (
+                      <optgroup label="⭐ Shortlisted">
+                        {shortlisted.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            {job.fit_score != null ? `[${job.fit_score}] ` : ""}{job.title} @ {job.company.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {saved.length > 0 && (
+                      <optgroup label="Saved">
+                        {saved.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            {job.fit_score != null ? `[${job.fit_score}] ` : ""}{job.title} @ {job.company.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                );
+              })()}
             </select>
           )}
 

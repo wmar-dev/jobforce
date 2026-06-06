@@ -1,4 +1,4 @@
-\documentclass[11pt,letterpaper]{article}
+\documentclass[11pt,legalpaper]{article}
 \usepackage[margin=0.75in]{geometry}
 \usepackage{hyperref}
 \usepackage[T1]{fontenc}
@@ -43,7 +43,7 @@
 \resumesection{Experience}
 \BLOCK{for job in data.work_history}
 \textbf{\VAR{job.title|latex_escape}} \hfill \VAR{job.start_date} -- \VAR{job.end_date if job.end_date else 'Present'}\\
-\textit{\VAR{job.company|latex_escape}}\BLOCK{if job.location} $\cdot$ \VAR{job.location|latex_escape}\BLOCK{endif}
+\textit{\VAR{job.company|latex_escape}}\BLOCK{if job.location} $\cdot$ \VAR{job.location|latex_escape}\BLOCK{endif}\\[-6pt]
 \BLOCK{if job.bullets}
 \begin{itemize}
 \BLOCK{for bullet in job.bullets}
@@ -58,10 +58,9 @@
 \BLOCK{if data.education}
 \resumesection{Education}
 \BLOCK{for edu in data.education}
-\textbf{\VAR{edu.degree|latex_escape}} \hfill \VAR{edu.institution|latex_escape}%
-\BLOCK{if edu.start_date or edu.end_date} -- \VAR{edu.end_date if edu.end_date else edu.start_date}\BLOCK{endif}%
-\BLOCK{if edu.gpa}\\ GPA: \VAR{edu.gpa|latex_escape}\BLOCK{endif}
-\vspace{2pt}
+\textbf{\VAR{edu.degree|latex_escape}} \hfill \BLOCK{if edu.start_date}\VAR{edu.start_date} -- \BLOCK{endif}\BLOCK{if edu.end_date}\VAR{edu.end_date}\BLOCK{endif}\\
+\textit{\VAR{edu.institution|latex_escape}}\BLOCK{if edu.gpa}\\
+GPA: \VAR{edu.gpa|latex_escape}\BLOCK{endif}\\[2pt]
 \BLOCK{endfor}
 \BLOCK{endif}
 
