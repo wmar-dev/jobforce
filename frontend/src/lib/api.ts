@@ -136,14 +136,11 @@ export function putBaseResume(resume: Resume): Promise<Resume> {
   return apiFetch("/api/resume/base", { method: "PUT", body: JSON.stringify(resume) });
 }
 
-export function tailorResume(
-  jobId: number,
-  baseResumeId: number
-): Promise<TailoredResumeResponse> {
-  return apiFetch("/api/resume/tailor", {
-    method: "POST",
-    body: JSON.stringify({ job_id: jobId, base_resume_id: baseResumeId }),
-  });
+export function getTailoredResume(jobId: number): Promise<TailoredResumeResponse | null> {
+  return apiFetch(`/api/resume/tailored?job_id=${jobId}`).then(
+    (r: TailoredResumeResponse | null) => r,
+    () => null,
+  );
 }
 
 export async function exportResume(resumeId: number): Promise<ExportResponse> {

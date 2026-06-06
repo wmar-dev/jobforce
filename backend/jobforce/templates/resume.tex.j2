@@ -1,17 +1,25 @@
 \documentclass[11pt,letterpaper]{article}
 \usepackage[margin=0.75in]{geometry}
-\usepackage{enumitem}
 \usepackage{hyperref}
-\usepackage{fontenc}
-\usepackage{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{parskip}
-\usepackage{titlesec}
-
-\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
-\titlespacing{\section}{0pt}{8pt}{4pt}
 
 \hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
 \pagestyle{empty}
+
+% Section heading: bold, large, with rule underneath, tight spacing
+\newcommand{\resumesection}[1]{%
+  \vspace{6pt}%
+  {\large\bfseries #1}%
+  \vspace{1pt}\hrule\vspace{4pt}%
+}
+
+% Tighter lists
+\setlength{\leftmargini}{1.2em}
+\setlength{\itemsep}{1pt}
+\setlength{\parsep}{0pt}
+\setlength{\topsep}{2pt}
 
 \begin{document}
 
@@ -27,17 +35,17 @@
 \end{center}
 
 \BLOCK{if data.summary}
-\section{Summary}
+\resumesection{Summary}
 \VAR{data.summary|latex_escape}
 \BLOCK{endif}
 
 \BLOCK{if data.work_history}
-\section{Experience}
+\resumesection{Experience}
 \BLOCK{for job in data.work_history}
 \textbf{\VAR{job.title|latex_escape}} \hfill \VAR{job.start_date} -- \VAR{job.end_date if job.end_date else 'Present'}\\
 \textit{\VAR{job.company|latex_escape}}\BLOCK{if job.location} $\cdot$ \VAR{job.location|latex_escape}\BLOCK{endif}
 \BLOCK{if job.bullets}
-\begin{itemize}[noitemsep,topsep=2pt,leftmargin=*]
+\begin{itemize}
 \BLOCK{for bullet in job.bullets}
   \item \VAR{bullet|latex_escape}
 \BLOCK{endfor}
@@ -48,7 +56,7 @@
 \BLOCK{endif}
 
 \BLOCK{if data.education}
-\section{Education}
+\resumesection{Education}
 \BLOCK{for edu in data.education}
 \textbf{\VAR{edu.degree|latex_escape}} \hfill \VAR{edu.institution|latex_escape}%
 \BLOCK{if edu.start_date or edu.end_date} -- \VAR{edu.end_date if edu.end_date else edu.start_date}\BLOCK{endif}%
@@ -58,24 +66,24 @@
 \BLOCK{endif}
 
 \BLOCK{if data.skills}
-\section{Skills}
+\resumesection{Skills}
 \VAR{', '.join(data.skills|map('latex_escape')|list)}
 \BLOCK{endif}
 
 \BLOCK{if data.certifications}
-\section{Certifications}
+\resumesection{Certifications}
 \BLOCK{for cert in data.certifications}
 \textbf{\VAR{cert.name|latex_escape}}\BLOCK{if cert.issuer} -- \VAR{cert.issuer|latex_escape}\BLOCK{endif}\BLOCK{if cert.year} (\VAR{cert.year})\BLOCK{endif}\\
 \BLOCK{endfor}
 \BLOCK{endif}
 
 \BLOCK{if data.projects}
-\section{Projects}
+\resumesection{Projects}
 \BLOCK{for proj in data.projects}
 \textbf{\VAR{proj.name|latex_escape}}\BLOCK{if proj.url} (\href{\VAR{proj.url}}{\VAR{proj.url}})\BLOCK{endif}%
 \BLOCK{if proj.description}\\ \VAR{proj.description|latex_escape}\BLOCK{endif}
 \BLOCK{if proj.bullets}
-\begin{itemize}[noitemsep,topsep=2pt,leftmargin=*]
+\begin{itemize}
 \BLOCK{for bullet in proj.bullets}
   \item \VAR{bullet|latex_escape}
 \BLOCK{endfor}

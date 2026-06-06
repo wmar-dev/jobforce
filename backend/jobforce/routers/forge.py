@@ -60,6 +60,32 @@ def _to_out(resume: Resume) -> ResumeOut:
     )
 
 
+@router.get("/tailored", response_model=TailoredResumeOut | None)
+async def get_tailored_resume_for_job(
+    job_id: int,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> TailoredResumeOut | None:
+    """Return the most recent tailored resume for a job, or null if none exists."""
+    result = await session.execute(
+        select(Resume)
+        .where(Resume.is_base == 0, Resume.job_listing_id == job_id)
+        .order_by(Resume.updated_at.desc())
+        .limit(1)
+    )
+    resume = result.scalar_one_or_none()
+    if resume is None:
+        return None
+    base_result = await session.execute(select(Resume).where(Resume.is_base == 1).limit(1))
+    base = base_result.scalar_one_or_none()
+    base_data: dict[str, Any] = json.loads(base.structured_data) if base else {}
+    tailored_data: dict[str, Any] = json.loads(resume.structured_data)
+    diff_raw = compute_diff(base_data, tailored_data)
+    return TailoredResumeOut(
+        **_to_out(resume).model_dump(),
+        diff=[ResumeDiffItem(**d) for d in diff_raw],
+    )
+
+
 @router.get("/base", response_model=ResumeOut)
 async def get_base_resume(
     session: Annotated[AsyncSession, Depends(get_session)],

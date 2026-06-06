@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getJobs, getBaseResume, putBaseResume, tailorResume } from "@/lib/api";
+import { getJobs, getBaseResume, putBaseResume, getTailoredResume } from "@/lib/api";
 import { ResumeDiff } from "@/components/forge/ResumeDiff";
 import { ExportButton } from "@/components/forge/ExportButton";
 import type { JobListing, Resume, TailoredResumeResponse } from "@/lib/types";
@@ -11,7 +11,7 @@ export default function ForgePage() {
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [baseResume, setBaseResume] = useState<Resume | null>(null);
   const [tailored, setTailored] = useState<TailoredResumeResponse | null>(null);
-  const [isTailoring, setIsTailoring] = useState(false);
+  const [isLoadingTailored, setIsLoadingTailored] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditingBase, setIsEditingBase] = useState(false);
   const [rawJson, setRawJson] = useState("");
@@ -39,18 +39,17 @@ export default function ForgePage() {
     }
   };
 
-  const handleTailor = async () => {
-    if (!selectedJobId || !baseResume) return;
-    setIsTailoring(true);
-    setError(null);
+  const handleJobSelect = async (jobId: number | null) => {
+    setSelectedJobId(jobId);
     setTailored(null);
+    setError(null);
+    if (!jobId) return;
+    setIsLoadingTailored(true);
     try {
-      const result = await tailorResume(selectedJobId, baseResume.id);
+      const result = await getTailoredResume(jobId);
       setTailored(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Tailoring failed");
     } finally {
-      setIsTailoring(false);
+      setIsLoadingTailored(false);
     }
   };
 
@@ -139,7 +138,7 @@ export default function ForgePage() {
           ) : (
             <select
               value={selectedJobId ?? ""}
-              onChange={(e) => setSelectedJobId(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => handleJobSelect(e.target.value ? Number(e.target.value) : null)}
               className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-amber-500"
             >
               <option value="">Select a job...</option>
@@ -151,13 +150,21 @@ export default function ForgePage() {
             </select>
           )}
 
-          <button
-            onClick={handleTailor}
-            disabled={isTailoring || !selectedJobId || !baseResume}
-            className="mt-4 w-full px-3 py-2 text-sm bg-amber-700 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
-          >
-            {isTailoring ? "Tailoring..." : "⚒️ Tailor Resume"}
-          </button>
+          {selectedJobId && (
+            <div className="mt-4 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-xs text-gray-400">
+              {isLoadingTailored ? (
+                <span>Loading tailored resume...</span>
+              ) : tailored ? (
+                <span className="text-green-400">✓ Tailored resume loaded</span>
+              ) : (
+                <>
+                  <span className="text-amber-400">No tailored resume yet.</span>
+                  {" "}Run in Claude Code:{" "}
+                  <code className="text-gray-200 font-mono">/forge-tailor {selectedJobId}</code>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

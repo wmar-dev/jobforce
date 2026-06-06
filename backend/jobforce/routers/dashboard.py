@@ -53,7 +53,15 @@ async def get_dashboard(
 ) -> DashboardOut:
     # Pipeline counts per status
     counts: dict[str, int] = {}
-    for status in ("saved", "shortlisted", "applied", "interviewing", "offer", "rejected", "withdrawn"):
+    for status in (
+        "saved",
+        "shortlisted",
+        "applied",
+        "interviewing",
+        "offer",
+        "rejected",
+        "withdrawn",
+    ):
         result = await session.execute(
             select(func.count()).select_from(JobListing).where(JobListing.status == status)
         )
