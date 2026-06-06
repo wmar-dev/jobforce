@@ -38,3 +38,9 @@ especially to prevent fabricated or exaggerated claims.
 - MapGrid/StreamCast work at Acme Corp was batch ETL, not streaming — do not
   rephrase as real-time or streaming pipelines.
 -->
+
+## Clarifications
+
+<!-- Answers to clarifying questions asked during /forge-tailor runs are
+recorded here automatically. Each entry is a constraint or fact derived from
+your answer, scoped to a role or company context. -->

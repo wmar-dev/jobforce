@@ -59,11 +59,56 @@ Then stop in either case.
 
 ---
 
-### Step 3: Tailor the resume
+### Step 3: Ask clarifying questions
+
+Before tailoring, reason about what you know and don't know about the candidate's
+experience relative to this specific job. Identify up to 5 points where a short
+answer would meaningfully improve the tailored output — ambiguities in scope,
+impact, or technology use that the resume doesn't make clear.
+
+Skip any point already answered in `config/tailoring-instructions.md` under
+`## Clarifications`.
+
+If there are questions to ask, present them like this and WAIT for the user to
+respond before proceeding:
+
+```
+⚒️ A few quick questions before I tailor for <job title> at <company>:
+
+1. <specific question about a bullet or claim>
+2. <specific question>
+...
+
+Answer any you know — press Enter to skip the rest and tailor with what's here.
+```
+
+If `config/tailoring-instructions.md` already covers all relevant ambiguities,
+skip this step and proceed directly to Step 4.
+
+#### After the user responds
+
+- Record each answered question as a new entry under `## Clarifications` in
+  `config/tailoring-instructions.md`, using this format:
+
+  ```markdown
+  ### <Role or company context, e.g. "Data engineering roles">
+  - <Concise rule derived from the answer, written as a constraint or fact>
+  ```
+
+- If `## Clarifications` doesn't exist in the file yet, append it after the
+  last section. If the file doesn't exist, create it with just the
+  `## Clarifications` section.
+- Do NOT duplicate a clarification already present in the file.
+- Unanswered questions are skipped — do not record them.
+
+---
+
+### Step 4: Tailor the resume
 
 Using the base resume's `structured_data`, the job's `title` and `description`,
-and any instructions from `config/tailoring-instructions.md`, reason about which
-fields to adjust to better match the role.
+and any instructions from `config/tailoring-instructions.md` (including
+clarifications just recorded), reason about which fields to adjust to better
+match the role.
 
 Rules:
 1. ONLY adjust emphasis, keywords, and bullet phrasing
@@ -76,7 +121,7 @@ Produce the tailored version of the resume JSON in memory — do not write any f
 
 ---
 
-### Step 4: Save the tailored resume
+### Step 5: Save the tailored resume
 
 ```json
 POST http://localhost:8000/api/resume/tailor
@@ -90,7 +135,7 @@ The backend stores the result and returns the resume ID and a field-level diff.
 
 ---
 
-### Step 5: Display diff summary
+### Step 6: Display diff summary
 
 ```
 ⚒️ Tailored Resume #<id> for Job #<job_id> — <job title>
@@ -108,7 +153,7 @@ If no fields changed, print:
 
 ---
 
-### Step 6: Export to .tex and PDF
+### Step 7: Export to .tex and PDF
 
 ```
 POST http://localhost:8000/api/resume/<tailored_id>/export
