@@ -48,8 +48,8 @@ async def _ingest(url: str, html: str, parsed: dict) -> dict:  # type: ignore[ty
             payload = IngestPayload(
                 source_url=url,
                 html=html,
-                title=parsed.get("title", ""),
-                company_name=parsed.get("company_name", ""),
+                title=parsed.get("title") or "",
+                company_name=parsed.get("company_name") or "",
                 location=parsed.get("location"),
                 role_type=parsed.get("role_type"),
                 description=parsed.get("description"),
@@ -62,6 +62,14 @@ async def _ingest(url: str, html: str, parsed: dict) -> dict:  # type: ignore[ty
 async def _run(url: str, dry_run: bool) -> dict:  # type: ignore[type-arg]
     html = await _fetch_html(url)
     parsed = parse_html(html, url)
+    if not parsed.get("company_name") or not parsed.get("title"):
+        print(
+            "error: page does not look like a job listing "
+            f"(company_name={parsed.get('company_name')!r}, title={parsed.get('title')!r}). "
+            "Provide a direct job listing URL, not a homepage or careers index.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     if dry_run:
         return parsed
     result = await _ingest(url, html, parsed)

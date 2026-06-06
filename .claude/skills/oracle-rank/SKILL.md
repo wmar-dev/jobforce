@@ -90,8 +90,7 @@ Then stop.
 GET http://localhost:8000/api/resume/base
 ```
 
-Store the structured JSON. If this returns 404, note "No base resume configured" — scores will still
-be produced but with `confidence: low`.
+Store the structured JSON. The `structured_data` field is returned as a **dict** (already parsed) — do NOT call `json.loads()` on it. If this returns 404, note "No base resume configured" — scores will still be produced but with `confidence: low`.
 
 ---
 

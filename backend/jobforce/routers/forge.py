@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -13,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobforce.db.engine import get_session
 from jobforce.db.models import Company, JobListing, Resume
 from jobforce.services.forge import ExportResult, compute_diff, export_resume
+
+_RESUME_FILE = Path(__file__).parents[3] / "config" / "resume.json"
 
 router = APIRouter(prefix="/resume", tags=["forge"])
 
@@ -75,9 +78,7 @@ async def get_tailored_resume_for_job(
     resume = result.scalar_one_or_none()
     if resume is None:
         return None
-    base_result = await session.execute(select(Resume).where(Resume.is_base == 1).limit(1))
-    base = base_result.scalar_one_or_none()
-    base_data: dict[str, Any] = json.loads(base.structured_data) if base else {}
+    base_data: dict[str, Any] = json.loads(_RESUME_FILE.read_text()) if _RESUME_FILE.exists() else {}
     tailored_data: dict[str, Any] = json.loads(resume.structured_data)
     diff_raw = compute_diff(base_data, tailored_data)
     return TailoredResumeOut(
@@ -87,40 +88,36 @@ async def get_tailored_resume_for_job(
 
 
 @router.get("/base", response_model=ResumeOut)
-async def get_base_resume(
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> ResumeOut:
-    result = await session.execute(select(Resume).where(Resume.is_base == 1).limit(1))
-    resume = result.scalar_one_or_none()
-    if resume is None:
-        raise HTTPException(status_code=404, detail="No base resume found")
-    return _to_out(resume)
+async def get_base_resume() -> ResumeOut:
+    if not _RESUME_FILE.exists():
+        raise HTTPException(status_code=404, detail="No base resume found — add config/resume.json")
+    structured_data = json.loads(_RESUME_FILE.read_text())
+    return ResumeOut(
+        id=0,
+        label="Base Resume",
+        is_base=True,
+        job_listing_id=None,
+        structured_data=structured_data,
+        created_at="",
+        updated_at="",
+    )
 
 
 @router.put("/base", response_model=ResumeOut)
-async def put_base_resume(
-    request: Request,
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> ResumeOut:
+async def put_base_resume(request: Request) -> ResumeOut:
     body = await request.json()
-    result = await session.execute(select(Resume).where(Resume.is_base == 1).limit(1))
-    resume = result.scalar_one_or_none()
-
-    structured_json = json.dumps(body if isinstance(body, dict) else body)
-
-    if resume is None:
-        resume = Resume(
-            label="Base Resume",
-            is_base=1,
-            structured_data=structured_json,
-        )
-        session.add(resume)
-    else:
-        resume.structured_data = structured_json
-
-    await session.commit()
-    await session.refresh(resume)
-    return _to_out(resume)
+    structured_data = body if isinstance(body, dict) else body
+    _RESUME_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _RESUME_FILE.write_text(json.dumps(structured_data, indent=2, ensure_ascii=False))
+    return ResumeOut(
+        id=0,
+        label="Base Resume",
+        is_base=True,
+        job_listing_id=None,
+        structured_data=structured_data,
+        created_at="",
+        updated_at="",
+    )
 
 
 @router.post("/tailor", response_model=TailoredResumeOut)
@@ -137,15 +134,13 @@ async def post_tailor(
     if job is None:
         raise HTTPException(status_code=404, detail="Job listing not found")
 
-    result_q = await session.execute(select(Resume).where(Resume.is_base == 1).limit(1))
-    base_resume = result_q.scalar_one_or_none()
-    if base_resume is None:
+    if not _RESUME_FILE.exists():
         raise HTTPException(
             status_code=404,
-            detail="No base resume found — upload one via PUT /api/resume/base first",
+            detail="No base resume found — add config/resume.json",
         )
 
-    base_data: dict[str, Any] = json.loads(base_resume.structured_data)
+    base_data: dict[str, Any] = json.loads(_RESUME_FILE.read_text())
     tailored_data: dict[str, Any] = body.structured_data
     diff_raw = compute_diff(base_data, tailored_data)
 
