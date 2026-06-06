@@ -23,6 +23,7 @@ especially to prevent fabricated or exaggerated claims.
   constructions (Was responsible for, Helped with).
 - Do not add superlatives ("world-class", "cutting-edge", "revolutionary") that
   aren't in the source.
+- Do not use em-dashes (—) in the summary; use separate sentences instead.
 
 ## Role-specific notes
 
