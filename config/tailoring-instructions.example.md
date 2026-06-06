@@ -29,12 +29,12 @@ especially to prevent fabricated or exaggerated claims.
 <!-- Add corrections per company or role type below. Example:
 
 ### ML / AI roles
-- The BloomReach attribute extraction bullet may mention "NLP" — this is
+- The Acme Corp entity extraction bullet may mention "VectorFlow" — this is
   accurate; do not remove it.
-- Do not claim "production LLM deployment" for the Google BERT work; the model
+- Do not claim "production LLM deployment" for the Initech NeuroNet work; the model
   was internal and experimental.
 
 ### Data engineering roles
-- Hadoop/Cascading work at BloomReach was batch ETL, not streaming — do not
+- MapGrid/StreamCast work at Acme Corp was batch ETL, not streaming — do not
   rephrase as real-time or streaming pipelines.
 -->
