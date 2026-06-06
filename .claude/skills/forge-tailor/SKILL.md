@@ -34,12 +34,16 @@ Then stop.
 
 ---
 
-### Step 2: Fetch base resume and job listing
+### Step 2: Fetch base resume, job listing, and tailoring instructions
 
 ```
 GET http://localhost:8000/api/resume/base
 GET http://localhost:8000/api/jobs/<job_id>
 ```
+
+Also read `config/tailoring-instructions.md` from disk if it exists. This file
+contains hard constraints and phrasing corrections that must be applied during
+tailoring. If the file is absent, proceed without it.
 
 If base resume returns 404:
 ```
@@ -57,13 +61,15 @@ Then stop in either case.
 
 ### Step 3: Tailor the resume
 
-Using the base resume's `structured_data` and the job's `title` and `description`,
-reason about which fields to adjust to better match the role.
+Using the base resume's `structured_data`, the job's `title` and `description`,
+and any instructions from `config/tailoring-instructions.md`, reason about which
+fields to adjust to better match the role.
 
 Rules:
 1. ONLY adjust emphasis, keywords, and bullet phrasing
 2. Do NOT add work history entries, companies, dates, or degrees that don't exist
-3. Keep all factual information accurate
+3. Keep all factual information accurate — apply every hard constraint listed in
+   tailoring-instructions.md before finalising any bullet
 4. Return the full adjusted `structured_data` object
 
 Produce the tailored version of the resume JSON in memory — do not write any files.

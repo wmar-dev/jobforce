@@ -39,6 +39,13 @@ make install
 cp config.example.yaml config.yaml
 # Edit config.yaml: add your target roles, companies, and profile
 
+cp config/resume.example.json config/resume.json
+# Edit config/resume.json: add your work history, skills, and education
+
+cp config/tailoring-instructions.example.md config/tailoring-instructions.md
+# Edit config/tailoring-instructions.md: add constraints to prevent false
+# information in AI-tailored resume bullets
+
 # 3. Initialize and seed the database
 cd backend && uv run python -m jobforce.db.init
 cd backend && uv run python -m jobforce.db.seed
@@ -115,6 +122,8 @@ jobforce/
 │       ├── components/       # per-agent UI components
 │       └── hooks/            # SWR data hooks
 ├── chrome-extension/         # MV3 extension
-├── config.example.yaml       # config template
-└── Makefile                  # dev, check, seed, install
+├── config.example.yaml                        # config template
+├── config/resume.example.json                 # resume template
+├── config/tailoring-instructions.example.md  # tailoring constraints template
+└── Makefile                                   # dev, check, seed, install
 ```

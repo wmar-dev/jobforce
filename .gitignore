@@ -40,6 +40,7 @@ yarn-error.log*
 # User config (may contain personal data)
 config.yaml
 config/resume.json
+config/tailoring-instructions.md
 
 # SQLite database and raw HTML snapshots
 backend/data/jobforce.db
