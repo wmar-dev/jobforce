@@ -14,6 +14,7 @@ import type {
   UserProfile,
   PipelineStatus,
   RoleType,
+  ExportResponse,
 } from "./types";
 
 const BASE_URL =
@@ -145,13 +146,13 @@ export function tailorResume(
   });
 }
 
-export async function exportResumePdf(resumeId: number): Promise<Blob> {
+export async function exportResume(resumeId: number): Promise<ExportResponse> {
   const res = await fetch(`${BASE_URL}/api/resume/${resumeId}/export`, { method: "POST" });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({ detail: res.statusText }));
     throw Object.assign(new Error(detail.detail ?? res.statusText), { status: res.status });
   }
-  return res.blob();
+  return res.json() as Promise<ExportResponse>;
 }
 
 // Coach

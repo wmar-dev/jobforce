@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { getJobs, getBaseResume, putBaseResume, tailorResume } from "@/lib/api";
 import { ResumeDiff } from "@/components/forge/ResumeDiff";
-import { PDFDownloadButton } from "@/components/forge/PDFDownloadButton";
+import { ExportButton } from "@/components/forge/ExportButton";
 import type { JobListing, Resume, TailoredResumeResponse } from "@/lib/types";
 
 export default function ForgePage() {
@@ -171,10 +171,7 @@ export default function ForgePage() {
             <h2 className="text-sm font-semibold text-gray-300">
               Changes ({tailored.diff.length} field{tailored.diff.length !== 1 ? "s" : ""} modified)
             </h2>
-            <PDFDownloadButton
-              resumeId={tailored.id}
-              filename={`resume_tailored_job${selectedJobId}.pdf`}
-            />
+            <ExportButton resumeId={tailored.id} />
           </div>
           <ResumeDiff diff={tailored.diff} />
         </div>

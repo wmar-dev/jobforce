@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -151,37 +150,67 @@ async def test_tailor_with_missing_job_returns_404(test_client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_export_resume_returns_pdf_bytes(test_client: AsyncClient) -> None:
+async def test_export_resume_returns_json_paths(test_client: AsyncClient) -> None:
+    """Export endpoint returns JSON with tex_path and pdf_path — no streaming bytes."""
+    from unittest.mock import AsyncMock, patch
+
     base = await _put_base_resume(test_client)
-
-    fake_pdf = b"%PDF-1.4 fake content"
-
     with patch(
-        "jobforce.routers.forge.render_pdf",
-        new_callable=AsyncMock,
-        return_value=fake_pdf,
+        "jobforce.services.forge.compile_pdf_cli", new_callable=AsyncMock, return_value=None
     ):
         resp = await test_client.post(f"/api/resume/{base['id']}/export")
-
     assert resp.status_code == 200
-    assert resp.headers.get("content-type", "").startswith("application/pdf")
-    assert len(resp.content) > 0
+    data = resp.json()
+    assert "tex_path" in data
+    assert data["tex_path"].endswith(".tex")
+    # pdf_path may be null if LaTeX not installed, but key must be present
+    assert "pdf_path" in data
 
 
 @pytest.mark.asyncio
-async def test_export_resume_returns_503_when_latex_unavailable(
+async def test_export_resume_tex_path_ends_with_company_and_title(
     test_client: AsyncClient,
 ) -> None:
-    base = await _put_base_resume(test_client)
+    """Filename includes a sanitized company + title slug."""
+    import os
+    from unittest.mock import AsyncMock, patch
+
+    await _put_base_resume(test_client)
+    job = await _ingest_job(test_client)
+    tailor_resp = await test_client.post(
+        "/api/resume/tailor",
+        json={"job_id": job["id"], "structured_data": _TAILORED_RESUME_DATA},
+    )
+    tailored_id = tailor_resp.json()["id"]
 
     with patch(
-        "jobforce.routers.forge.render_pdf",
-        new_callable=AsyncMock,
-        side_effect=RuntimeError("LaTeX not available"),
+        "jobforce.services.forge.compile_pdf_cli", new_callable=AsyncMock, return_value=None
+    ):
+        resp = await test_client.post(f"/api/resume/{tailored_id}/export")
+    assert resp.status_code == 200
+    data = resp.json()
+    # Filename should contain slugified "TechCo" and "Senior Python Engineer"
+    stem = os.path.basename(data["tex_path"]).replace(".tex", "")
+    assert "techco" in stem.lower()
+    assert "senior" in stem.lower()
+
+
+@pytest.mark.asyncio
+async def test_export_resume_pdf_path_null_when_latex_unavailable(
+    test_client: AsyncClient,
+) -> None:
+    """When LaTeX unavailable, pdf_path is null (not a 503 error)."""
+    from unittest.mock import AsyncMock, patch
+
+    base = await _put_base_resume(test_client)
+    with patch(
+        "jobforce.services.forge.compile_pdf_cli", new_callable=AsyncMock, return_value=None
     ):
         resp = await test_client.post(f"/api/resume/{base['id']}/export")
-
-    assert resp.status_code == 503
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "tex_path" in data
+    assert data["pdf_path"] is None
 
 
 @pytest.mark.asyncio
@@ -203,5 +232,5 @@ async def test_export_pdf_performance_within_30s(test_client: AsyncClient) -> No
     start = time.monotonic()
     resp = await test_client.post(f"/api/resume/{base['id']}/export")
     elapsed = time.monotonic() - start
-    assert resp.status_code in (200, 503)
+    assert resp.status_code == 200
     assert elapsed <= 30.0, f"PDF export took {elapsed:.1f}s, exceeding 30s limit"

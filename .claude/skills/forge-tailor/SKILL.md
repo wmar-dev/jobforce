@@ -102,15 +102,31 @@ If no fields changed, print:
 
 ---
 
-### Step 6: Export PDF (optional)
+### Step 6: Export to .tex and PDF
 
 ```
 POST http://localhost:8000/api/resume/<tailored_id>/export
 ```
 
-Save to `./resume_job_<job_id>.pdf`
-- **200**: "✅ PDF saved to ./resume_job_<job_id>.pdf"
-- **503**: "⚠ LaTeX not installed — install texlive to generate PDFs"
+The response is JSON:
+```json
+{
+  "tex_path": "/absolute/path/to/resume-company-title-YYYYMMDD-HHMMSS.tex",
+  "pdf_path": "/absolute/path/to/resume-company-title-YYYYMMDD-HHMMSS.pdf"
+}
+```
+
+Print the result:
+```
+✅ .tex written to: /absolute/path/to/resume-company-title-YYYYMMDD-HHMMSS.tex
+✅ PDF written to:  /absolute/path/to/resume-company-title-YYYYMMDD-HHMMSS.pdf
+```
+
+If `pdf_path` is `null`:
+```
+✅ .tex written to: /absolute/path/to/resume-company-title-YYYYMMDD-HHMMSS.tex
+⚠  PDF not generated — install texlive to compile PDFs (brew install --cask mactex)
+```
 
 ## Notes
 

@@ -202,3 +202,8 @@ export interface UserProfile {
   preferences?: string | null;
   updated_at?: string;
 }
+
+export interface ExportResponse {
+  tex_path: string;
+  pdf_path: string | null;
+}

@@ -151,5 +151,5 @@ Key changes:
 **Verify invariant**: `grep -r "import anthropic" backend/` → zero results
 
 <!-- SPECKIT START -->
-Active feature plan: specs/012-hn-whos-hiring-parser/plan.md
+Active feature plan: specs/013-forge-tex-pdf/plan.md
 <!-- SPECKIT END -->

@@ -1,19 +1,18 @@
-"""Forge router — resume CRUD, tailor, and PDF export."""
+"""Forge router — resume CRUD, tailor, and export."""
 
 from __future__ import annotations
 
 import json
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.engine import get_session
-from jobforce.db.models import JobListing, Resume
-from jobforce.services.forge import compute_diff, render_pdf
+from jobforce.db.models import Company, JobListing, Resume
+from jobforce.services.forge import ExportResult, compute_diff, export_resume
 
 router = APIRouter(prefix="/resume", tags=["forge"])
 
@@ -42,6 +41,11 @@ class TailorRequest(BaseModel):
     job_id: int
     structured_data: Any
     base_resume_id: int | None = None
+
+
+class ExportOut(BaseModel):
+    tex_path: str
+    pdf_path: str | None
 
 
 def _to_out(resume: Resume) -> ResumeOut:
@@ -135,27 +139,28 @@ async def post_tailor(
     )
 
 
-@router.post("/{resume_id}/export")
-async def export_resume_pdf(
+@router.post("/{resume_id}/export", response_model=ExportOut)
+async def export_resume_endpoint(
     resume_id: int,
     session: Annotated[AsyncSession, Depends(get_session)],
-) -> Response:
+) -> ExportOut:
+    """Write .tex and PDF to output/ and return their paths.
+
+    pdf_path is null when LaTeX is unavailable — this is not an error.
+    """
     resume = await session.get(Resume, resume_id)
     if resume is None:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    structured_data = json.loads(resume.structured_data)
+    job_company = "unknown"
+    job_title = "resume"
+    if resume.job_listing_id:
+        job = await session.get(JobListing, resume.job_listing_id)
+        if job is not None:
+            job_title = job.title or "resume"
+            company = await session.get(Company, job.company_id)
+            if company is not None:
+                job_company = company.name
 
-    try:
-        pdf_bytes = await render_pdf(structured_data)
-    except RuntimeError as exc:
-        return JSONResponse(
-            status_code=503,
-            content={"detail": str(exc), "code": "LATEX_UNAVAILABLE"},
-        )
-
-    return StreamingResponse(
-        iter([pdf_bytes]),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'},
-    )
+    result: ExportResult = await export_resume(resume, job_company, job_title)
+    return ExportOut(tex_path=result.tex_path, pdf_path=result.pdf_path)
