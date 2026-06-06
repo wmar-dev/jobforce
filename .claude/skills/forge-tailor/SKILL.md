@@ -59,47 +59,43 @@ Then stop in either case.
 
 ---
 
-### Step 3: Ask clarifying questions
+### Step 3: Ask clarifying questions (only if needed)
 
-Before tailoring, reason about what you know and don't know about the candidate's
-experience relative to this specific job. Identify up to 5 points where a short
-answer would meaningfully improve the tailored output — ambiguities in scope,
-impact, or technology use that the resume doesn't make clear.
+Reason about whether any ambiguity in the resume — relative to this specific job
+— would materially change how a bullet is phrased or whether a claim can be made.
+Default to **not asking**: if the existing instructions and resume are sufficient
+to tailor accurately, skip this step entirely and proceed to Step 4.
 
-Skip any point already answered in `config/tailoring-instructions.md` under
-`## Clarifications`.
+Only surface a question when all three are true:
+1. The answer would change a specific bullet or claim in a meaningful way
+2. The answer cannot be inferred from the resume, the job description, or
+   `config/tailoring-instructions.md`
+3. The point has not already been addressed under `## Clarifications`
 
-If there are questions to ask, present them like this and WAIT for the user to
-respond before proceeding:
+If any questions meet that bar, ask them (max 3) and WAIT for the user to respond:
 
 ```
-⚒️ A few quick questions before I tailor for <job title> at <company>:
+⚒️ One quick question before I tailor for <job title> at <company>:
 
-1. <specific question about a bullet or claim>
-2. <specific question>
-...
+1. <specific question>
 
-Answer any you know — press Enter to skip the rest and tailor with what's here.
+Skip with Enter to tailor with what's here.
 ```
-
-If `config/tailoring-instructions.md` already covers all relevant ambiguities,
-skip this step and proceed directly to Step 4.
 
 #### After the user responds
 
 - Record each answered question as a new entry under `## Clarifications` in
-  `config/tailoring-instructions.md`, using this format:
+  `config/tailoring-instructions.md`:
 
   ```markdown
-  ### <Role or company context, e.g. "Data engineering roles">
-  - <Concise rule derived from the answer, written as a constraint or fact>
+  ### <Role or company context>
+  - <Concise constraint or fact derived from the answer>
   ```
 
-- If `## Clarifications` doesn't exist in the file yet, append it after the
-  last section. If the file doesn't exist, create it with just the
-  `## Clarifications` section.
-- Do NOT duplicate a clarification already present in the file.
-- Unanswered questions are skipped — do not record them.
+- If `## Clarifications` doesn't exist yet, append it. If the file doesn't
+  exist, create it with just that section.
+- Do NOT duplicate anything already present.
+- Unanswered/skipped questions are not recorded.
 
 ---
 
