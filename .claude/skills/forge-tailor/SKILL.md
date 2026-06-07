@@ -111,7 +111,10 @@ Rules:
 2. Do NOT add work history entries, companies, dates, or degrees that don't exist
 3. Keep all factual information accurate — apply every hard constraint listed in
    tailoring-instructions.md before finalising any bullet
-4. Return the full adjusted `structured_data` object
+4. Every claim in a rewritten bullet or summary must be traceable to the source
+   text. If you cannot point to a specific word, phrase, or fact in the original
+   bullet or resume that supports the claim, remove it.
+5. Return the full adjusted `structured_data` object
 
 Produce the tailored version of the resume JSON in memory — do not write any files.
 
