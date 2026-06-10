@@ -168,7 +168,46 @@ If the page appears login-gated (redirects to a login form, shows sign-in wall),
   ⚠ Skipped: careers page requires authentication
 ```
 
+### 4c2: Try filtering by location and team via the page's own search controls (optional)
+
+Large careers pages (100+ listings across many pages) often expose their own filter UI — a **Location** combobox/listbox, a **Team**/**Department**/**Category**/**Function** combobox/listbox, sometimes a Keywords box, and a Search/Apply/Filter button. Using these first can shrink a multi-page crawl down to a handful of relevant listings.
+
+In the snapshot from 4c, look for such controls. If none are found, or `target_roles`/`target_locations` are both empty, skip this step entirely and proceed to 4d with the unfiltered snapshot — log:
+```
+🔎 <name> — no usable filter controls found, crawling unfiltered
+```
+
+If controls are found:
+
+1. **Location filter** (skip if `target_locations` is empty): find option(s) whose text matches a `target_locations` entry (case-insensitive substring; "Remote" matches "Remote"). There may be more than one match (e.g. both "San Francisco" and "Remote" are offered).
+   - **Multi-select** (checkboxes or a multi-select listbox): select all matching options in a single pass.
+   - **Single-select** (`combobox`/`<select>`): plan one pass per matching option (see step 4 below).
+   - No matches → leave the location filter unset.
+
+2. **Team/department filter** (skip if `target_roles` is empty): find an option whose text suggests it covers `target_roles` — keywords like "Engineering", "Software", "Technology", "R&D", "Research", "Product & Engineering". Most engineering-flavored `target_roles` (e.g. "Software Engineer", "ML Engineer", "Staff Software Engineer") fall under an "Engineering"-style category.
+   - Exactly one option clearly covers all (or nearly all) `target_roles` → select it.
+   - Ambiguous (no clear match, or `target_roles` span categories like both "Engineering" and "Research") → leave unset rather than risk excluding valid jobs.
+
+3. If neither a location nor a team filter could be mapped to an available option, treat this the same as "no usable filter controls found" (log and fall back to 4d unfiltered).
+
+4. Apply the filter(s) with `browser_select_option` (or by clicking checkboxes), then click the Search/Filter/Apply button with `browser_click`, then take a new snapshot with `browser_snapshot`.
+   - Single-select location with N matching options → repeat this for each option (N passes total), each time re-applying the team filter (if any) alongside that pass's location.
+
+5. For each filtered snapshot, run the link-extraction + pre-filter logic from 4d against it (instead of the unfiltered 4c snapshot), producing a list of `(anchor_text, location_text, href)` tuples. Merge tuples across passes, deduplicating by `href`.
+   - If a filtered snapshot shows zero results where the unfiltered count was non-zero, the filter mapping was likely wrong for this site — discard that pass's results and fall back to the unfiltered 4c snapshot for 4d instead.
+
+6. Log which filters were applied (one line per pass):
+   ```
+   🔎 <name> — filtering by Team=<team>, Location=<location>
+   ```
+
+7. Pass the merged, deduplicated tuple list to 4e onward as if it were the output of 4d. Skip the unfiltered 4d extraction in this case.
+
+> This is a pre-filter to reduce crawl volume on large listing pages — it does not replace the anchor-text/location pre-filter in 4d (still applied per-pass in step 5), nor the post-fetch checks in 4g.
+
 ### 4d: Extract individual job listing URLs and pre-filter by anchor text
+
+If 4c2 already produced a merged tuple list, skip this step and proceed to 4e with that list.
 
 From the Playwright snapshot, extract `(anchor_text, href)` pairs where the href looks like an individual job posting link. Criteria for the href:
 - Contains path segments like `/jobs/`, `/roles/`, `/positions/`, `/opening/`, `/job/`, `/careers/`
@@ -356,6 +395,9 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | No domain or careers_url | Skip company, report |
 | Careers page not found after probing | Skip company, report |
 | Login-gated page | Skip company, report "requires login" |
+| Page has Location/Team filter controls matching target_roles/target_locations | Apply filter(s), use filtered snapshot(s) for 4d, log filters applied |
+| No filter controls found, or none map to target_roles/target_locations | Skip filtering, crawl unfiltered, log fallback |
+| Filtered snapshot returns zero results (unfiltered had results) | Discard that pass, fall back to unfiltered snapshot |
 | No job links found on page | Report, continue to next company |
 | scout_fetch fails for a URL | Log error for that URL, continue |
 | Anchor text doesn't match target_roles | Log as off-target (title), skip scout_fetch entirely, continue |
@@ -385,3 +427,4 @@ This scores only unscored jobs, so it will pick up exactly what was just ingeste
 - New companies (from a URL or unknown name argument) are appended to `config.yaml` automatically so they persist for future runs
 - This skill uses Playwright MCP for browser interaction; no Python browser code
 - Job extraction uses Claude's judgment — page layouts vary across ATS platforms
+- On large listing pages, the page's own Location/Team filter controls are tried first (4c2) to shrink the crawl before falling back to a full unfiltered crawl
