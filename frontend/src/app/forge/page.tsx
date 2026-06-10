@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getJobs, getBaseResume, putBaseResume, getTailoredResume } from "@/lib/api";
+import { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { getJobs, getJob, getBaseResume, putBaseResume, getTailoredResume } from "@/lib/api";
 import { ResumeDiff } from "@/components/forge/ResumeDiff";
 import { ExportButton } from "@/components/forge/ExportButton";
 import type { JobListing, Resume, TailoredResumeResponse } from "@/lib/types";
 
-export default function ForgePage() {
+function ForgePageInner() {
+  const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [baseResume, setBaseResume] = useState<Resume | null>(null);
@@ -15,12 +18,31 @@ export default function ForgePage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditingBase, setIsEditingBase] = useState(false);
   const [rawJson, setRawJson] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    const linkedJobId = Number(searchParams.get("jobId")) || null;
+
     Promise.all([
       getJobs({ status: "shortlisted", limit: 50, sort_by: "fit_score", sort_dir: "desc" }),
       getJobs({ status: "saved", limit: 50, sort_by: "fit_score", sort_dir: "desc" }),
-    ]).then(([shortlisted, saved]) => setJobs([...shortlisted.items, ...saved.items]));
+    ]).then(async ([shortlisted, saved]) => {
+      let combined = [...shortlisted.items, ...saved.items];
+      if (linkedJobId && !combined.some((j) => j.id === linkedJobId)) {
+        try {
+          const linkedJob = await getJob(linkedJobId);
+          combined = [linkedJob, ...combined];
+        } catch {
+          // job not found; ignore and leave it out of the dropdown
+        }
+      }
+      setJobs(combined);
+    });
+
+    if (linkedJobId) {
+      handleJobSelect(linkedJobId);
+    }
+
     getBaseResume()
       .then((r) => {
         setBaseResume(r);
@@ -29,7 +51,7 @@ export default function ForgePage() {
       .catch(() => {
         setRawJson(JSON.stringify(EMPTY_RESUME, null, 2));
       });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaveBase = async () => {
     try {
@@ -46,6 +68,7 @@ export default function ForgePage() {
     setSelectedJobId(jobId);
     setTailored(null);
     setError(null);
+    setCopied(false);
     if (!jobId) return;
     setIsLoadingTailored(true);
     try {
@@ -54,6 +77,13 @@ export default function ForgePage() {
     } finally {
       setIsLoadingTailored(false);
     }
+  };
+
+  const handleCopyCommand = async () => {
+    if (!selectedJobId) return;
+    await navigator.clipboard.writeText(`/forge-tailor ${selectedJobId}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   return (
@@ -148,6 +178,7 @@ export default function ForgePage() {
               {(() => {
                 const shortlisted = jobs.filter((j) => j.status === "shortlisted");
                 const saved = jobs.filter((j) => j.status === "saved");
+                const other = jobs.filter((j) => j.status !== "shortlisted" && j.status !== "saved");
                 return (
                   <>
                     {shortlisted.length > 0 && (
@@ -168,6 +199,15 @@ export default function ForgePage() {
                         ))}
                       </optgroup>
                     )}
+                    {other.length > 0 && (
+                      <optgroup label="Other">
+                        {other.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            {job.fit_score != null ? `[${job.fit_score}] ` : ""}{job.title} @ {job.company.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </>
                 );
               })()}
@@ -176,17 +216,35 @@ export default function ForgePage() {
 
           {selectedJobId && (
             <div className="mt-4 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-xs text-gray-400">
-              {isLoadingTailored ? (
-                <span>Loading tailored resume...</span>
-              ) : tailored ? (
-                <span className="text-green-400">✓ Tailored resume loaded</span>
-              ) : (
-                <>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-gray-300">
+                  Job <span className="font-mono text-gray-200">#{selectedJobId}</span>
+                  {" "}
+                  <Link
+                    href={`/jobs/${selectedJobId}`}
+                    target="_blank"
+                    className="text-emerald-400 hover:text-emerald-300"
+                  >
+                    View job →
+                  </Link>
+                </span>
+                <button
+                  onClick={handleCopyCommand}
+                  title="Copy /forge-tailor command to clipboard"
+                  className="text-gray-500 hover:text-amber-400 transition-colors font-mono"
+                >
+                  {copied ? "✓ copied" : `📋 /forge-tailor ${selectedJobId}`}
+                </button>
+              </div>
+              <div className="mt-2">
+                {isLoadingTailored ? (
+                  <span>Loading tailored resume...</span>
+                ) : tailored ? (
+                  <span className="text-green-400">✓ Tailored resume loaded</span>
+                ) : (
                   <span className="text-amber-400">No tailored resume yet.</span>
-                  {" "}Run in Claude Code:{" "}
-                  <code className="text-gray-200 font-mono">/forge-tailor {selectedJobId}</code>
-                </>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -208,6 +266,14 @@ export default function ForgePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ForgePage() {
+  return (
+    <Suspense>
+      <ForgePageInner />
+    </Suspense>
   );
 }
 

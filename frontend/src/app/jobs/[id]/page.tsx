@@ -177,6 +177,12 @@ export default function JobDetailPage({
         >
           View original ↗
         </a>
+        <Link
+          href={`/forge?jobId=${job.id}`}
+          className="text-amber-400 hover:text-amber-300 transition-colors"
+        >
+          ⚒️ Tailor in Forge
+        </Link>
       </div>
 
       {/* Fit score */}
