@@ -136,7 +136,7 @@ async def get_jobs(
     if status:
         stmt = stmt.where(JobListing.status == status)
     else:
-        stmt = stmt.where(JobListing.status != "archived")
+        stmt = stmt.where(JobListing.status.notin_(["archived", "withdrawn"]))
     if company_id:
         stmt = stmt.where(JobListing.company_id == company_id)
     if fit_scored is not None:

@@ -83,6 +83,65 @@ async def test_default_list_excludes_archived(
 
 
 @pytest.mark.asyncio
+async def test_default_list_excludes_withdrawn(
+    test_client: object, db_session: AsyncSession, sample_company: Company
+) -> None:
+    withdrawn_job = JobListing(
+        company_id=sample_company.id,
+        title="Withdrawn Job",
+        source_url="https://example.com/withdrawn",
+        status="withdrawn",
+    )
+    saved_job = JobListing(
+        company_id=sample_company.id,
+        title="Saved Job 2",
+        source_url="https://example.com/saved2-active",
+        status="saved",
+    )
+    db_session.add_all([withdrawn_job, saved_job])
+    await db_session.commit()
+
+    from httpx import AsyncClient
+
+    assert isinstance(test_client, AsyncClient)
+    response = await test_client.get("/api/jobs")
+    assert response.status_code == 200
+    data = response.json()
+    statuses = {j["status"] for j in data["items"]}
+    assert "withdrawn" not in statuses
+    assert "saved" in statuses
+
+
+@pytest.mark.asyncio
+async def test_explicit_withdrawn_filter_returns_only_withdrawn(
+    test_client: object, db_session: AsyncSession, sample_company: Company
+) -> None:
+    withdrawn_job = JobListing(
+        company_id=sample_company.id,
+        title="Withdrawn Job 2",
+        source_url="https://example.com/withdrawn2",
+        status="withdrawn",
+    )
+    saved_job = JobListing(
+        company_id=sample_company.id,
+        title="Saved Job 3",
+        source_url="https://example.com/saved3-active",
+        status="saved",
+    )
+    db_session.add_all([withdrawn_job, saved_job])
+    await db_session.commit()
+
+    from httpx import AsyncClient
+
+    assert isinstance(test_client, AsyncClient)
+    response = await test_client.get("/api/jobs?status=withdrawn")
+    assert response.status_code == 200
+    data = response.json()
+    statuses = {j["status"] for j in data["items"]}
+    assert statuses == {"withdrawn"}
+
+
+@pytest.mark.asyncio
 async def test_explicit_archived_filter_returns_only_archived(
     test_client: object, db_session: AsyncSession, sample_company: Company
 ) -> None:
