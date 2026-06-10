@@ -1075,3 +1075,51 @@ def test_parse_html_discord_description_non_null() -> None:
     result = parse_html(html, _DISCORD_URL)
     assert result["description"] is not None
     assert "distributed systems" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Stripe (stripe.com/jobs/listing/<slug>/<id>)
+# ---------------------------------------------------------------------------
+
+_STRIPE_URL = "https://stripe.com/jobs/listing/android-engineer-terminal-developer-productivity/7550154"
+
+
+def test_parse_html_stripe_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("stripe_job.html")
+    result = parse_html(html, _STRIPE_URL)
+    assert result["title"] == "Android Engineer, Terminal Developer Productivity"
+
+
+def test_parse_html_stripe_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("stripe_job.html")
+    result = parse_html(html, _STRIPE_URL)
+    assert result["company_name"] == "Stripe"
+
+
+def test_parse_html_stripe_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("stripe_job.html")
+    result = parse_html(html, _STRIPE_URL)
+    assert result["location"] == "Seattle,  or South San Francisco HQ"
+
+
+def test_parse_html_stripe_role_type() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("stripe_job.html")
+    result = parse_html(html, _STRIPE_URL)
+    assert result["role_type"] == "full-time"
+
+
+def test_parse_html_stripe_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("stripe_job.html")
+    result = parse_html(html, _STRIPE_URL)
+    assert result["description"] is not None
+    assert "Developer Productivity team" in result["description"]
