@@ -29,13 +29,21 @@ async def db_session(db_engine: Any) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture
-async def test_client(db_engine: Any, monkeypatch: Any) -> AsyncGenerator[AsyncClient, None]:
+async def test_client(
+    db_engine: Any, monkeypatch: Any, tmp_path: Any
+) -> AsyncGenerator[AsyncClient, None]:
     """AsyncClient wired to a test FastAPI app with an in-memory SQLite DB."""
     import jobforce.db.engine as engine_module
+    import jobforce.routers.forge as forge_router_module
+    import jobforce.services.forge as forge_service_module
     from jobforce.main import create_app
 
     monkeypatch.setattr(engine_module, "_engine", db_engine)
     monkeypatch.setattr(engine_module, "_session_factory", build_session_factory(db_engine))
+    # Forge endpoints read/write these paths directly (not via the DB) — point
+    # them at tmp_path so tests never touch the real config/resume.json or output/.
+    monkeypatch.setattr(forge_router_module, "_RESUME_FILE", tmp_path / "resume.json")
+    monkeypatch.setattr(forge_service_module, "_OUTPUT_DIR", tmp_path / "output")
 
     async def noop_lifespan(app: Any) -> AsyncGenerator[None, None]:
         yield
