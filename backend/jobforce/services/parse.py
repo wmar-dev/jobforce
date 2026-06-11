@@ -674,6 +674,29 @@ def _stripe_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Apple site adapter — jobs.apple.com/en-us/details/<id>/<slug>
+# Page structure: h1 = job title (generic handles this). Location and team
+# are sibling <label> elements (#jobdetails-joblocation / #jobdetails-teamname)
+# in the row right after the h1. Job content is split across sibling
+# div#jobdetails-* sections (Summary, Description, Responsibilities,
+# Qualifications, Pay & Benefits, plus unheaded legal-boilerplate footers);
+# only the headed sections are joined for the description.
+# ---------------------------------------------------------------------------
+
+
+def _apple_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one("#jobdetails-joblocation"))
+
+
+def _apple_description(doc: BeautifulSoup, url: str) -> str | None:
+    parts = []
+    for div in doc.select("section.hyperlink-underline > div[id^='jobdetails-']"):
+        if div.find("h2") and (md_text := _to_markdown(div)):
+            parts.append(md_text)
+    return "\n\n".join(parts) if parts else None
+
+
+# ---------------------------------------------------------------------------
 # Hacker News site adapter — news.ycombinator.com/item?id=<comment-id>
 # Single-comment page layout: table.fatitem > tr.athing > td.default >
 #   div.comment > div.commtext
@@ -856,6 +879,11 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "title": _stripe_title,
         "location": _stripe_location,
         "description": _stripe_description,
+    },
+    "jobs.apple.com": {
+        "company_name": lambda doc, url: "Apple",
+        "location": _apple_location,
+        "description": _apple_description,
     },
 }
 
