@@ -364,6 +364,31 @@ If any jobs are missing location, the site adapter's location selector is broken
 
 7. **Commit** — include the fixture, the tests, and the parse fix in one commit.
 
+### 4i: Detect and merge duplicate company records
+
+`/api/ingest` derives `company_name` from the scraped page text, which can differ from this company's name in `config.yaml`/the DB (e.g. scraped "Edisonscientific" vs the canonical "Edison Scientific"). Company lookup during ingest is an exact case-insensitive match, so a near-miss creates a new duplicate `Company` row instead of reusing the canonical one.
+
+After ingesting this company's listings, re-fetch companies:
+
+```bash
+curl -s http://localhost:8000/api/companies
+```
+
+Look for another company record whose name, normalized (lowercase, spaces/punctuation removed), equals this company's normalized name but whose `id` differs from the canonical `id` noted in Step 3 (the canonical record is the one matching the `config.yaml` name, usually with `domain`/`careers_url` set).
+
+If a duplicate is found, merge it into the canonical record using the `merge_companies` CLI — this reassigns the duplicate's job listings and meeting notes to the canonical company, then deletes the duplicate:
+
+```bash
+cd backend && uv run python -m jobforce.cli.merge_companies <duplicate_id> <canonical_id>
+```
+
+Log:
+```
+🔧 <name> — merged duplicate company id=<duplicate_id> ("<dup_name>") into id=<canonical_id>
+```
+
+If no duplicate is found, skip silently.
+
 ## Step 5: Print per-company summary and final totals
 
 For each company processed, print:
@@ -408,6 +433,7 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | Location not visible near link in snapshot | Skip location pre-filter for that entry, fetch it anyway |
 | No target_roles in config | Warn once, skip title filtering, ingest all titles |
 | No target_locations in config | Warn once, skip location filtering, ingest all locations |
+| Ingest creates a duplicate Company record (4i) | Merge via `merge_companies` CLI into the canonical company, log merge |
 
 ## Step 6: Run oracle-rank on newly ingested jobs
 
@@ -428,3 +454,4 @@ This scores only unscored jobs, so it will pick up exactly what was just ingeste
 - This skill uses Playwright MCP for browser interaction; no Python browser code
 - Job extraction uses Claude's judgment — page layouts vary across ATS platforms
 - On large listing pages, the page's own Location/Team filter controls are tried first (4c2) to shrink the crawl before falling back to a full unfiltered crawl
+- Duplicate company records left over from past runs (or runs predating step 4i) can be cleaned up at any time with `cd backend && uv run python -m jobforce.cli.merge_companies <duplicate_id> <canonical_id>`
