@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -168,20 +169,28 @@ async def export_resume_endpoint(
     """Write .tex and PDF to output/ and return their paths.
 
     pdf_path is null when LaTeX is unavailable — this is not an error.
+    resume_id=0 refers to the current base resume (config/resume.json).
     """
-    resume = await session.get(Resume, resume_id)
-    if resume is None:
-        raise HTTPException(status_code=404, detail="Resume not found")
-
     job_company = "unknown"
     job_title = "resume"
-    if resume.job_listing_id:
-        job = await session.get(JobListing, resume.job_listing_id)
-        if job is not None:
-            job_title = job.title or "resume"
-            company = await session.get(Company, job.company_id)
-            if company is not None:
-                job_company = company.name
+
+    if resume_id == 0:
+        if not _RESUME_FILE.exists():
+            raise HTTPException(
+                status_code=404, detail="No base resume found — add config/resume.json"
+            )
+        resume: Any = SimpleNamespace(structured_data=_RESUME_FILE.read_text())
+    else:
+        resume = await session.get(Resume, resume_id)
+        if resume is None:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        if resume.job_listing_id:
+            job = await session.get(JobListing, resume.job_listing_id)
+            if job is not None:
+                job_title = job.title or "resume"
+                company = await session.get(Company, job.company_id)
+                if company is not None:
+                    job_company = company.name
 
     result: ExportResult = await export_resume(resume, job_company, job_title)
     return ExportOut(tex_path=result.tex_path, pdf_path=result.pdf_path)
