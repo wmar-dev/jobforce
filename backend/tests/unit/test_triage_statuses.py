@@ -142,6 +142,65 @@ async def test_explicit_withdrawn_filter_returns_only_withdrawn(
 
 
 @pytest.mark.asyncio
+async def test_default_list_excludes_rejected(
+    test_client: object, db_session: AsyncSession, sample_company: Company
+) -> None:
+    rejected_job = JobListing(
+        company_id=sample_company.id,
+        title="Rejected Job",
+        source_url="https://example.com/rejected",
+        status="rejected",
+    )
+    saved_job = JobListing(
+        company_id=sample_company.id,
+        title="Saved Job 4",
+        source_url="https://example.com/saved4-active",
+        status="saved",
+    )
+    db_session.add_all([rejected_job, saved_job])
+    await db_session.commit()
+
+    from httpx import AsyncClient
+
+    assert isinstance(test_client, AsyncClient)
+    response = await test_client.get("/api/jobs")
+    assert response.status_code == 200
+    data = response.json()
+    statuses = {j["status"] for j in data["items"]}
+    assert "rejected" not in statuses
+    assert "saved" in statuses
+
+
+@pytest.mark.asyncio
+async def test_explicit_rejected_filter_returns_only_rejected(
+    test_client: object, db_session: AsyncSession, sample_company: Company
+) -> None:
+    rejected_job = JobListing(
+        company_id=sample_company.id,
+        title="Rejected Job 2",
+        source_url="https://example.com/rejected2",
+        status="rejected",
+    )
+    saved_job = JobListing(
+        company_id=sample_company.id,
+        title="Saved Job 5",
+        source_url="https://example.com/saved5-active",
+        status="saved",
+    )
+    db_session.add_all([rejected_job, saved_job])
+    await db_session.commit()
+
+    from httpx import AsyncClient
+
+    assert isinstance(test_client, AsyncClient)
+    response = await test_client.get("/api/jobs?status=rejected")
+    assert response.status_code == 200
+    data = response.json()
+    statuses = {j["status"] for j in data["items"]}
+    assert statuses == {"rejected"}
+
+
+@pytest.mark.asyncio
 async def test_explicit_archived_filter_returns_only_archived(
     test_client: object, db_session: AsyncSession, sample_company: Company
 ) -> None:
