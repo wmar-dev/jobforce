@@ -4,7 +4,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -59,6 +59,11 @@ class JobListPage(BaseModel):
 
 
 class JobPatchRequest(BaseModel):
+    # extra="forbid" so a "status" field (handled by PATCH /jobs/{id}/status,
+    # which records a status_transitions row) errors loudly instead of being
+    # silently dropped.
+    model_config = ConfigDict(extra="forbid")
+
     title: str | None = None
     location: str | None = None
     role_type: str | None = None

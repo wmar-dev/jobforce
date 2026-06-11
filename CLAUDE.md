@@ -120,6 +120,7 @@ SWR polls every 30s. Backend CORS allows `localhost:3000` only.
 | Endpoint | Purpose |
 | -------- | ------- |
 | `POST /api/jobs/{id}/reparse` | Re-extract `title`, `location`, `role_type`, `description` from the stored HTML snapshot using the current site adapter in `services/parse.py`. Use after fixing or adding a site adapter to refresh already-ingested jobs without re-crawling. Returns 404 if no snapshot exists. |
+| `PATCH /api/jobs/{id}/status` | The **only** way to change a job's pipeline `status` (e.g. mark `rejected`, `applied`). Body: `{"status": "<new_status>"}`. Validates the transition against the state machine in `services/scout.py` (`_VALID_TRANSITIONS`) and records a row in `status_transitions`. Returns 422 with `code: "INVALID_TRANSITION"` if the transition isn't allowed. The general `PATCH /api/jobs/{id}` endpoint rejects a `status` field with 422 (`extra_forbidden`) — use this endpoint instead. See the `/scout-reject` skill. |
 
 ### Chrome Extension
 
