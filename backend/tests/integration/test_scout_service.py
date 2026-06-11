@@ -55,6 +55,37 @@ async def test_dedup_by_url_returns_existing(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
+async def test_dedup_reingest_refreshes_snapshot(db_session: AsyncSession) -> None:
+    payload = IngestPayload(
+        source_url="https://example.com/job/dup-snap",
+        html="<html>stale</html>",
+        title="Engineer",
+        company_name="DupSnapCo",
+    )
+    first = await ingest_listing(db_session, payload)
+
+    # Simulate a row with an empty snapshot (e.g. captured before HTML storage existed).
+    snap = await db_session.execute(
+        select(PageSnapshot).where(PageSnapshot.job_listing_id == first["id"])
+    )
+    snapshot = snap.scalar_one()
+    snapshot.html_blob = b""
+    snapshot.size_bytes = 0
+    await db_session.commit()
+
+    refreshed_payload = payload.model_copy(update={"html": "<html>fresh content</html>"})
+    second = await ingest_listing(db_session, refreshed_payload)
+    assert second["duplicate"] is True
+
+    snap = await db_session.execute(
+        select(PageSnapshot).where(PageSnapshot.job_listing_id == first["id"])
+    )
+    snapshot = snap.scalar_one()
+    assert snapshot.html_blob == b"<html>fresh content</html>"
+    assert snapshot.size_bytes == len(b"<html>fresh content</html>")
+
+
+@pytest.mark.asyncio
 async def test_company_auto_created_case_insensitive(db_session: AsyncSession) -> None:
     payload = IngestPayload(
         source_url="https://example.com/job/ci",

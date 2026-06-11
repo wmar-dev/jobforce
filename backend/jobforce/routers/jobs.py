@@ -286,7 +286,7 @@ async def reparse_job(
     if job is None:
         raise HTTPException(status_code=404, detail="Job listing not found")
     html_bytes = await retrieve_snapshot(session, job_id)
-    if html_bytes is None:
+    if not html_bytes:
         raise HTTPException(status_code=404, detail="No HTML snapshot stored for this job")
     parsed = parse_html(html_bytes.decode("utf-8", errors="replace"), job.source_url)
     for field in ("title", "location", "role_type", "description"):

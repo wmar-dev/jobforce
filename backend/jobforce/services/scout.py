@@ -50,7 +50,11 @@ async def ingest_listing(
     if existing_job is not None:
         if payload.description:
             existing_job.description = payload.description
-            await session.commit()
+        if payload.html:
+            await store_snapshot(
+                session, existing_job.id, payload.html.encode("utf-8"), pages_dir=pages_dir
+            )
+        await session.commit()
         return {
             "id": existing_job.id,
             "status": existing_job.status,

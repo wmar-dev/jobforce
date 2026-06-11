@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from jobforce.db.models import Company, JobListing, PageSnapshot, StatusTransition
 
 
 async def _ingest(client: AsyncClient, **overrides: object) -> dict:
@@ -139,6 +142,81 @@ async def test_get_jobs_pagination_limit_offset(test_client: AsyncClient) -> Non
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["items"]) <= 2
+
+
+# ---------------------------------------------------------------------------
+# Reparse endpoint
+# ---------------------------------------------------------------------------
+
+
+async def _create_job_without_snapshot(db_session: AsyncSession) -> JobListing:
+    company = Company(name="SnapshotlessCo")
+    db_session.add(company)
+    await db_session.flush()
+    job = JobListing(
+        company_id=company.id,
+        title="Original Title",
+        location="Remote, US",
+        source_url="https://example.com/j/no-snapshot",
+        status="saved",
+    )
+    db_session.add(job)
+    await db_session.flush()
+    db_session.add(StatusTransition(job_listing_id=job.id, from_status=None, to_status="saved"))
+    await db_session.commit()
+    await db_session.refresh(job)
+    return job
+
+
+@pytest.mark.asyncio
+async def test_reparse_with_no_snapshot_row_returns_404(
+    test_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    job = await _create_job_without_snapshot(db_session)
+    resp = await test_client.post(f"/api/jobs/{job.id}/reparse")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_reparse_with_empty_snapshot_blob_returns_404(
+    test_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    job = await _create_job_without_snapshot(db_session)
+    db_session.add(
+        PageSnapshot(
+            job_listing_id=job.id,
+            html_blob=b"",
+            file_path=None,
+            content_hash="empty",
+            size_bytes=0,
+        )
+    )
+    await db_session.commit()
+    resp = await test_client.post(f"/api/jobs/{job.id}/reparse")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_reparse_with_valid_snapshot_updates_fields(test_client: AsyncClient) -> None:
+    html = (
+        "<html><head><title>Ignored</title></head><body>"
+        "<h1>Reparsed Title</h1>"
+        "<div class='job-description'><p>Updated description text.</p></div>"
+        "</body></html>"
+    )
+    ingest_resp = await _ingest(
+        test_client,
+        source_url="https://example.com/j/reparse-success",
+        title="Original Title",
+        description="Original description",
+        html=html,
+    )
+    job_id = ingest_resp["id"]
+    resp = await test_client.post(f"/api/jobs/{job_id}/reparse")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["title"] == "Reparsed Title"
+    assert "Updated description text" in data["description"]
 
 
 # ---------------------------------------------------------------------------
