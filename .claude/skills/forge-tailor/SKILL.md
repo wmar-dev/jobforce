@@ -175,7 +175,7 @@ Print the result:
 If `pdf_path` is `null`:
 ```
 ✅ .tex written to: /absolute/path/to/resume-company-title-YYYYMMDD-HHMMSS.tex
-⚠  PDF not generated — install texlive to compile PDFs (brew install --cask mactex)
+⚠  PDF not generated — install latexmk to compile PDFs (brew install --cask mactex, or brew install --cask basictex && sudo tlmgr install latexmk geometry hyperref parskip)
 ```
 
 ## Notes

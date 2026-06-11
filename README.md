@@ -26,7 +26,9 @@ I wanted to practice spec-driven design and ran out of tokens when I tried to us
 
 - Python 3.12+ with [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 20+
-- LaTeX (optional — for PDF resume export): `brew install --cask mactex`
+- LaTeX (optional — for PDF resume export, requires `latexmk`):
+  - Full install: `brew install --cask mactex` (~5GB, includes `latexmk`)
+  - Lightweight: `brew install --cask basictex`, then `sudo tlmgr update --self && sudo tlmgr install latexmk geometry hyperref parskip`
 - Chrome (for the extension)
 
 ## Setup
