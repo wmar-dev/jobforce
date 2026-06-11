@@ -69,6 +69,11 @@ GPA: \VAR{edu.gpa|latex_escape}\BLOCK{endif}\\[2pt]
 \VAR{', '.join(data.skills|map('latex_escape')|list)}
 \BLOCK{endif}
 
+\BLOCK{if data.coursework}
+\resumesection{Coursework}
+\BLOCK{if data.coursework.provider}\VAR{data.coursework.provider|latex_escape}: \BLOCK{endif}\VAR{', '.join(data.coursework.courses|map('latex_escape')|list)}
+\BLOCK{endif}
+
 \BLOCK{if data.certifications}
 \resumesection{Certifications}
 \BLOCK{for cert in data.certifications}
@@ -89,6 +94,13 @@ GPA: \VAR{edu.gpa|latex_escape}\BLOCK{endif}\\[2pt]
 \end{itemize}
 \BLOCK{endif}
 \vspace{4pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if data.patents}
+\resumesection{Patents}
+\BLOCK{for patent in data.patents}
+\textbf{\VAR{patent.title|latex_escape}}\BLOCK{if patent.number} -- \VAR{patent.number|latex_escape}\BLOCK{endif}\\
 \BLOCK{endfor}
 \BLOCK{endif}
 
