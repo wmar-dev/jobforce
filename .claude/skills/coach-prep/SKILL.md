@@ -44,7 +44,13 @@ Run **all searches in parallel** using the WebSearch tool. Use the actual compan
 - `"<company name>" system design interview questions`
 - `"<role title>" machine learning engineer interview questions` (adapt to actual title)
 
-Then **fetch the top 1–2 most relevant URLs** from the search results using WebFetch to get actual question content. Prioritize Glassdoor, Blind, levels.fyi, and engineering blogs.
+Then **fetch 3–4 URLs from at least 3 different domains** across the search results using WebFetch to get actual question content.
+
+**Prefer first-hand candidate reports**: Glassdoor, Blind (teamblind.com), Reddit, 1point3acres, LeetCode Discuss, levels.fyi, and company engineering blogs. These reflect real interview experiences.
+
+**Deprioritize content-marketing/SEO sites** whose "interview questions" posts are AI-written summaries rather than sourced from real candidates — e.g. interviewcoder.co, prepfully.com, vervecopilot.com, companyinterviews.com, prachub.com. Only fall back to these if no first-hand sources surface for a given company.
+
+**Source diversity is required**: do not cite the same `source_url` for more than ~half the questions in any one category, and never for every question in the full set. If a single page yields several good questions, still pull at least one more question from a different domain for that category. If search results keep returning the same 1-2 domains, run an additional targeted search (e.g. add `site:teamblind.com` or `site:1point3acres.com`) before settling.
 
 **Do NOT WebFetch or construct leetcode.com URLs** — LeetCode requires JavaScript to render (WebFetch returns nothing useful), and slug guessing produces "Page Not Found" errors because LeetCode slugs don't always match the problem title. Instead, for each coding problem, run a WebSearch for `site:leetcode.com/problems "<problem title>"` and use the URL directly from the search result. Only set `leetcode_url` when you have a URL from search results — never construct one yourself.
 
@@ -64,6 +70,7 @@ Guidelines per category:
 
 **Coding (technical roles, at least 3–4 questions):**
 - Only include problems you found by name in search results (e.g. from a Glassdoor/Blind thread listing what was asked) — do NOT invent problem names
+- Pull problems from at least 2 different source pages — do not cite the same `source_url` for every coding question, even if one page lists multiple problems
 - For each problem name found, run `site:leetcode.com/problems "<problem name>"` via WebSearch; use the URL only if a result comes back with a matching leetcode.com/problems/ URL — omit `leetcode_url` entirely if no result is found
 - Never construct or guess a LeetCode URL — only use URLs that appeared verbatim in search results
 - System design topics (rate limiter, URL shortener, etc.) are NOT LeetCode problems; put them in system_design category, never assign a `leetcode_url`
