@@ -84,15 +84,13 @@ Write the full JSON payload to a temp file (e.g. `/tmp/coach_<job_id>.json`) and
 
 ```bash
 # Write payload to temp file first
-# Then POST:
+# Then POST, extracting just the session_id to avoid echoing the full payload back:
 curl -s -X POST http://localhost:8000/api/coach/prep \
   -H "Content-Type: application/json" \
-  -d @/tmp/coach_<job_id>.json
+  -d @/tmp/coach_<job_id>.json | jq -r '.session_id'
 ```
 
 Set `source_url` to the page URL where a question was found (Glassdoor, Blind, etc.) — this gives provenance. Set `leetcode_url` for coding questions only when you have a URL from search results.
-
-Capture `session_id` from the response.
 
 ### 6. Confirm completion
 
