@@ -183,6 +183,12 @@ export default function JobDetailPage({
         >
           ⚒️ Tailor in Forge
         </Link>
+        <Link
+          href={`/coach?job=${job.id}`}
+          className="text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          🎯 Interview Prep
+        </Link>
       </div>
 
       {/* Fit score */}
