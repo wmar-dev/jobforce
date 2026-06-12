@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -114,6 +114,21 @@ def _to_out(job: JobListing, *, has_note: bool = False) -> JobListingOut:
     )
 
 
+def _apply_default_status_filter(
+    stmt: Select[tuple[JobListing]], status: str | None, source_url: str | None
+) -> Select[tuple[JobListing]]:
+    """Apply the status filter, or the default archived/withdrawn/rejected exclusion.
+
+    Skipped entirely when filtering by source_url, since duplicate lookups must
+    match regardless of pipeline status.
+    """
+    if status:
+        return stmt.where(JobListing.status == status)
+    if source_url:
+        return stmt
+    return stmt.where(JobListing.status.notin_(["archived", "withdrawn", "rejected"]))
+
+
 _SORT_COLUMNS: dict[str, Any] = {
     "fit_score": JobListing.fit_score,
     "created_at": JobListing.created_at,
@@ -132,16 +147,16 @@ async def get_jobs(
     min_score: float | None = Query(None),
     location: str | None = Query(None),
     role_type: str | None = Query(None),
+    source_url: str | None = Query(None),
     sort_by: str = Query("fit_score", pattern="^(fit_score|created_at|title|status|company)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> JobListPage:
     stmt = select(JobListing).options(selectinload(JobListing.company))
-    if status:
-        stmt = stmt.where(JobListing.status == status)
-    else:
-        stmt = stmt.where(JobListing.status.notin_(["archived", "withdrawn", "rejected"]))
+    stmt = _apply_default_status_filter(stmt, status, source_url)
+    if source_url:
+        stmt = stmt.where(JobListing.source_url == source_url)
     if company_id:
         stmt = stmt.where(JobListing.company_id == company_id)
     if fit_scored is not None:

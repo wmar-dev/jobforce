@@ -76,6 +76,44 @@ async def test_get_jobs_filter_by_role_type(test_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_jobs_filter_by_source_url(test_client: AsyncClient) -> None:
+    await _ingest(test_client, source_url="https://example.com/j/40", title="Unique Job")
+    resp = await test_client.get("/api/jobs?source_url=https://example.com/j/40")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Unique Job"
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_source_url_no_match_returns_empty(
+    test_client: AsyncClient,
+) -> None:
+    resp = await test_client.get("/api/jobs?source_url=https://example.com/does-not-exist")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 0
+    assert data["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_source_url_includes_archived(
+    test_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/41")
+    job = await db_session.get(JobListing, ingest_resp["id"])
+    assert job is not None
+    job.status = "archived"
+    await db_session.commit()
+
+    resp = await test_client.get("/api/jobs?source_url=https://example.com/j/41")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["items"][0]["status"] == "archived"
+
+
+@pytest.mark.asyncio
 async def test_get_job_detail_includes_status_history(test_client: AsyncClient) -> None:
     ingest_resp = await _ingest(test_client, source_url="https://example.com/j/detail")
     job_id = ingest_resp["id"]
