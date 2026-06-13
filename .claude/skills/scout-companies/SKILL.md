@@ -276,14 +276,23 @@ If the parse check passes, proceed to ingest the full list (including the first 
 
 For each URL that passed the anchor-text filter in 4d:
 
-1. Run scout_fetch:
+1. **Dedup check before crawling**:
+   ```bash
+   curl -s "http://localhost:8000/api/jobs?source_url=<url>"
+   ```
+   If `total >= 1`, the job is already captured — count it as a duplicate and continue to the next URL without running scout_fetch:
+   ```
+     ⏭ duplicate (already captured): <url>
+   ```
+
+2. Run scout_fetch:
    ```bash
    cd backend && uv run python -m jobforce.cli.scout_fetch --url "<url>"
    ```
 
-2. If scout_fetch fails or returns non-JSON output, log: `  ❌ fetch failed: <url>` and continue.
+3. If scout_fetch fails or returns non-JSON output, log: `  ❌ fetch failed: <url>` and continue.
 
-3. Parse the JSON output. **Confirm title and location relevance**:
+4. Parse the JSON output. **Confirm title and location relevance**:
    - Re-apply the title check against the extracted `title`. If it no longer matches, log and skip:
      ```
        ⏭ skipped (off-target title): <title> — <url>
@@ -294,7 +303,7 @@ For each URL that passed the anchor-text filter in 4d:
      ```
    Count skipped-off-target separately from duplicates.
 
-4. Build the ingest payload for matching titles (exclude `compensation`):
+5. Build the ingest payload for matching titles (exclude `compensation`):
    ```json
    {
      "source_url": "...",
@@ -307,16 +316,16 @@ For each URL that passed the anchor-text filter in 4d:
    }
    ```
 
-5. POST to ingest:
+6. POST to ingest:
    ```bash
    curl -s -X POST http://localhost:8000/api/ingest \
      -H "Content-Type: application/json" \
      -d '<payload>'
    ```
 
-6. Track the result:
+7. Track the result:
    - **201**: count as ingested
-   - **409**: count as duplicate (skip)
+   - **409**: count as duplicate (rare — step 1's pre-check should normally catch these before crawling)
    - Other: log as error and continue
 
 ### 4h: Verify location parsed correctly
@@ -427,6 +436,7 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | scout_fetch fails for a URL | Log error for that URL, continue |
 | Anchor text doesn't match target_roles | Log as off-target (title), skip scout_fetch entirely, continue |
 | Location text doesn't match target_locations | Log as off-target (location), skip scout_fetch entirely, continue |
+| `GET /api/jobs?source_url=` returns `total >= 1` | Already captured — count as duplicate, skip scout_fetch entirely, continue |
 | Fetched title doesn't match target_roles | Log as off-target (title), skip ingest, continue |
 | Fetched location doesn't match target_locations | Log as off-target (location), skip ingest, continue |
 | All anchor texts are generic (e.g. "View role") | Disable title pre-filtering, fall back to fetching all URLs |
