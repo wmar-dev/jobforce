@@ -191,6 +191,20 @@ const greenhouseAdapter = {
   },
 };
 
+const larridinAdapter = {
+  // No og:site_name on this HubSpot site; company name is fixed for this domain.
+  company_name: () => "Larridin",
+  // Location sits in the "col-content" block immediately after the title's "headings" block.
+  location: (doc) => text(doc.querySelector(".headings + .col-content p")) || null,
+  // Job content lives in HubSpot rich-text modules with no semantic main/article wrapper.
+  description: (doc) => {
+    const parts = Array.from(doc.querySelectorAll(".sr-richtext"))
+      .map((el) => text(el))
+      .filter(Boolean);
+    return parts.length ? parts.join("\n\n") : null;
+  },
+};
+
 /* ─── Registry: hostname → adapter ───────────────────────────────────────── */
 
 const ADAPTERS = {
@@ -198,6 +212,7 @@ const ADAPTERS = {
   "jobs.ashbyhq.com": ashbyAdapter,
   "myworkdayjobs.com": workdayAdapter,
   "job-boards.greenhouse.io": greenhouseAdapter,
+  "larridin.com": larridinAdapter,
   // "lever.co": leverAdapter,
   // "linkedin.com": linkedinAdapter,
 };
