@@ -1038,6 +1038,39 @@ def test_parse_html_adal_description_non_null() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Larridin (larridin.com) — HubSpot CMS page; company name, location, and
+# description all live in custom markup with no generic-adapter hooks
+# ---------------------------------------------------------------------------
+
+_LARRIDIN_URL = "https://larridin.com/software-engineer"
+
+
+def test_parse_html_larridin_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("larridin_job.html")
+    result = parse_html(html, _LARRIDIN_URL)
+    assert result["company_name"] == "Larridin"
+
+
+def test_parse_html_larridin_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("larridin_job.html")
+    result = parse_html(html, _LARRIDIN_URL)
+    assert result["location"] == "Bay Area | In-Office"
+
+
+def test_parse_html_larridin_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("larridin_job.html")
+    result = parse_html(html, _LARRIDIN_URL)
+    assert result["description"] is not None
+    assert "AI-native engineering teams that own outcomes" in result["description"]
+
+
+# ---------------------------------------------------------------------------
 # Discord (discord.com/jobs/<id>)
 # ---------------------------------------------------------------------------
 
@@ -1081,7 +1114,9 @@ def test_parse_html_discord_description_non_null() -> None:
 # Stripe (stripe.com/jobs/listing/<slug>/<id>)
 # ---------------------------------------------------------------------------
 
-_STRIPE_URL = "https://stripe.com/jobs/listing/android-engineer-terminal-developer-productivity/7550154"
+_STRIPE_URL = (
+    "https://stripe.com/jobs/listing/android-engineer-terminal-developer-productivity/7550154"
+)
 
 
 def test_parse_html_stripe_title() -> None:
