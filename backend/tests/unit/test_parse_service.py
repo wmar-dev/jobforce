@@ -1158,3 +1158,43 @@ def test_parse_html_stripe_description_non_null() -> None:
     result = parse_html(html, _STRIPE_URL)
     assert result["description"] is not None
     assert "Developer Productivity team" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Turing adapter (careers.turing.com/job/<id>)
+# ---------------------------------------------------------------------------
+
+_TURING_URL = "https://careers.turing.com/job/5609732004"
+
+
+def test_parse_html_turing_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("turing_job.html")
+    result = parse_html(html, _TURING_URL)
+    assert result["company_name"] == "Turing"
+
+
+def test_parse_html_turing_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("turing_job.html")
+    result = parse_html(html, _TURING_URL)
+    assert result["title"] == "Forward Deployed AI Engineer"
+
+
+def test_parse_html_turing_location_strips_prefix() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("turing_job.html")
+    result = parse_html(html, _TURING_URL)
+    assert result["location"] == "New York, New York, United States; San Francisco, California, United States"
+
+
+def test_parse_html_turing_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("turing_job.html")
+    result = parse_html(html, _TURING_URL)
+    assert result["description"] is not None
+    assert "Generative AI" in result["description"]
