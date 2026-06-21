@@ -31,28 +31,23 @@ If the response is not `200`, stop immediately and print:
 
 ## Step 2: Load target companies and user preferences from config
 
-Run:
+Use the `config_lookup` CLI:
+
+**No argument — all companies:**
 ```bash
-cd backend && uv run python -c "
-import json
-from jobforce.config import load_config
-cfg = load_config()
-prefs = cfg.user.preferences if cfg.user and cfg.user.preferences else {}
-get_pref = lambda k: prefs.get(k, []) if isinstance(prefs, dict) else getattr(prefs, k, [])
-search = cfg.search
-get_search = lambda k: getattr(search, k, None) or []
-out = {
-  'companies': [{'name': c.name, 'domain': c.domain, 'careers_url': c.careers_url} for c in search.target_companies],
-  'target_roles': get_pref('target_roles'),
-  'target_locations': get_search('target_locations'),
-}
-print(json.dumps(out))
-"
+cd backend && uv run python -m jobforce.cli.config_lookup
 ```
+
+**Argument provided — single company lookup (infer the name first, then pass it):**
+```bash
+cd backend && uv run python -m jobforce.cli.config_lookup "<inferred_name>"
+```
+
+Replace `<inferred_name>` with the company name inferred from the argument (see rules below). The output includes `total_companies` when a name filter is used — a non-zero value confirms the config was read even when `companies` is empty (i.e. a genuinely new company, not a broken config).
 
 Parse the JSON object. Store `companies`, `target_roles`, and `target_locations` lists for use in filtering later.
 
-If `companies` is empty, stop and print:
+If **no argument** and `companies` is empty, stop and print:
 ```
 ❌ No target_companies found in config.yaml. Add companies under search.target_companies.
 ```
@@ -160,7 +155,7 @@ If none of the four paths succeeds, skip and report:
 
 ### 4c: Navigate to the careers page with Playwright MCP
 
-Use `browser_navigate` to load the careers URL determined in 4a or 4b. Take a snapshot with `browser_snapshot`.
+Use `browser_navigate` to load the careers URL determined in 4a or 4b. Take a snapshot with `browser_snapshot` using `depth: 3` — job titles and hrefs are in the top few layers of the accessibility tree, and a shallow snapshot cuts token cost by ~70% on large listing pages.
 
 If the page appears login-gated (redirects to a login form, shows sign-in wall), skip and report:
 ```
@@ -190,7 +185,7 @@ If controls are found:
 
 3. If neither a location nor a team filter could be mapped to an available option, treat this the same as "no usable filter controls found" (log and fall back to 4d unfiltered).
 
-4. Apply the filter(s) with `browser_select_option` (or by clicking checkboxes), then click the Search/Filter/Apply button with `browser_click`, then take a new snapshot with `browser_snapshot`.
+4. Apply the filter(s) with `browser_select_option` (or by clicking checkboxes), then click the Search/Filter/Apply button with `browser_click`, then take a new snapshot with `browser_snapshot` using `depth: 3`.
    - Single-select location with N matching options → repeat this for each option (N passes total), each time re-applying the team filter (if any) alongside that pass's location.
 
 5. For each filtered snapshot, run the link-extraction + pre-filter logic from 4d against it (instead of the unfiltered 4c snapshot), producing a list of `(anchor_text, location_text, href)` tuples. Merge tuples across passes, deduplicating by `href`.
