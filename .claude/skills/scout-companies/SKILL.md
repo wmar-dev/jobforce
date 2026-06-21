@@ -65,8 +65,8 @@ If `target_locations` is empty, print a warning and proceed without location fil
 **If an argument was provided** (e.g. `/scout-companies "Acme Corp"`):
 - If the argument looks like a URL (starts with `http://` or `https://`):
   - Treat it as a `careers_url` for an unknown company
-  - Infer `name` from the URL (e.g. `anthropic` from `jobs.ashbyhq.com/anthropic` → `Anthropic`; use the path segment or hostname)
-  - Infer `domain` as the base domain of the URL (e.g. `anthropic.com`) — if it's an ATS-hosted URL (ashbyhq.com, greenhouse.io, lever.co, etc.) leave `domain` blank
+  - Infer `name` from the URL (e.g. `widgetco` from `jobs.ashbyhq.com/widgetco` → `Widgetco`; use the path segment or hostname)
+  - Infer `domain` as the base domain of the URL (e.g. `widgetco.com`) — if it's an ATS-hosted URL (ashbyhq.com, greenhouse.io, lever.co, etc.) leave `domain` blank
   - Set `careers_url` to the provided URL
   - Proceed to Step 2b to check if this company is already in config before adding
 - Else: filter the `companies` list to entries whose `name` matches the argument (case-insensitive)
@@ -370,7 +370,7 @@ If any jobs are missing location, the site adapter's location selector is broken
 
 ### 4i: Detect and merge duplicate company records
 
-`/api/ingest` derives `company_name` from the scraped page text, which can differ from this company's name in `config.yaml`/the DB (e.g. scraped "Edisonscientific" vs the canonical "Edison Scientific"). Company lookup during ingest is an exact case-insensitive match, so a near-miss creates a new duplicate `Company` row instead of reusing the canonical one.
+`/api/ingest` derives `company_name` from the scraped page text, which can differ from this company's name in `config.yaml`/the DB (e.g. scraped "Globotech" vs the canonical "Globo Tech"). Company lookup during ingest is an exact case-insensitive match, so a near-miss creates a new duplicate `Company` row instead of reusing the canonical one.
 
 After ingesting this company's listings, re-fetch companies:
 
