@@ -23,7 +23,7 @@ async def _fetch_html(url: str) -> str:
             page = await browser.new_page()
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=_TIMEOUT_MS)
-                await page.wait_for_selector("h1, main h2", timeout=10_000)
+                await page.wait_for_selector("h1, main h2", timeout=10_000, state="attached")
             except PlaywrightTimeout:
                 print(
                     f"error: page load timed out after {_TIMEOUT_MS // 1000}s: {url}",

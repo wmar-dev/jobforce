@@ -1198,3 +1198,34 @@ def test_parse_html_turing_description_non_null() -> None:
     result = parse_html(html, _TURING_URL)
     assert result["description"] is not None
     assert "Generative AI" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Waymo adapter (careers.withwaymo.com/jobs/<slug>)
+# ---------------------------------------------------------------------------
+
+_WAYMO_URL = "https://careers.withwaymo.com/jobs/machine-learning-engineer-perception-llm-vlm"
+
+
+def test_parse_html_waymo_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("waymo_job.html")
+    result = parse_html(html, _WAYMO_URL)
+    assert result["company_name"] == "Waymo"
+
+
+def test_parse_html_waymo_title_ignores_sitewide_headings() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("waymo_job.html")
+    result = parse_html(html, _WAYMO_URL)
+    assert result["title"] == "Machine Learning Engineer Perception LLM/VLM (PhD, New Grad)"
+
+
+def test_parse_html_waymo_location_ignores_related_jobs_sidebar() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("waymo_job.html")
+    result = parse_html(html, _WAYMO_URL)
+    assert result["location"] == "Mountain View, California, San Francisco, California"
