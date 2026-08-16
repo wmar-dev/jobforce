@@ -148,6 +148,8 @@ async def get_jobs(
     location: str | None = Query(None),
     role_type: str | None = Query(None),
     source_url: str | None = Query(None),
+    title: str | None = Query(None, description="Case-insensitive substring match on title"),
+    q: str | None = Query(None, description="Case-insensitive substring match on description"),
     sort_by: str = Query("fit_score", pattern="^(fit_score|created_at|title|status|company)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=200),
@@ -167,6 +169,10 @@ async def get_jobs(
         stmt = stmt.where(JobListing.location.ilike(f"%{location}%"))
     if role_type:
         stmt = stmt.where(JobListing.role_type == role_type)
+    if title:
+        stmt = stmt.where(JobListing.title.ilike(f"%{title}%"))
+    if q:
+        stmt = stmt.where(JobListing.description.ilike(f"%{q}%"))
 
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total_result = await session.execute(count_stmt)
