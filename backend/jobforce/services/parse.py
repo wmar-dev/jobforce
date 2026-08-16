@@ -129,6 +129,12 @@ def _openai_location(doc: BeautifulSoup, url: str) -> str | None:
     # First h2 in main is the job title; its next sibling p is the dept/location line
     # e.g. "Robotics - San Francisco" or "Applied AI Engineering - San Francisco and Seattle"
     # Guard: some pages put a team description <p> before the location — skip those.
+    # Current hero markup wraps the subhead <p> in a <div> after the h2 rather than
+    # making it a direct sibling, so check the explicit data attribute first —
+    # it survives that nesting change and multi-location "X, Y, and Z" text alike.
+    subhead = doc.select_one('[data-article-hero-copy-region="subhead"]')
+    if subhead and (t := _text(subhead)):
+        return t
     title_h2 = doc.select_one("main h2")
     if title_h2:
         el = title_h2.find_next_sibling("p")
@@ -176,12 +182,23 @@ def _workday_company(doc: BeautifulSoup, url: str) -> str | None:
 
 def _workday_title(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("[data-automation-id='jobPostingTitle']")
-    return _text(el)
+    if t := _text(el):
+        return t
+    # Some Workday tenants don't render the nested jobPostingTitle element and
+    # only have the job title text directly in the jobPostingHeader heading.
+    return _text(doc.select_one("[data-automation-id='jobPostingHeader']"))
 
 
 def _workday_location(doc: BeautifulSoup, url: str) -> str | None:
     el = doc.select_one("[data-automation-id='location']")
-    return _text(el)
+    if t := _text(el):
+        return t
+    # Some Workday tenants render locations as a <dl><dt>locations</dt><dd>...</dd>...</dl>
+    # list (one <dd> per location) instead of a single nested "location" element.
+    dds = doc.select("[data-automation-id='locations'] dd")
+    if dds:
+        return "; ".join(t for dd in dds if (t := _text(dd)))
+    return None
 
 
 def _workday_description(doc: BeautifulSoup, url: str) -> str | None:
@@ -841,6 +858,57 @@ def _parse_hn(html: str, url: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# TikTok / lifeattiktok.com site adapter
+# Detail page structure (React SPA, CSS-Module class names):
+#   .job-header > [data-test="jobTitle"]         = job title
+#   .job-info   > span[0] > span.clamp-content   = location (e.g. "San Jose")
+#   .job-info   > span[1]                        = employment type ("Regular" = full-time)
+#   .block-title / .block-content pairs          = description sections
+# ---------------------------------------------------------------------------
+
+
+def _tiktok_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one('[data-test="jobTitle"]'))
+
+
+def _tiktok_location(doc: BeautifulSoup, url: str) -> str | None:
+    job_info = doc.select_one(".job-info")
+    if not job_info:
+        return None
+    for span in job_info.find_all("span", recursive=False):
+        if t := _text(span):
+            return t
+    return None
+
+
+def _tiktok_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    job_info = doc.select_one(".job-info")
+    if job_info:
+        spans = [s for s in job_info.find_all("span", recursive=False) if _text(s)]
+        if len(spans) >= 2:
+            raw = (_text(spans[1]) or "").lower()
+            if "regular" in raw:
+                return "full-time"
+            if "intern" in raw:
+                return "internship"
+            if "contract" in raw:
+                return "contract"
+    return _generic_role_type(doc, url)
+
+
+def _tiktok_description(doc: BeautifulSoup, url: str) -> str | None:
+    parts: list[str] = []
+    for el in doc.select(".block-title, .block-content"):
+        classes = el.get("class") or []
+        if "block-title" in classes:
+            parts.append(f"\n## {_text(el)}\n")
+        elif "block-content" in classes:
+            if md_part := _to_markdown(el):
+                parts.append(md_part)
+    return "\n".join(parts).strip() or None
+
+
+# ---------------------------------------------------------------------------
 # Waymo site adapter — careers.withwaymo.com/jobs/<slug>
 # Generic "h1, main h2" selectors hit unrelated sitewide headings ("Working
 # at Waymo", "Teams") before the real job title, and the generic
@@ -918,6 +986,16 @@ def _google_careers_description(doc: BeautifulSoup, url: str) -> str | None:
         if md_part := _to_markdown(child):
             parts.append(md_part)
     return "\n\n".join(parts) if parts else None
+
+
+def _wbd_location(doc: BeautifulSoup, url: str) -> str | None:
+    # Multi-location postings list one .location element per location; a plain
+    # select_one would only capture the first, dropping the rest.
+    seen: list[str] = []
+    for el in doc.select(".location.au-target"):
+        if (t := _text(el)) and t not in seen:
+            seen.append(t)
+    return "; ".join(seen) if seen else None
 
 
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
@@ -1028,6 +1106,13 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "location": _turing_location,
         "description": _turing_description,
     },
+    "lifeattiktok.com": {
+        "company_name": lambda doc, url: "TikTok",
+        "title": _tiktok_title,
+        "location": _tiktok_location,
+        "role_type": _tiktok_role_type,
+        "description": _tiktok_description,
+    },
     "careers.withwaymo.com": {
         "company_name": lambda doc, url: "Waymo",
         "title": _waymo_title,
@@ -1038,6 +1123,11 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "title": _google_careers_title,
         "location": _google_careers_location,
         "description": _google_careers_description,
+    },
+    "careers.wbd.com": {
+        "company_name": lambda doc, url: "Warner Bros. Discovery",
+        "location": _wbd_location,
+        "description": lambda doc, url: _to_markdown(doc.select_one(".jd-info")),
     },
 }
 

@@ -259,6 +259,22 @@ def test_openai_team_desc_layout_does_not_use_team_desc_as_location() -> None:
     assert "Kernels team" not in (result["location"] or "")
 
 
+def test_openai_gov_location_job_multi_location_from_subhead() -> None:
+    """Current OpenAI hero markup wraps the subhead <p> in a <div> after the title
+    h2 instead of making it a direct sibling, so the old find_next_sibling("p")
+    lookup misses it entirely for pages like this 3-location gov posting."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("openai_gov_location_job.html")
+    result = parse_html(
+        html,
+        "https://openai.com/careers/senior-staff-software-engineer-gov-washington-dc/",
+    )
+    assert result["location"] is not None
+    assert "Washington, DC" in result["location"]
+    assert "San Francisco" in result["location"]
+
+
 # ---------------------------------------------------------------------------
 # US2: Parity — generic adapter produces non-null title and role_type (T020)
 # ---------------------------------------------------------------------------
@@ -386,6 +402,28 @@ def test_parse_html_workday_description_non_null() -> None:
     )
     assert result["description"] is not None
     assert "platform" in result["description"].lower()
+
+
+def test_parse_html_workday_title_falls_back_to_job_posting_header() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job_dl_locations.html")
+    result = parse_html(
+        html,
+        "https://verily.wd1.myworkdayjobs.com/en-US/Verily_Careers/job/San-Bruno-California/Staff-AI-Applied-Scientist_REQ-723",
+    )
+    assert result["title"] == "Staff AI Applied Scientist"
+
+
+def test_parse_html_workday_location_falls_back_to_dl_dd_list() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job_dl_locations.html")
+    result = parse_html(
+        html,
+        "https://verily.wd1.myworkdayjobs.com/en-US/Verily_Careers/job/San-Bruno-California/Staff-AI-Applied-Scientist_REQ-723",
+    )
+    assert result["location"] == "San Bruno, California; Boston, Massachusetts; Mountain View, California"
 
 
 def test_parse_html_workday_suffix_match_applies_adapter() -> None:
@@ -1229,6 +1267,51 @@ def test_parse_html_waymo_location_ignores_related_jobs_sidebar() -> None:
     html = _read("waymo_job.html")
     result = parse_html(html, _WAYMO_URL)
     assert result["location"] == "Mountain View, California, San Francisco, California"
+
+
+# ---------------------------------------------------------------------------
+# parse_html — Warner Bros. Discovery adapter (careers.wbd.com, Phenom People ATS)
+# ---------------------------------------------------------------------------
+
+_WBD_URL = "https://careers.wbd.com/global/en/job/R000106532/Staff-Machine-Learning-Engineer-Search"
+
+
+def test_parse_html_wbd_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("wbd_job.html")
+    result = parse_html(html, _WBD_URL)
+    assert result["company_name"] == "Warner Bros. Discovery"
+
+
+def test_parse_html_wbd_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("wbd_job.html")
+    result = parse_html(html, _WBD_URL)
+    assert result["title"] == "Staff Machine Learning Engineer -  Search"
+
+
+def test_parse_html_wbd_location_joins_all_and_dedupes() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("wbd_job.html")
+    result = parse_html(html, _WBD_URL)
+    assert result["location"] == (
+        "San Francisco, California, United States of America; "
+        "Bellevue, Washington, United States of America"
+    )
+
+
+def test_parse_html_wbd_description_excludes_similar_jobs_and_share_widgets() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("wbd_job.html")
+    result = parse_html(html, _WBD_URL)
+    assert result["description"] is not None
+    assert "Staff Machine Learning Engineer" in result["description"]
+    assert "Similar Jobs" not in result["description"]
+    assert "Share this opportunity" not in result["description"]
 
 
 # ---------------------------------------------------------------------------

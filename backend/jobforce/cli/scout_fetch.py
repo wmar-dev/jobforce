@@ -23,13 +23,28 @@ async def _fetch_html(url: str) -> str:
             page = await browser.new_page()
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=_TIMEOUT_MS)
-                await page.wait_for_selector("h1, main h2", timeout=10_000, state="attached")
             except PlaywrightTimeout:
                 print(
                     f"error: page load timed out after {_TIMEOUT_MS // 1000}s: {url}",
                     file=sys.stderr,
                 )
                 sys.exit(1)
+            # Workday tenants render a sitewide h1 (e.g. "Careers at Acme") immediately
+            # while the actual job content hydrates later via XHR, so a bare
+            # "h1, main h2" wait resolves before the job title/location/description
+            # are in the DOM. Wait on the job-specific marker for those hosts instead.
+            is_workday = "myworkdayjobs.com" in (urlparse(url).hostname or "")
+            wait_selector = (
+                "[data-automation-id='jobPostingHeader'],"
+                " [data-automation-id='job-posting-details']"
+                if is_workday
+                else "h1, main h2"
+            )
+            try:
+                await page.wait_for_selector(wait_selector, timeout=10_000, state="attached")
+            except PlaywrightTimeout:
+                # SPA pages without the expected marker (e.g. TikTok): wait for JS to hydrate content
+                await page.wait_for_timeout(5_000)
             return str(await page.evaluate("document.documentElement.outerHTML"))
         finally:
             await browser.close()
