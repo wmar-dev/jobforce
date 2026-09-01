@@ -79,7 +79,9 @@ async def get_tailored_resume_for_job(
     resume = result.scalar_one_or_none()
     if resume is None:
         return None
-    base_data: dict[str, Any] = json.loads(_RESUME_FILE.read_text()) if _RESUME_FILE.exists() else {}
+    base_data: dict[str, Any] = (
+        json.loads(_RESUME_FILE.read_text()) if _RESUME_FILE.exists() else {}
+    )
     tailored_data: dict[str, Any] = json.loads(resume.structured_data)
     diff_raw = compute_diff(base_data, tailored_data)
     return TailoredResumeOut(

@@ -9,8 +9,13 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import Any
 
 from jobforce.config import load_config
+
+
+def _get_pref(prefs: Any, key: str) -> Any:
+    return prefs.get(key, []) if isinstance(prefs, dict) else getattr(prefs, key, [])
 
 
 def main() -> None:
@@ -19,7 +24,6 @@ def main() -> None:
     cfg = load_config()
     search = cfg.search
     prefs = cfg.user.preferences if cfg.user and cfg.user.preferences else {}
-    get_pref = lambda k: prefs.get(k, []) if isinstance(prefs, dict) else getattr(prefs, k, [])
 
     all_companies = [
         {"name": c.name, "domain": c.domain, "careers_url": c.careers_url}
@@ -30,14 +34,14 @@ def main() -> None:
         companies = [c for c in all_companies if c["name"].lower() == name_filter]
         out = {
             "companies": companies,
-            "target_roles": get_pref("target_roles"),
+            "target_roles": _get_pref(prefs, "target_roles"),
             "target_locations": getattr(search, "target_locations", None) or [],
             "total_companies": len(all_companies),
         }
     else:
         out = {
             "companies": all_companies,
-            "target_roles": get_pref("target_roles"),
+            "target_roles": _get_pref(prefs, "target_roles"),
             "target_locations": getattr(search, "target_locations", None) or [],
         }
 

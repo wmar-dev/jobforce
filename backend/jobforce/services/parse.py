@@ -756,7 +756,7 @@ def _turing_location(doc: BeautifulSoup, url: str) -> str | None:
     t = _text(el) or ""
     # Strip "Location: " prefix
     if t.lower().startswith("location:"):
-        t = t[len("location:"):].strip()
+        t = t[len("location:") :].strip()
     return t or None
 
 
@@ -899,7 +899,7 @@ def _tiktok_role_type(doc: BeautifulSoup, url: str) -> str | None:
 def _tiktok_description(doc: BeautifulSoup, url: str) -> str | None:
     parts: list[str] = []
     for el in doc.select(".block-title, .block-content"):
-        classes = el.get("class") or []
+        classes = el.get_attribute_list("class")
         if "block-title" in classes:
             parts.append(f"\n## {_text(el)}\n")
         elif "block-content" in classes:

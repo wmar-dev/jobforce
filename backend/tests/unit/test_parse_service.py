@@ -423,7 +423,10 @@ def test_parse_html_workday_location_falls_back_to_dl_dd_list() -> None:
         html,
         "https://verily.wd1.myworkdayjobs.com/en-US/Verily_Careers/job/San-Bruno-California/Staff-AI-Applied-Scientist_REQ-723",
     )
-    assert result["location"] == "San Bruno, California; Boston, Massachusetts; Mountain View, California"
+    assert (
+        result["location"]
+        == "San Bruno, California; Boston, Massachusetts; Mountain View, California"
+    )
 
 
 def test_parse_html_workday_suffix_match_applies_adapter() -> None:
@@ -1226,7 +1229,10 @@ def test_parse_html_turing_location_strips_prefix() -> None:
 
     html = _read("turing_job.html")
     result = parse_html(html, _TURING_URL)
-    assert result["location"] == "New York, New York, United States; San Francisco, California, United States"
+    assert (
+        result["location"]
+        == "New York, New York, United States; San Francisco, California, United States"
+    )
 
 
 def test_parse_html_turing_description_non_null() -> None:
