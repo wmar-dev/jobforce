@@ -129,6 +129,19 @@ def _apply_default_status_filter(
     return stmt.where(JobListing.status.notin_(["archived", "withdrawn", "rejected"]))
 
 
+def _apply_company_filter(
+    stmt: Select[tuple[JobListing]], company: str | None, sort_by: str
+) -> Select[tuple[JobListing]]:
+    """Join Company when filtering or sorting by it; filter by name substring."""
+    if company:
+        return stmt.join(Company, JobListing.company_id == Company.id).where(
+            Company.name.ilike(f"%{company}%")
+        )
+    if sort_by == "company":
+        return stmt.join(Company, JobListing.company_id == Company.id)
+    return stmt
+
+
 _SORT_COLUMNS: dict[str, Any] = {
     "fit_score": JobListing.fit_score,
     "created_at": JobListing.created_at,
@@ -143,6 +156,9 @@ async def get_jobs(
     session: Annotated[AsyncSession, Depends(get_session)],
     status: str | None = Query(None),
     company_id: int | None = Query(None),
+    company: str | None = Query(
+        None, description="Case-insensitive substring match on company name"
+    ),
     fit_scored: bool | None = Query(None),
     min_score: float | None = Query(None),
     location: str | None = Query(None),
@@ -161,6 +177,7 @@ async def get_jobs(
         stmt = stmt.where(JobListing.source_url == source_url)
     if company_id:
         stmt = stmt.where(JobListing.company_id == company_id)
+    stmt = _apply_company_filter(stmt, company, sort_by)
     if fit_scored is not None:
         stmt = stmt.where(JobListing.fit_scored == (1 if fit_scored else 0))
     if min_score is not None:
@@ -178,8 +195,6 @@ async def get_jobs(
     total_result = await session.execute(count_stmt)
     total = total_result.scalar_one()
 
-    if sort_by == "company":
-        stmt = stmt.join(Company, JobListing.company_id == Company.id)
     col = _SORT_COLUMNS[sort_by]
     primary_order = col.desc().nulls_last() if sort_dir == "desc" else col.asc().nulls_last()
     # Always break ties by created_at desc so order is stable across pages.
@@ -208,8 +223,17 @@ async def get_jobs(
 async def bulk_archive_jobs(
     session: Annotated[AsyncSession, Depends(get_session)],
     company_id: int | None = Query(None),
+    all_active: bool = Query(
+        False,
+        description=(
+            "Archive every saved/shortlisted job for company_id regardless of fit "
+            "score, instead of only low-score (<0.50) saved jobs. Requires company_id."
+        ),
+    ),
 ) -> dict[str, int]:
-    count = await bulk_archive_low_score(session, company_id=company_id)
+    if all_active and company_id is None:
+        raise HTTPException(422, "all_active requires company_id")
+    count = await bulk_archive_low_score(session, company_id=company_id, all_active=all_active)
     return {"archived_count": count}
 
 

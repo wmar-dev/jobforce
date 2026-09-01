@@ -100,15 +100,27 @@ async def ingest_listing(
     }
 
 
-async def bulk_archive_low_score(session: AsyncSession, company_id: int | None = None) -> int:
-    """Archive saved jobs with fit_score < 0.50. Optionally scoped to one company."""
-    conditions = [
-        JobListing.status == "saved",
-        JobListing.fit_score.is_not(None),
-        JobListing.fit_score < 0.50,
-    ]
-    if company_id is not None:
-        conditions.append(JobListing.company_id == company_id)
+async def bulk_archive_low_score(
+    session: AsyncSession, company_id: int | None = None, all_active: bool = False
+) -> int:
+    """Archive saved jobs with fit_score < 0.50. Optionally scoped to one company.
+
+    With all_active=True (requires company_id), archives every saved/shortlisted
+    job for that company regardless of fit score.
+    """
+    if all_active:
+        conditions = [
+            JobListing.status.in_(["saved", "shortlisted"]),
+            JobListing.company_id == company_id,
+        ]
+    else:
+        conditions = [
+            JobListing.status == "saved",
+            JobListing.fit_score.is_not(None),
+            JobListing.fit_score < 0.50,
+        ]
+        if company_id is not None:
+            conditions.append(JobListing.company_id == company_id)
     result = await session.execute(select(JobListing).where(*conditions))
     jobs = result.scalars().all()
     for job in jobs:

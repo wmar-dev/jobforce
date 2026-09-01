@@ -76,6 +76,21 @@ async def test_get_jobs_filter_by_role_type(test_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_jobs_filter_by_company_name_substring(test_client: AsyncClient) -> None:
+    await _ingest(
+        test_client,
+        source_url="https://example.com/j/35",
+        title="Reddit Job",
+        company_name="Reddit",
+    )
+    resp = await test_client.get("/api/jobs?company=redd")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 1
+    assert all(item["company"]["name"] == "Reddit" for item in data["items"])
+
+
+@pytest.mark.asyncio
 async def test_get_jobs_filter_by_source_url(test_client: AsyncClient) -> None:
     await _ingest(test_client, source_url="https://example.com/j/40", title="Unique Job")
     resp = await test_client.get("/api/jobs?source_url=https://example.com/j/40")

@@ -202,3 +202,58 @@ async def test_bulk_archive_skips_pipeline_stage_jobs(
 
     await db_session.refresh(applied_low)
     assert applied_low.status == "applied"
+
+
+@pytest.mark.asyncio
+async def test_bulk_archive_all_active_archives_regardless_of_score(
+    test_client: AsyncClient,
+    db_session: AsyncSession,
+    sample_company: Company,
+) -> None:
+    high_score = JobListing(
+        company_id=sample_company.id,
+        title="High Score Job",
+        source_url="https://example.com/all-active-high",
+        status="saved",
+        fit_score=0.90,
+        fit_scored=1,
+    )
+    shortlisted = JobListing(
+        company_id=sample_company.id,
+        title="Shortlisted Job",
+        source_url="https://example.com/all-active-shortlisted",
+        status="shortlisted",
+        fit_score=0.90,
+        fit_scored=1,
+    )
+    unscored = JobListing(
+        company_id=sample_company.id,
+        title="Unscored Job",
+        source_url="https://example.com/all-active-unscored",
+        status="saved",
+        fit_score=None,
+        fit_scored=0,
+    )
+    db_session.add_all([high_score, shortlisted, unscored])
+    await db_session.commit()
+    await db_session.refresh(high_score)
+    await db_session.refresh(shortlisted)
+    await db_session.refresh(unscored)
+
+    response = await test_client.post(
+        f"/api/jobs/bulk-archive?company_id={sample_company.id}&all_active=true"
+    )
+    assert response.status_code == 200
+    assert response.json()["archived_count"] == 3
+
+    for job in (high_score, shortlisted, unscored):
+        await db_session.refresh(job)
+        assert job.status == "archived"
+
+
+@pytest.mark.asyncio
+async def test_bulk_archive_all_active_requires_company_id(
+    test_client: AsyncClient,
+) -> None:
+    response = await test_client.post("/api/jobs/bulk-archive?all_active=true")
+    assert response.status_code == 422
