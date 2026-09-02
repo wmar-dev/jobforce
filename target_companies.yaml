@@ -132,10 +132,10 @@
       careers_url: ""
     - name: "AlphaSense"
       domain: "alpha-sense.com"  # not alphasense.com — that's an unrelated UK gas-sensor company
-      careers_url: ""
+      careers_url: "https://job-boards.greenhouse.io/alphasense"
     - name: "Altana AI"
       domain: "altana.ai"
-      careers_url: ""
+      careers_url: "https://altana.ai/careers"
     - name: "ALTEN"
       domain: ""
       careers_url: ""

@@ -4,16 +4,57 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import html as html_module
 import json
 import sys
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from jobforce.services.parse import parse_html
 
 _TIMEOUT_MS = 30_000
 
 
+async def _fetch_nebius_greenhouse_html(url: str) -> str | None:
+    """careers.nebius.com embeds the actual Greenhouse job description and
+    apply flow in a cross-origin iframe that the wrapper page's own DOM never
+    exposes — and unlike other Greenhouse-embedded sites, there's no direct
+    job-boards.greenhouse.io fallback either (Greenhouse permanently 302s
+    that URL back to this same wrapper for Nebius). Bypass rendering
+    entirely and pull the job data from Greenhouse's public, unauthenticated
+    Jobs API instead, then synthesize minimal HTML for parse_html to read.
+    """
+    import httpx
+
+    parsed = urlparse(url)
+    if "careers.nebius.com" not in (parsed.hostname or ""):
+        return None
+    gh_jid_values = parse_qs(parsed.query).get("gh_jid") or []
+    if not gh_jid_values:
+        return None
+    gh_jid = gh_jid_values[0]
+    api_url = f"https://boards-api.greenhouse.io/v1/boards/nebius/jobs/{gh_jid}?content=true"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(api_url)
+    if resp.status_code != 200:
+        return None
+    data = resp.json()
+    title = html_module.escape((data.get("title") or "").strip())
+    location = html_module.escape((data.get("location") or {}).get("name") or "")
+    description_html = html_module.unescape(data.get("content") or "")
+    return (
+        f"<!doctype html><html><head><title>{title} | Nebius</title></head><body>"
+        f'<h1 class="nebius-gh-title">{title}</h1>'
+        f'<div class="nebius-gh-location">{location}</div>'
+        f'<div class="nebius-gh-description">{description_html}</div>'
+        "</body></html>"
+    )
+
+
 async def _fetch_html(url: str) -> str:
+    nebius_html = await _fetch_nebius_greenhouse_html(url)
+    if nebius_html is not None:
+        return nebius_html
+
     from playwright.async_api import TimeoutError as PlaywrightTimeout
     from playwright.async_api import async_playwright
 
@@ -34,6 +75,8 @@ async def _fetch_html(url: str) -> str:
             # "h1, main h2" wait resolves before the job title/location/description
             # are in the DOM. Wait on the job-specific marker for those hosts instead.
             is_workday = "myworkdayjobs.com" in (urlparse(url).hostname or "")
+            is_workable_apply = "apply.workable.com" in (urlparse(url).hostname or "")
+            is_twilio = "jobs.twilio.com" in (urlparse(url).hostname or "")
             wait_selector = (
                 "[data-automation-id='jobPostingHeader'],"
                 " [data-automation-id='job-posting-details']"
@@ -42,6 +85,30 @@ async def _fetch_html(url: str) -> str:
             )
             try:
                 await page.wait_for_selector(wait_selector, timeout=10_000, state="attached")
+                if is_workable_apply:
+                    # apply.workable.com renders an empty <h1 data-ui="job-title">
+                    # shell immediately on domcontentloaded; the JSON-LD block and
+                    # real title only appear once client-side hydration finishes.
+                    try:
+                        await page.wait_for_function(
+                            "document.querySelector('h1[data-ui=\"job-title\"]')"
+                            "?.textContent.trim().length > 0",
+                            timeout=10_000,
+                        )
+                    except PlaywrightTimeout:
+                        pass
+                if is_twilio:
+                    # jobs.twilio.com's <h1> is a static "Single Position" shell;
+                    # the real title/description only render after the Eightfold
+                    # SPA hydrates and fetches the job data client-side.
+                    try:
+                        await page.wait_for_function(
+                            "document.querySelector('h2[class*=\"position-title\"]')"
+                            "?.textContent.trim().length > 0",
+                            timeout=10_000,
+                        )
+                    except PlaywrightTimeout:
+                        pass
             except PlaywrightTimeout:
                 # SPA pages without the expected marker (e.g. TikTok): wait for JS to hydrate content
                 await page.wait_for_timeout(5_000)

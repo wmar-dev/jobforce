@@ -981,6 +981,34 @@ def test_parse_html_workable_description_non_null() -> None:
     assert "Kettle" in result["description"]
 
 
+_WORKABLE_APPLY_URL = "https://apply.workable.com/innovaccer-analytics/j/643DCD9804/"
+
+
+def test_parse_html_workable_apply_company_name() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_apply_innovaccer_job.html")
+    result = parse_html(html, _WORKABLE_APPLY_URL)
+    assert result["company_name"] == "Innovaccer Analytics"
+
+
+def test_parse_html_workable_apply_location_handles_list_jobLocation() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_apply_innovaccer_job.html")
+    result = parse_html(html, _WORKABLE_APPLY_URL)
+    assert result["location"] == "San Francisco, California"
+
+
+def test_parse_html_workable_apply_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workable_apply_innovaccer_job.html")
+    result = parse_html(html, _WORKABLE_APPLY_URL)
+    assert result["description"] is not None
+    assert "production-grade AI systems" in result["description"]
+
+
 # ---------------------------------------------------------------------------
 # parse_html — Notion adapter (*.notion.site/<page-id>)
 # Fixture: notion_paradedb_job.html — ParadeDB Distributed Systems Engineer
@@ -1363,3 +1391,257 @@ def test_parse_html_google_careers_description_excludes_boilerplate() -> None:
     assert "Generative AI" in result["description"]
     assert "Privacy Policy" not in result["description"]
     assert "equal opportunity" not in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# C3.ai (c3.ai) — Next.js job page. Title is a bare <h1>, location/department
+# share one <p> right after it ("City, ST · Department"), and the full JD
+# (intro, responsibilities, pay range, EEO conclusion) lives in the wrapper
+# <div> that follows the "Apply Now" button.
+# ---------------------------------------------------------------------------
+
+_C3AI_URL = "https://c3.ai/job-description?gh_jid=6225305002"
+
+
+def test_parse_html_c3ai_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("c3ai_job.html")
+    result = parse_html(html, _C3AI_URL)
+    assert result["company_name"] == "C3 AI"
+
+
+def test_parse_html_c3ai_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("c3ai_job.html")
+    result = parse_html(html, _C3AI_URL)
+    assert result["location"] == "Redwood City, CA"
+
+
+def test_parse_html_c3ai_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("c3ai_job.html")
+    result = parse_html(html, _C3AI_URL)
+    assert result["description"] is not None
+    assert "AI Studio team" in result["description"]
+    assert "Equal Opportunity" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Rippling ATS (ats.rippling.com/<company-slug>/jobs/<id>) — shared job board
+# used by many companies (e.g. ThoughtSpot, Rippling itself). The recruiter-
+# authored description HTML sometimes embeds the next section's heading
+# inside the same malformed <h1> as the job title, so title comes from the
+# document <title> tag instead. There's no structured company name field on
+# the job page; it's derived from the breadcrumb link back to the employer's
+# own careers site.
+# ---------------------------------------------------------------------------
+
+_RIPPLING_THOUGHTSPOT_URL = (
+    "https://ats.rippling.com/thoughtspot/jobs/602db28c-e76f-4fee-ad02-0419372d02af"
+)
+
+
+def test_parse_html_rippling_title_ignores_embedded_next_heading() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("rippling_thoughtspot_job.html")
+    result = parse_html(html, _RIPPLING_THOUGHTSPOT_URL)
+    assert result["title"] == "Staff Forward Deployment Engineer"
+
+
+def test_parse_html_rippling_company_from_breadcrumb() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("rippling_thoughtspot_job.html")
+    result = parse_html(html, _RIPPLING_THOUGHTSPOT_URL)
+    assert result["company_name"] == "Thoughtspot"
+
+
+def test_parse_html_rippling_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("rippling_thoughtspot_job.html")
+    result = parse_html(html, _RIPPLING_THOUGHTSPOT_URL)
+    assert result["location"] == "Mountain View, CA"
+
+
+def test_parse_html_rippling_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("rippling_thoughtspot_job.html")
+    result = parse_html(html, _RIPPLING_THOUGHTSPOT_URL)
+    assert result["description"] is not None
+    assert "Agentic Analytics Platform" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Twilio (jobs.twilio.com) — Eightfold-powered ATS on Twilio's own domain.
+# The page's static <h1> always reads "Single Position" regardless of which
+# job is loaded; the real title lives in an <h2> further down.
+# ---------------------------------------------------------------------------
+
+_TWILIO_URL = "https://jobs.twilio.com/careers/job/1099554769400"
+
+
+def test_parse_html_twilio_title_ignores_static_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("twilio_job.html")
+    result = parse_html(html, _TWILIO_URL)
+    assert result["title"] == "Senior Software Engineer"
+
+
+def test_parse_html_twilio_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("twilio_job.html")
+    result = parse_html(html, _TWILIO_URL)
+    assert result["company_name"] == "Twilio"
+
+
+def test_parse_html_twilio_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("twilio_job.html")
+    result = parse_html(html, _TWILIO_URL)
+    assert result["location"] == "Remote - US"
+
+
+def test_parse_html_twilio_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("twilio_job.html")
+    result = parse_html(html, _TWILIO_URL)
+    assert result["description"] is not None
+    assert "data infrastructure" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Nebius (careers.nebius.com) — scout_fetch synthesizes this HTML shape from
+# Greenhouse's public Jobs API (see _fetch_nebius_greenhouse_html) since the
+# real page hides everything in a cross-origin iframe.
+# ---------------------------------------------------------------------------
+
+_NEBIUS_URL = "https://careers.nebius.com/?gh_jid=4765610101"
+
+
+def test_parse_html_nebius_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("nebius_job.html")
+    result = parse_html(html, _NEBIUS_URL)
+    assert result["title"] == "Infrastructure Software Engineer"
+
+
+def test_parse_html_nebius_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("nebius_job.html")
+    result = parse_html(html, _NEBIUS_URL)
+    assert result["company_name"] == "Nebius"
+
+
+def test_parse_html_nebius_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("nebius_job.html")
+    result = parse_html(html, _NEBIUS_URL)
+    assert result["location"] == "Remote - United States"
+
+
+def test_parse_html_nebius_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("nebius_job.html")
+    result = parse_html(html, _NEBIUS_URL)
+    assert result["description"] is not None
+    assert "bare-metal infrastructure" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Asana (asana.com/jobs/apply/<id>) — title parses fine via the generic
+# adapter's <h1> selector, but company_name falls back to the wrong
+# og:site_name ("Asana Jobs") and location/description need dedicated
+# selectors since they're not tagged with any location/description class.
+# ---------------------------------------------------------------------------
+
+_ASANA_URL = "https://asana.com/jobs/apply/8084470"
+
+
+def test_parse_html_asana_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("asana_job.html")
+    result = parse_html(html, _ASANA_URL)
+    assert result["title"] == "Senior Software Engineer, Infrastructure Security"
+
+
+def test_parse_html_asana_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("asana_job.html")
+    result = parse_html(html, _ASANA_URL)
+    assert result["company_name"] == "Asana"
+
+
+def test_parse_html_asana_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("asana_job.html")
+    result = parse_html(html, _ASANA_URL)
+    assert result["location"] == "San Francisco"
+
+
+def test_parse_html_asana_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("asana_job.html")
+    result = parse_html(html, _ASANA_URL)
+    assert result["description"] is not None
+    assert "Security Development team" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Breezy HR (<company>.breezy.hr/p/<id>-<slug>) — shared ATS. The page has
+# two <h1>s (site brand logo, then the real job title), so the generic
+# adapter's bare "h1" selector picks up the wrong one. Company name is
+# derived from the subdomain, same pattern as the Workday adapter.
+# ---------------------------------------------------------------------------
+
+_BREEZY_BEARROBOTICS_URL = "https://bear-robotics.breezy.hr/p/58d3df356ee1-software-engineer-ii"
+
+
+def test_parse_html_breezy_title_ignores_brand_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("breezy_bearrobotics_job.html")
+    result = parse_html(html, _BREEZY_BEARROBOTICS_URL)
+    assert result["title"] == "Software Engineer II"
+
+
+def test_parse_html_breezy_company_from_subdomain() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("breezy_bearrobotics_job.html")
+    result = parse_html(html, _BREEZY_BEARROBOTICS_URL)
+    assert result["company_name"] == "Bear Robotics"
+
+
+def test_parse_html_breezy_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("breezy_bearrobotics_job.html")
+    result = parse_html(html, _BREEZY_BEARROBOTICS_URL)
+    assert result["location"] == "Redwood City, CA"
+
+
+def test_parse_html_breezy_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("breezy_bearrobotics_job.html")
+    result = parse_html(html, _BREEZY_BEARROBOTICS_URL)
+    assert result["description"] is not None
+    assert "designing, developing, and maintaining complex software" in result["description"]

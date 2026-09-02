@@ -381,10 +381,13 @@ def _pinecone_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Workable site adapter — jobs.workable.com/en/view/<id>/<slug>
+# Workable site adapter — jobs.workable.com/en/view/<id>/<slug> and
+# apply.workable.com/<company-slug>/j/<id> (company-hosted "Apply" link).
 # All fields live in a JSON-LD <script type="application/ld+json"> block.
 # employmentType values: FULL_TIME, PART_TIME, CONTRACTOR, INTERN
 # jobLocationType: TELECOMMUTE → "Remote"
+# jobLocation is a single object on jobs.workable.com but a list on
+# apply.workable.com — _workable_job_location() normalizes both.
 # ---------------------------------------------------------------------------
 
 
@@ -410,13 +413,22 @@ def _workable_company(doc: BeautifulSoup, url: str) -> str | None:
     return (d.get("hiringOrganization") or {}).get("name") or None
 
 
+def _workable_job_location(d: dict[str, Any]) -> dict[str, Any]:
+    # jobLocation is a single object on jobs.workable.com but a list on
+    # apply.workable.com — normalize to the first entry either way.
+    job_location = d.get("jobLocation") or {}
+    if isinstance(job_location, list):
+        job_location = job_location[0] if job_location else {}
+    return job_location
+
+
 def _workable_location(doc: BeautifulSoup, url: str) -> str | None:
     d = _workable_jsonld(doc)
     if d.get("jobLocationType") == "TELECOMMUTE":
-        addr = (d.get("jobLocation") or {}).get("address") or {}
+        addr = _workable_job_location(d).get("address") or {}
         city = addr.get("addressLocality", "")
         return f"{city} (Remote)" if city else "Remote"
-    addr = (d.get("jobLocation") or {}).get("address") or {}
+    addr = _workable_job_location(d).get("address") or {}
     city = addr.get("addressLocality", "")
     region = addr.get("addressRegion", "")
     if city and region:
@@ -998,6 +1010,159 @@ def _wbd_location(doc: BeautifulSoup, url: str) -> str | None:
     return "; ".join(seen) if seen else None
 
 
+# ---------------------------------------------------------------------------
+# C3.ai (c3.ai) — Next.js job page. Title is a bare <h1>, location/department
+# share one <p> right after it ("City, ST · Department"), and the full JD
+# lives in the wrapper <div> that follows the "Apply Now" button.
+# ---------------------------------------------------------------------------
+
+
+def _c3ai_location(doc: BeautifulSoup, url: str) -> str | None:
+    h1 = doc.select_one("h1")
+    if h1 is None:
+        return None
+    p = h1.find_next_sibling("p")
+    if p is None:
+        return None
+    text = _text(p) or ""
+    location = text.split("·", 1)[0].strip()
+    return location or None
+
+
+def _c3ai_description(doc: BeautifulSoup, url: str) -> str | None:
+    h1 = doc.select_one("h1")
+    if h1 is None:
+        return None
+    button = h1.find_next_sibling("button")
+    if button is None:
+        return None
+    wrapper = button.find_next_sibling("div")
+    return _to_markdown(wrapper)
+
+
+# ---------------------------------------------------------------------------
+# Rippling ATS (ats.rippling.com/<company-slug>/jobs/<id>) — shared job board
+# used by many companies. The recruiter-authored description sometimes
+# embeds the next section's heading inside the same <h1> as the job title
+# (via a nested <strong>), so title comes from the document <title> tag
+# instead. There's no structured company-name field on the page; it's
+# derived from the breadcrumb link back to the employer's own careers site
+# (may need casing fixes via merge_companies after ingest).
+# ---------------------------------------------------------------------------
+
+
+def _rippling_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.title) if doc.title else None
+
+
+def _rippling_company(doc: BeautifulSoup, url: str) -> str | None:
+    breadcrumb = doc.select_one('a[data-testid^="http"]')
+    if breadcrumb is None:
+        return None
+    href = breadcrumb.get("data-testid") or ""
+    host = (urlparse(str(href)).hostname or "").removeprefix("www.")
+    label = host.split(".")[0]
+    return label.replace("-", " ").title() or None
+
+
+def _rippling_location(doc: BeautifulSoup, url: str) -> str | None:
+    icon = doc.select_one('span[data-icon="LOCATION_OUTLINE"]')
+    if icon is None:
+        return None
+    return _text(icon.find_next_sibling("p"))
+
+
+def _rippling_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one(".ATS_htmlPreview"))
+
+
+# ---------------------------------------------------------------------------
+# Twilio (jobs.twilio.com) — Eightfold-powered ATS hosted on Twilio's own
+# domain. The static <h1> always reads "Single Position" no matter which job
+# is loaded; the real title is in an <h2> further down (CSS-module class
+# names are hashed per build, so match on the stable prefix instead).
+# ---------------------------------------------------------------------------
+
+
+def _twilio_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one('h2[class*="position-title"]'))
+
+
+def _twilio_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one('div[class*="position-location"]'))
+
+
+def _twilio_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one("#job-description-container"))
+
+
+# ---------------------------------------------------------------------------
+# Nebius (careers.nebius.com) — the real job description/apply flow is a
+# cross-origin Greenhouse iframe scout_fetch can't see, so scout_fetch
+# fetches Greenhouse's public Jobs API instead and hands this adapter
+# synthetic HTML with the fields under fixed classes (see
+# jobforce.cli.scout_fetch._fetch_nebius_greenhouse_html).
+# ---------------------------------------------------------------------------
+
+
+def _nebius_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one(".nebius-gh-title"))
+
+
+def _nebius_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one(".nebius-gh-location"))
+
+
+def _nebius_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one(".nebius-gh-description"))
+
+
+# ---------------------------------------------------------------------------
+# Asana (asana.com/jobs/apply/<id>) — title already extracts correctly via
+# the generic adapter's <h1> selector; company_name, location, and
+# description need overrides since CSS-module class names are hashed per
+# build. The description div is the sibling right after the div holding the
+# "#grnhse_app" apply anchor (Asana embeds a Greenhouse apply widget there).
+# ---------------------------------------------------------------------------
+
+
+def _asana_location(doc: BeautifulSoup, url: str) -> str | None:
+    main = doc.select_one("main")
+    return _text(main.select_one("h4")) if main else None
+
+
+def _asana_description(doc: BeautifulSoup, url: str) -> str | None:
+    apply_link = doc.select_one('a[href^="#grnhse_app"]')
+    if apply_link is None:
+        return None
+    apply_container = apply_link.find_parent("div")
+    if apply_container is None:
+        return None
+    desc_div = apply_container.find_next_sibling("div")
+    return _to_markdown(desc_div)
+
+
+# ---------------------------------------------------------------------------
+# Breezy HR (<company>.breezy.hr/p/<id>-<slug>) — shared ATS matched by
+# hostname suffix. The page has two <h1>s (the site brand/logo, then the
+# real job title), so the generic adapter's bare "h1" selector grabs the
+# wrong one. Company name comes from the subdomain, mirroring the Workday
+# adapter's approach.
+# ---------------------------------------------------------------------------
+
+
+def _breezy_company(doc: BeautifulSoup, url: str) -> str | None:
+    hostname = urlparse(url).hostname or ""
+    subdomain = hostname.split(".")[0]
+    if subdomain and subdomain not in ("www",):
+        return " ".join(w.capitalize() for w in subdomain.replace("-", " ").split())
+    return None
+
+
+def _breezy_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one(".banner h1"))
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "careers.airbnb.com": {
         "company_name": lambda doc, url: "Airbnb",
@@ -1013,6 +1178,17 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": lambda doc, url: "Larridin",
         "location": _larridin_location,
         "description": _larridin_description,
+    },
+    "c3.ai": {
+        "company_name": lambda doc, url: "C3 AI",
+        "location": _c3ai_location,
+        "description": _c3ai_description,
+    },
+    "ats.rippling.com": {
+        "title": _rippling_title,
+        "company_name": _rippling_company,
+        "location": _rippling_location,
+        "description": _rippling_description,
     },
     "discord.com": {
         "company_name": lambda doc, url: "Discord",
@@ -1077,6 +1253,13 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "description": _workable_description,
         "role_type": _workable_role_type,
     },
+    "apply.workable.com": {
+        "company_name": _workable_company,
+        "title": _workable_title,
+        "location": _workable_location,
+        "description": _workable_description,
+        "role_type": _workable_role_type,
+    },
     "pinterestcareers.com": {
         "company_name": lambda doc, url: "Pinterest",
         "location": _pinterest_location,
@@ -1128,6 +1311,27 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": lambda doc, url: "Warner Bros. Discovery",
         "location": _wbd_location,
         "description": lambda doc, url: _to_markdown(doc.select_one(".jd-info")),
+    },
+    "jobs.twilio.com": {
+        "company_name": lambda doc, url: "Twilio",
+        "title": _twilio_title,
+        "location": _twilio_location,
+        "description": _twilio_description,
+    },
+    "careers.nebius.com": {
+        "company_name": lambda doc, url: "Nebius",
+        "title": _nebius_title,
+        "location": _nebius_location,
+        "description": _nebius_description,
+    },
+    "asana.com": {
+        "company_name": lambda doc, url: "Asana",
+        "location": _asana_location,
+        "description": _asana_description,
+    },
+    "breezy.hr": {
+        "company_name": _breezy_company,
+        "title": _breezy_title,
     },
 }
 
