@@ -50,6 +50,35 @@ async def _fetch_nebius_greenhouse_html(url: str) -> str | None:
     )
 
 
+# Hosts whose job content hydrates in client-side after the initial DOM
+# marker (h1/h2) is already attached, so a bare "h1, main h2" wait resolves
+# before the real title/location/description are present. Maps a hostname
+# substring to a JS expression that's truthy once the real content has
+# rendered — scout_fetch polls it (via wait_for_function) before capturing.
+_HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
+    # apply.workable.com renders an empty <h1 data-ui="job-title"> shell
+    # immediately on domcontentloaded; the JSON-LD block and real title only
+    # appear once client-side hydration finishes.
+    "apply.workable.com": (
+        "document.querySelector('h1[data-ui=\"job-title\"]')?.textContent.trim().length > 0"
+    ),
+    # jobs.twilio.com's <h1> is a static "Single Position" shell; the real
+    # title/description only render after the Eightfold SPA hydrates and
+    # fetches the job data client-side.
+    "jobs.twilio.com": (
+        "document.querySelector('h2[class*=\"position-title\"]')?.textContent.trim().length > 0"
+    ),
+    # careers.chime.com's <h1>/title render immediately, but the ".jobCopy"
+    # description div is present-but-empty until the SPA hydrates and fills
+    # in the job body client-side.
+    "careers.chime.com": "document.querySelector('.jobCopy')?.textContent.trim().length > 0",
+    # coinbase.com/careers is a heavy client-rendered SPA; the generic wait
+    # can resolve before the real job content (".content-intro") has
+    # hydrated in, so wait on it directly to avoid an intermittent race.
+    "coinbase.com": "document.querySelector('.content-intro')?.textContent.trim().length > 0",
+}
+
+
 async def _fetch_html(url: str) -> str:
     nebius_html = await _fetch_nebius_greenhouse_html(url)
     if nebius_html is not None:
@@ -74,9 +103,12 @@ async def _fetch_html(url: str) -> str:
             # while the actual job content hydrates later via XHR, so a bare
             # "h1, main h2" wait resolves before the job title/location/description
             # are in the DOM. Wait on the job-specific marker for those hosts instead.
-            is_workday = "myworkdayjobs.com" in (urlparse(url).hostname or "")
-            is_workable_apply = "apply.workable.com" in (urlparse(url).hostname or "")
-            is_twilio = "jobs.twilio.com" in (urlparse(url).hostname or "")
+            hostname = urlparse(url).hostname or ""
+            is_workday = "myworkdayjobs.com" in hostname
+            hydration_condition = next(
+                (cond for host, cond in _HYDRATION_WAIT_CONDITIONS.items() if host in hostname),
+                None,
+            )
             wait_selector = (
                 "[data-automation-id='jobPostingHeader'],"
                 " [data-automation-id='job-posting-details']"
@@ -85,28 +117,9 @@ async def _fetch_html(url: str) -> str:
             )
             try:
                 await page.wait_for_selector(wait_selector, timeout=10_000, state="attached")
-                if is_workable_apply:
-                    # apply.workable.com renders an empty <h1 data-ui="job-title">
-                    # shell immediately on domcontentloaded; the JSON-LD block and
-                    # real title only appear once client-side hydration finishes.
+                if hydration_condition is not None:
                     try:
-                        await page.wait_for_function(
-                            "document.querySelector('h1[data-ui=\"job-title\"]')"
-                            "?.textContent.trim().length > 0",
-                            timeout=10_000,
-                        )
-                    except PlaywrightTimeout:
-                        pass
-                if is_twilio:
-                    # jobs.twilio.com's <h1> is a static "Single Position" shell;
-                    # the real title/description only render after the Eightfold
-                    # SPA hydrates and fetches the job data client-side.
-                    try:
-                        await page.wait_for_function(
-                            "document.querySelector('h2[class*=\"position-title\"]')"
-                            "?.textContent.trim().length > 0",
-                            timeout=10_000,
-                        )
+                        await page.wait_for_function(hydration_condition, timeout=10_000)
                     except PlaywrightTimeout:
                         pass
             except PlaywrightTimeout:

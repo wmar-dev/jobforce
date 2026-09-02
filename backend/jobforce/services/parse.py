@@ -1163,6 +1163,115 @@ def _breezy_title(doc: BeautifulSoup, url: str) -> str | None:
     return _text(doc.select_one(".banner h1"))
 
 
+# ---------------------------------------------------------------------------
+# Block (block.xyz/careers/jobs/<id>) — the site's own og:site_name meta is
+# buggy and echoes the page title instead of "Block", so the generic
+# adapter's company_name fallback grabs the wrong text.
+# ---------------------------------------------------------------------------
+
+
+def _block_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one('[data-testid="job-location"]'))
+
+
+def _block_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one('[data-testid="job-about"]'))
+
+
+# ---------------------------------------------------------------------------
+# Brex (brex.com/careers/<id>) — title and company_name already extract
+# correctly via the generic adapter. Brex renders Greenhouse's job content
+# HTML directly, including its ".content-intro" wrapper div, so the
+# description container is that div's parent.
+# ---------------------------------------------------------------------------
+
+
+def _brex_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one("h4"))
+
+
+def _brex_description(doc: BeautifulSoup, url: str) -> str | None:
+    intro = doc.select_one(".content-intro")
+    if intro is None:
+        return None
+    container = intro.find_parent("div")
+    return _to_markdown(container)
+
+
+# ---------------------------------------------------------------------------
+# Chime (careers.chime.com/jobs/<id>/<slug>) — title extracts fine via the
+# generic adapter's <h1>. Location is the second of two <p> tags inside
+# ".content-wrapper" (department, then location); description lives in the
+# ".jobCopy" container.
+# ---------------------------------------------------------------------------
+
+
+def _chime_location(doc: BeautifulSoup, url: str) -> str | None:
+    ps = doc.select(".content-wrapper p")
+    if len(ps) < 2:
+        return None
+    return _text(ps[1])
+
+
+def _chime_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one(".jobCopy"))
+
+
+# ---------------------------------------------------------------------------
+# Coinbase (coinbase.com/careers/positions/<id>) — title extracts fine via
+# the generic adapter's <h1>. Location is the first of two <span> tags in
+# the div right after the <h1>. Coinbase renders Greenhouse's job content
+# HTML directly, including its ".content-intro" wrapper div, so the
+# description container is that div's parent — same pattern as Brex.
+# ---------------------------------------------------------------------------
+
+
+def _coinbase_location(doc: BeautifulSoup, url: str) -> str | None:
+    h1 = doc.select_one("h1")
+    if h1 is None:
+        return None
+    sib = h1.find_next_sibling("div")
+    if sib is None:
+        return None
+    return _text(sib.select_one("span"))
+
+
+def _coinbase_description(doc: BeautifulSoup, url: str) -> str | None:
+    intro = doc.select_one(".content-intro")
+    if intro is None:
+        return None
+    container = intro.find_parent("div")
+    return _to_markdown(container)
+
+
+# ---------------------------------------------------------------------------
+# Intuit (jobs.intuit.com) — shared board across all Intuit brands (Credit
+# Karma, TurboTax, QuickBooks, Mailchimp). Title extracts fine via the
+# generic adapter's <h1>, which carries a " - <Brand>" suffix company_name is
+# derived from (falls back to "Intuit" for postings with no such suffix).
+# The generic adapter's location falls back to page-level "Multiple
+# Locations" metadata instead of the real ".job-location-jd" element.
+# ---------------------------------------------------------------------------
+
+
+def _intuit_company(doc: BeautifulSoup, url: str) -> str | None:
+    h1 = doc.select_one("h1")
+    text = _text(h1) or ""
+    if " - " in text:
+        return text.rsplit(" - ", 1)[-1].strip() or "Intuit"
+    return "Intuit"
+
+
+def _intuit_location(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one(".job-location-jd")
+    if el is None:
+        return None
+    text = _text(el) or ""
+    text = re.sub(r"^Location\s*", "", text)
+    text = re.sub(r"\s*;\s*", "; ", text)
+    return text.strip() or None
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "careers.airbnb.com": {
         "company_name": lambda doc, url: "Airbnb",
@@ -1332,6 +1441,29 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "breezy.hr": {
         "company_name": _breezy_company,
         "title": _breezy_title,
+    },
+    "block.xyz": {
+        "company_name": lambda doc, url: "Block",
+        "location": _block_location,
+        "description": _block_description,
+    },
+    "brex.com": {
+        "location": _brex_location,
+        "description": _brex_description,
+    },
+    "careers.chime.com": {
+        "company_name": lambda doc, url: "Chime",
+        "location": _chime_location,
+        "description": _chime_description,
+    },
+    "coinbase.com": {
+        "company_name": lambda doc, url: "Coinbase",
+        "location": _coinbase_location,
+        "description": _coinbase_description,
+    },
+    "jobs.intuit.com": {
+        "company_name": _intuit_company,
+        "location": _intuit_location,
     },
 }
 

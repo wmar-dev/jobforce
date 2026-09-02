@@ -1645,3 +1645,214 @@ def test_parse_html_breezy_description() -> None:
     result = parse_html(html, _BREEZY_BEARROBOTICS_URL)
     assert result["description"] is not None
     assert "designing, developing, and maintaining complex software" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Block (block.xyz/careers/jobs/<id>) — the site's own og:site_name meta is
+# buggy and echoes the page title instead of "Block", so the generic
+# adapter's company_name fallback grabs the wrong text; location and
+# description need dedicated selectors too.
+# ---------------------------------------------------------------------------
+
+_BLOCK_URL = "https://block.xyz/careers/jobs/5243440008"
+
+
+def test_parse_html_block_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("block_job.html")
+    result = parse_html(html, _BLOCK_URL)
+    assert result["title"] == "Senior Machine Learning Engineer, Applied AI Quality"
+
+
+def test_parse_html_block_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("block_job.html")
+    result = parse_html(html, _BLOCK_URL)
+    assert result["company_name"] == "Block"
+
+
+def test_parse_html_block_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("block_job.html")
+    result = parse_html(html, _BLOCK_URL)
+    assert result["location"] == "Bay Area, CA, US"
+
+
+def test_parse_html_block_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("block_job.html")
+    result = parse_html(html, _BLOCK_URL)
+    assert result["description"] is not None
+    assert "Applied AI Quality team" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Brex (brex.com/careers/<id>) — title and company_name already extract
+# correctly via the generic adapter; location is a bare <h4>, and the
+# description sits in the parent of Greenhouse's ".content-intro" wrapper
+# div (this page renders Greenhouse's job content HTML directly).
+# ---------------------------------------------------------------------------
+
+_BREX_URL = "https://www.brex.com/careers/8606890002"
+
+
+def test_parse_html_brex_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("brex_job.html")
+    result = parse_html(html, _BREX_URL)
+    assert result["title"] == "AI Engineer, Ecosystem"
+
+
+def test_parse_html_brex_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("brex_job.html")
+    result = parse_html(html, _BREX_URL)
+    assert result["location"] == "San Francisco, California, United States"
+
+
+def test_parse_html_brex_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("brex_job.html")
+    result = parse_html(html, _BREX_URL)
+    assert result["description"] is not None
+    assert "agentic integrations" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Chime (careers.chime.com/jobs/<id>/<slug>) — title extracts fine via the
+# generic adapter's <h1>; company_name, location, and description need
+# overrides. Location is the second of two <p> tags inside
+# ".content-wrapper" (department, then location); description is the
+# ".jobCopy" container.
+# ---------------------------------------------------------------------------
+
+_CHIME_URL = "https://careers.chime.com/jobs/8569366002/senior-ai-ml-engineer"
+
+
+def test_parse_html_chime_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("chime_job.html")
+    result = parse_html(html, _CHIME_URL)
+    assert result["title"] == "Senior AI/ML Engineer"
+
+
+def test_parse_html_chime_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("chime_job.html")
+    result = parse_html(html, _CHIME_URL)
+    assert result["company_name"] == "Chime"
+
+
+def test_parse_html_chime_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("chime_job.html")
+    result = parse_html(html, _CHIME_URL)
+    assert (
+        result["location"]
+        == "Chicago, IL, USA; New York, NY, USA; San Francisco, CA, USA; Seattle, WA, USA"
+    )
+
+
+def test_parse_html_chime_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("chime_job.html")
+    result = parse_html(html, _CHIME_URL)
+    assert result["description"] is not None
+    assert "Growth & Marketing AI" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Coinbase (coinbase.com/careers/positions/<id>) — title extracts fine via
+# the generic adapter's <h1>. Location is the first of two <span> tags in
+# the div right after the <h1> (location, then Job ID); Coinbase renders
+# Greenhouse's job content HTML directly, including its ".content-intro"
+# wrapper div, so the description container is that div's parent — same
+# pattern as Brex.
+# ---------------------------------------------------------------------------
+
+_COINBASE_URL = "https://www.coinbase.com/careers/positions/7739592"
+
+
+def test_parse_html_coinbase_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("coinbase_job.html")
+    result = parse_html(html, _COINBASE_URL)
+    assert result["title"] == "Senior Machine Learning Engineer"
+
+
+def test_parse_html_coinbase_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("coinbase_job.html")
+    result = parse_html(html, _COINBASE_URL)
+    assert result["company_name"] == "Coinbase"
+
+
+def test_parse_html_coinbase_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("coinbase_job.html")
+    result = parse_html(html, _COINBASE_URL)
+    assert result["location"] == "Remote - USA"
+
+
+def test_parse_html_coinbase_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("coinbase_job.html")
+    result = parse_html(html, _COINBASE_URL)
+    assert result["description"] is not None
+    assert "models that power Coinbase's core products" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Intuit (jobs.intuit.com/job/<city>/<slug>/27595/<id>) — shared board across
+# all Intuit brands (Credit Karma, TurboTax, QuickBooks, Mailchimp). Title
+# already extracts fine via the generic adapter's <h1>, which carries a
+# " - <Brand>" suffix company_name is derived from. The generic adapter's
+# location falls back to "Multiple Locations" from page metadata instead of
+# reading the real ".job-location-jd" element.
+# ---------------------------------------------------------------------------
+
+_INTUIT_CK_URL = (
+    "https://jobs.intuit.com/job/charlotte/staff-software-engineer-credit-karma/27595/99074782144"
+)
+
+
+def test_parse_html_intuit_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuit_creditkarma_job.html")
+    result = parse_html(html, _INTUIT_CK_URL)
+    assert result["title"] == "Staff Software Engineer - Credit Karma"
+
+
+def test_parse_html_intuit_company_from_title_suffix() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuit_creditkarma_job.html")
+    result = parse_html(html, _INTUIT_CK_URL)
+    assert result["company_name"] == "Credit Karma"
+
+
+def test_parse_html_intuit_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuit_creditkarma_job.html")
+    result = parse_html(html, _INTUIT_CK_URL)
+    assert (
+        result["location"]
+        == "Charlotte, North Carolina; Mountain View, California; Oakland, California"
+    )
