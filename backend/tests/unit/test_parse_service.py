@@ -2020,3 +2020,72 @@ def test_parse_html_github_location() -> None:
     html = _read("github_job.html")
     result = parse_html(html, _GITHUB_URL)
     assert result["location"] == "United States"
+
+
+# ---------------------------------------------------------------------------
+# Grid Dynamics (griddynamics.com/careers/vacancy/<id>) — title extracts fine
+# via the generic adapter, but location isn't visible via any plain element
+# the generic adapter checks, and the generic adapter's description falls
+# back to the short meta description rather than the full vacancy body.
+# ---------------------------------------------------------------------------
+
+_GRIDDYNAMICS_URL = "https://www.griddynamics.com/careers/vacancy/59817"
+
+
+def test_parse_html_griddynamics_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("griddynamics_job.html")
+    result = parse_html(html, _GRIDDYNAMICS_URL)
+    assert result["location"] == "US Remote, US"
+
+
+# ---------------------------------------------------------------------------
+# Guidewire (guidewire.com/about/careers/jobs/<slug>) — no <h1>; the page
+# uses <h2> for the job title, so the generic adapter falls back to the
+# <title> tag and truncates at the first " - ", dropping team-qualifier
+# suffixes like "- Cloud Data Platform" from titles that legitimately
+# contain a hyphen. Location and description aren't exposed via any plain
+# element the generic adapter checks — its description fallback picks up
+# the site's footer boilerplate ("We do not accept bot-generated candidate
+# applications...") instead.
+# ---------------------------------------------------------------------------
+
+_GUIDEWIRE_URL = "https://www.guidewire.com/about/careers/jobs/senior-software-engineer---cloud-data-platform-jr_14462"
+
+
+def test_parse_html_guidewire_title_full_not_truncated_at_hyphen() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("guidewire_job.html")
+    result = parse_html(html, _GUIDEWIRE_URL)
+    assert result["title"] == "Senior Software Engineer - Cloud Data Platform"
+
+
+def test_parse_html_guidewire_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("guidewire_job.html")
+    result = parse_html(html, _GUIDEWIRE_URL)
+    assert result["location"] == "United States - San Mateo, CA"
+
+
+def test_parse_html_guidewire_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("guidewire_job.html")
+    result = parse_html(html, _GUIDEWIRE_URL)
+    assert result["description"] is not None
+    assert "machine learning lifecycle" in result["description"]
+
+
+def test_parse_html_griddynamics_description_prefers_full_body_over_meta() -> None:
+    """The generic adapter falls back to the short <meta name="description">
+    tag, which drops the "Essential functions" list present in the full
+    vacancy body."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("griddynamics_job.html")
+    result = parse_html(html, _GRIDDYNAMICS_URL)
+    assert result["description"] is not None
+    assert "Essential functions" in result["description"]

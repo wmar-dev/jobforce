@@ -1372,6 +1372,45 @@ def _github_location(doc: BeautifulSoup, url: str) -> str | None:
     return _text(doc.select_one("#header-locations"))
 
 
+# ---------------------------------------------------------------------------
+# Grid Dynamics (griddynamics.com/careers/vacancy/<id>) — title extracts fine
+# via the generic adapter; location isn't exposed via any plain element the
+# generic adapter checks, and the generic adapter's description falls back
+# to the short <meta name="description"> tag, dropping the "Essential
+# functions"/requirements lists present in the full vacancy body.
+# ---------------------------------------------------------------------------
+
+
+def _griddynamics_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one(".careers-vacancy__underline-text"))
+
+
+def _griddynamics_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one(".careers-vacancy__content-block"))
+
+
+# ---------------------------------------------------------------------------
+# Guidewire (guidewire.com/about/careers/jobs/<slug>) — title extracts fine
+# via the generic adapter (no <h1>; the page uses <h2> for the job title, so
+# the generic adapter falls back to the <title> tag); location and
+# description aren't exposed via any plain element the generic adapter
+# checks — its description fallback picks up the site's footer boilerplate
+# ("We do not accept bot-generated candidate applications...") instead.
+# ---------------------------------------------------------------------------
+
+
+def _guidewire_title(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one(".JobDetail_heroTitle__48mry"))
+
+
+def _guidewire_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one(".JobDetail_heroLocation__aqxLv"))
+
+
+def _guidewire_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one(".JobDetail_contentSection__XzJan"))
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "careers.airbnb.com": {
         "company_name": lambda doc, url: "Airbnb",
@@ -1572,6 +1611,15 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "github.careers": {
         "company_name": lambda doc, url: "GitHub",
         "location": _github_location,
+    },
+    "griddynamics.com": {
+        "location": _griddynamics_location,
+        "description": _griddynamics_description,
+    },
+    "guidewire.com": {
+        "title": _guidewire_title,
+        "location": _guidewire_location,
+        "description": _guidewire_description,
     },
     "careersatdoordash.com": {
         "location": _doordash_location,
