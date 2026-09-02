@@ -2089,3 +2089,41 @@ def test_parse_html_griddynamics_description_prefers_full_body_over_meta() -> No
     result = parse_html(html, _GRIDDYNAMICS_URL)
     assert result["description"] is not None
     assert "Essential functions" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Intuitive Surgical (careers.intuitive.com/en/jobs/<id>/<req>/<slug>/) —
+# title extracts fine via the generic adapter's <h1> selector, but
+# company_name comes back as the og:site_name meta ("Intuitive Surgical
+# Careers" instead of "Intuitive Surgical"), and location/description
+# aren't exposed via any plain element the generic adapter checks.
+# ---------------------------------------------------------------------------
+
+_INTUITIVE_URL = (
+    "https://careers.intuitive.com/en/jobs/744000138714310/JOB215151/sr-mobile-app-developer/"
+)
+
+
+def test_parse_html_intuitivesurgical_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuitivesurgical_job.html")
+    result = parse_html(html, _INTUITIVE_URL)
+    assert result["company_name"] == "Intuitive Surgical"
+
+
+def test_parse_html_intuitivesurgical_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuitivesurgical_job.html")
+    result = parse_html(html, _INTUITIVE_URL)
+    assert result["location"] == "Sunnyvale, CA, United States"
+
+
+def test_parse_html_intuitivesurgical_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuitivesurgical_job.html")
+    result = parse_html(html, _INTUITIVE_URL)
+    assert result["description"] is not None
+    assert "react native and native android" in result["description"]

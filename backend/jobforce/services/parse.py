@@ -1411,6 +1411,27 @@ def _guidewire_description(doc: BeautifulSoup, url: str) -> str | None:
     return _to_markdown(doc.select_one(".JobDetail_contentSection__XzJan"))
 
 
+# ---------------------------------------------------------------------------
+# Intuitive Surgical (careers.intuitive.com/en/jobs/<id>/<req>/<slug>/) —
+# title extracts fine via the generic adapter's <h1> selector, but
+# company_name comes back as the og:site_name meta ("Intuitive Surgical
+# Careers" instead of "Intuitive Surgical"), and location/description
+# aren't exposed via any plain element the generic adapter checks.
+# ---------------------------------------------------------------------------
+
+
+def _intuitivesurgical_location(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one(".job-meta")
+    if el is None:
+        return None
+    first_item = el.select_one("li")
+    return _text(first_item)
+
+
+def _intuitivesurgical_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one("article.cms-content"))
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "careers.airbnb.com": {
         "company_name": lambda doc, url: "Airbnb",
@@ -1620,6 +1641,11 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "title": _guidewire_title,
         "location": _guidewire_location,
         "description": _guidewire_description,
+    },
+    "careers.intuitive.com": {
+        "company_name": lambda doc, url: "Intuitive Surgical",
+        "location": _intuitivesurgical_location,
+        "description": _intuitivesurgical_description,
     },
     "careersatdoordash.com": {
         "location": _doordash_location,
