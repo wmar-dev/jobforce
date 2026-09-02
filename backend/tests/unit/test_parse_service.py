@@ -482,6 +482,35 @@ def test_parse_html_ashby_hyphenated_company_capitalized() -> None:
     assert result["company_name"] == "Linear App"
 
 
+def test_parse_html_ashby_frontcareers_slug_maps_to_front() -> None:
+    """Front's Ashby board slug is 'frontcareers', not 'front'."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/frontcareers/xyz-456")
+    assert result["company_name"] == "Front"
+
+
+def test_parse_html_ashby_grammarly_slug_maps_to_grammarly() -> None:
+    """Grammarly's Ashby board slug is its parent brand's legal entity name,
+    URL-encoded with spaces (%20) since it contains real spaces."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/Superhuman%20Platform%20Inc/xyz-456")
+    assert result["company_name"] == "Grammarly"
+
+
+def test_parse_html_ashby_url_encoded_slug_decoded_before_capitalizing() -> None:
+    """A %20-encoded slug with no override should still decode to real words
+    rather than leaking literal '%20' into the capitalized company name."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("ashby_job.html")
+    result = parse_html(html, "https://jobs.ashbyhq.com/Acme%20Corp/xyz-456")
+    assert result["company_name"] == "Acme Corp"
+
+
 # ---------------------------------------------------------------------------
 # parse_html — Ashby new markup (ashby_decagon_job.html)
 # Fixture captured from jobs.ashbyhq.com/decagon when location was returning
@@ -1856,3 +1885,138 @@ def test_parse_html_intuit_location() -> None:
         result["location"]
         == "Charlotte, North Carolina; Mountain View, California; Oakland, California"
     )
+
+
+# ---------------------------------------------------------------------------
+# Docusign (careers.docusign.com/careers-home/jobs/<id>) — title and
+# description already extract fine via the generic adapter; the site's own
+# og:site_name meta is buggy and echoes the full "<title> in <location> |
+# careers-home" page title instead of "Docusign". "#job-location" only
+# shows one arbitrary location from a multi-location posting, so location
+# comes from "#header-locations" instead, which carries the full list.
+# ---------------------------------------------------------------------------
+
+_DOCUSIGN_URL = "https://careers.docusign.com/careers-home/jobs/29733"
+
+
+def test_parse_html_docusign_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("docusign_job.html")
+    result = parse_html(html, _DOCUSIGN_URL)
+    assert result["title"] == "Senior Software Engineer - New Revenue"
+
+
+def test_parse_html_docusign_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("docusign_job.html")
+    result = parse_html(html, _DOCUSIGN_URL)
+    assert result["company_name"] == "Docusign"
+
+
+def test_parse_html_docusign_location_prefers_full_multi_location_list() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("docusign_job.html")
+    result = parse_html(html, _DOCUSIGN_URL)
+    assert result["location"] == "San Francisco, California; Seattle, Washington"
+
+
+# ---------------------------------------------------------------------------
+# DoorDash (careersatdoordash.com/jobs/<slug>/<id>) — title and company_name
+# already extract fine via the generic adapter; location and description
+# need dedicated selectors ("#jd-location" and ".content").
+# ---------------------------------------------------------------------------
+
+_DOORDASH_URL = "https://careersatdoordash.com/jobs/software-engineer-data-and-ai-platform/8171620"
+
+
+def test_parse_html_doordash_title_via_generic_h1() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("doordash_job.html")
+    result = parse_html(html, _DOORDASH_URL)
+    assert result["title"] == "SOFTWARE ENGINEER, DATA AND AI PLATFORM"
+
+
+def test_parse_html_doordash_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("doordash_job.html")
+    result = parse_html(html, _DOORDASH_URL)
+    assert result["location"] == "San Francisco, CA; Sunnyvale, CA"
+
+
+def test_parse_html_doordash_description() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("doordash_job.html")
+    result = parse_html(html, _DOORDASH_URL)
+    assert result["description"] is not None
+    assert "drill-down and cross-filter semantics" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Dropbox (dropbox.jobs/en/jobs/<id>/<slug>) — company_name and location come
+# from the page's own "#js-job-posting" schema.org JobPosting JSON-LD block
+# (same pattern as the Workable adapter), since the generic adapter's
+# og:site_name only yields the generic "Dropbox Careers" and there's no
+# plain-text location element.
+# ---------------------------------------------------------------------------
+
+_DROPBOX_URL = "https://www.dropbox.jobs/en/jobs/8006972/principal-software-engineer-core-sharing-collaboration/"
+
+
+def test_parse_html_dropbox_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("dropbox_job.html")
+    result = parse_html(html, _DROPBOX_URL)
+    assert result["company_name"] == "Dropbox"
+
+
+def test_parse_html_dropbox_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("dropbox_job.html")
+    result = parse_html(html, _DROPBOX_URL)
+    assert result["location"] == "Remote - US: All locations"
+
+
+def test_parse_html_dropbox_description_from_jsonld() -> None:
+    """The generic adapter finds no plain-text description container on this
+    React-rendered page; description must come from the JSON-LD block."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("dropbox_job.html")
+    result = parse_html(html, _DROPBOX_URL)
+    assert result["description"] is not None
+    assert "Principal Engineer at Dropbox" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# GitHub (www.github.careers/careers-home/jobs/<id>) — a Phenom People/iCIMS
+# board (same "#header-locations" pattern seen on careers.docusign.com).
+# company_name comes back from the generic adapter as the full page <title>
+# ("<role> in <location> | GitHub, Inc."), and location isn't visible via
+# any plain element the generic adapter checks.
+# ---------------------------------------------------------------------------
+
+_GITHUB_URL = "https://www.github.careers/careers-home/jobs/5679?lang=en-us"
+
+
+def test_parse_html_github_company() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("github_job.html")
+    result = parse_html(html, _GITHUB_URL)
+    assert result["company_name"] == "GitHub"
+
+
+def test_parse_html_github_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("github_job.html")
+    result = parse_html(html, _GITHUB_URL)
+    assert result["location"] == "United States"

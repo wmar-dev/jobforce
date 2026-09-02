@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify as md
@@ -212,11 +212,23 @@ def _workday_description(doc: BeautifulSoup, url: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+_ASHBY_SLUG_COMPANY_OVERRIDES = {
+    # Some companies' Ashby board slugs don't match their real name
+    # (e.g. jobs.ashbyhq.com/frontcareers/... is Front, not "Frontcareers").
+    "frontcareers": "Front",
+    # Grammarly's board is under its parent brand's legal entity name.
+    "superhuman platform inc": "Grammarly",
+}
+
+
 def _ashby_company(doc: BeautifulSoup, url: str) -> str | None:
     # Extract company from URL path: jobs.ashbyhq.com/figma/... → Figma
     parts = urlparse(url).path.strip("/").split("/")
     if parts and parts[0]:
-        return " ".join(w.capitalize() for w in parts[0].replace("-", " ").split())
+        slug = unquote(parts[0])
+        if override := _ASHBY_SLUG_COMPANY_OVERRIDES.get(slug.lower()):
+            return override
+        return " ".join(w.capitalize() for w in slug.replace("-", " ").split())
     return None
 
 
@@ -1272,6 +1284,94 @@ def _intuit_location(doc: BeautifulSoup, url: str) -> str | None:
     return text.strip() or None
 
 
+# ---------------------------------------------------------------------------
+# Docusign (careers.docusign.com/careers-home/jobs/<id>) — title and
+# description already extract fine via the generic adapter; the site's own
+# og:site_name meta is buggy and echoes the full "<title> in <location> |
+# careers-home" page title instead of "Docusign".
+# ---------------------------------------------------------------------------
+
+
+def _docusign_location(doc: BeautifulSoup, url: str) -> str | None:
+    # "#job-location" only shows a single, seemingly arbitrary pick from a
+    # multi-location posting (e.g. just "Seattle" for a job actually listed
+    # in "San Francisco; Seattle"); "#header-locations" carries the full,
+    # correct location list for both single- and multi-location postings.
+    return _text(doc.select_one("#header-locations"))
+
+
+# ---------------------------------------------------------------------------
+# DoorDash (careersatdoordash.com/jobs/<slug>/<id>) — title and company_name
+# already extract fine via the generic adapter; location and description
+# need dedicated selectors.
+# ---------------------------------------------------------------------------
+
+
+def _doordash_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one("#jd-location"))
+
+
+def _doordash_description(doc: BeautifulSoup, url: str) -> str | None:
+    return _to_markdown(doc.select_one(".content"))
+
+
+# ---------------------------------------------------------------------------
+# Dropbox (dropbox.jobs/en/jobs/<id>/<slug>) — company_name and location come
+# from the page's own "#js-job-posting" schema.org JobPosting JSON-LD block,
+# since the generic adapter's og:site_name only yields the generic "Dropbox
+# Careers" and there's no plain-text location element.
+# ---------------------------------------------------------------------------
+
+
+def _dropbox_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
+    import json as _json
+
+    script = doc.select_one("#js-job-posting")
+    if script is None:
+        return {}
+    try:
+        d = _json.loads(script.string or "")
+    except Exception:
+        return {}
+    return d if isinstance(d, dict) else {}
+
+
+def _dropbox_company(doc: BeautifulSoup, url: str) -> str | None:
+    d = _dropbox_jsonld(doc)
+    return (d.get("hiringOrganization") or {}).get("name") or None
+
+
+def _dropbox_location(doc: BeautifulSoup, url: str) -> str | None:
+    d = _dropbox_jsonld(doc)
+    return (d.get("jobLocation") or {}).get("name") or None
+
+
+def _dropbox_description(doc: BeautifulSoup, url: str) -> str | None:
+    # The generic adapter finds no plain-text description container on this
+    # React-rendered page; the JSON-LD "description" field is itself an HTML
+    # string, so convert it directly rather than via a BeautifulSoup Tag.
+    d = _dropbox_jsonld(doc)
+    html = d.get("description")
+    if not html:
+        return None
+    result = md(html, heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
+    return result or None
+
+
+# ---------------------------------------------------------------------------
+# GitHub (www.github.careers/careers-home/jobs/<id>) — a Phenom People/iCIMS
+# board (same "#header-locations" element id seen on careers.docusign.com).
+# title and description already extract fine via the generic adapter; the
+# page <title> is "<role> in <location> | GitHub, Inc." so company_name
+# needs a fixed override, and location isn't exposed via any plain element
+# the generic adapter checks.
+# ---------------------------------------------------------------------------
+
+
+def _github_location(doc: BeautifulSoup, url: str) -> str | None:
+    return _text(doc.select_one("#header-locations"))
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "careers.airbnb.com": {
         "company_name": lambda doc, url: "Airbnb",
@@ -1464,6 +1564,23 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "jobs.intuit.com": {
         "company_name": _intuit_company,
         "location": _intuit_location,
+    },
+    "careers.docusign.com": {
+        "company_name": lambda doc, url: "Docusign",
+        "location": _docusign_location,
+    },
+    "github.careers": {
+        "company_name": lambda doc, url: "GitHub",
+        "location": _github_location,
+    },
+    "careersatdoordash.com": {
+        "location": _doordash_location,
+        "description": _doordash_description,
+    },
+    "dropbox.jobs": {
+        "company_name": _dropbox_company,
+        "location": _dropbox_location,
+        "description": _dropbox_description,
     },
 }
 

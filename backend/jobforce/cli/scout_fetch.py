@@ -76,6 +76,12 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     # can resolve before the real job content (".content-intro") has
     # hydrated in, so wait on it directly to avoid an intermittent race.
     "coinbase.com": "document.querySelector('.content-intro')?.textContent.trim().length > 0",
+    # careers.docusign.com's <h1>/title render immediately, but the
+    # "#header-locations" element is added to the DOM later once client-side
+    # hydration finishes.
+    "careers.docusign.com": (
+        "document.querySelector('#header-locations')?.textContent.trim().length > 0"
+    ),
 }
 
 
