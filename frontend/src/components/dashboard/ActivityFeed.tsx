@@ -68,7 +68,14 @@ export function ActivityFeed({ transitions, notes }: ActivityFeedProps) {
               </span>
             ) : (
               <span className="text-sm text-gray-400 truncate block">
-                Note on company #{entry.item.company_id}: {entry.item.content}
+                Note on{" "}
+                <a
+                  href={`/companies/${entry.item.company_id}`}
+                  className="text-emerald-400 hover:text-emerald-300"
+                >
+                  company #{entry.item.company_id}
+                </a>
+                : {entry.item.content}
               </span>
             )}
           </div>

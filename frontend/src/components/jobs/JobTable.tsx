@@ -92,7 +92,14 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   )}
                 </Link>
               </td>
-              <td className="py-3 pr-4 text-gray-300">{job.company.name}</td>
+              <td className="py-3 pr-4 text-gray-300">
+                <Link
+                  href={`/companies/${job.company.id}`}
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  {job.company.name}
+                </Link>
+              </td>
               <td className="py-3 pr-4 text-gray-400">{job.location ?? "—"}</td>
               <td className="py-3 pr-4">
                 <StatusBadge status={job.status} />

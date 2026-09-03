@@ -82,7 +82,12 @@ export default function OraclePage() {
                       >
                         {job.title}
                       </Link>
-                      <p className="text-gray-500 text-xs mt-0.5">{job.company.name}</p>
+                      <Link
+                        href={`/companies/${job.company.id}`}
+                        className="block text-gray-500 hover:text-gray-300 text-xs mt-0.5 transition-colors"
+                      >
+                        {job.company.name}
+                      </Link>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -126,7 +131,12 @@ export default function OraclePage() {
                   >
                     {job.title}
                   </Link>
-                  <p className="text-gray-600 text-xs mt-0.5">{job.company.name}</p>
+                  <Link
+                    href={`/companies/${job.company.id}`}
+                    className="block text-gray-600 hover:text-gray-300 text-xs mt-0.5 transition-colors"
+                  >
+                    {job.company.name}
+                  </Link>
                 </div>
                 <StatusBadge status={job.status} />
               </div>
