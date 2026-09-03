@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
-from ._common import GENERIC_ADAPTER, slug_to_location
+from ._common import GENERIC_ADAPTER, normalize_description, slug_to_location
 from ._hn import _parse_hn
 from .sites import SITE_ADAPTERS
 
@@ -19,6 +19,7 @@ __all__ = [
     "SITE_ADAPTERS",
     "_match_adapter",
     "merge",
+    "normalize_description",
     "parse_html",
     "run_adapter",
     "slug_to_location",

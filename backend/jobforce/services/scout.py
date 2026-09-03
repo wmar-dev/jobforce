@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.models import Company, JobListing, StatusTransition
+from jobforce.services.parse import normalize_description
 from jobforce.services.storage import store_snapshot
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ async def ingest_listing(
     existing_job = existing.scalar_one_or_none()
     if existing_job is not None:
         if payload.description:
-            existing_job.description = payload.description
+            existing_job.description = normalize_description(payload.description)
         if payload.html:
             await store_snapshot(
                 session, existing_job.id, payload.html.encode("utf-8"), pages_dir=pages_dir
@@ -70,7 +71,7 @@ async def ingest_listing(
         title=payload.title,
         location=payload.location,
         role_type=payload.role_type,
-        description=payload.description,
+        description=normalize_description(payload.description),
         source_url=payload.source_url,
         status="saved",
         crawled_at=now,

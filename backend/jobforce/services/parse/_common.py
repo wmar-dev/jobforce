@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as html_module
 import re
 from typing import Any
 
@@ -44,6 +45,27 @@ def _to_markdown(el: Tag | None) -> str | None:
         return None
     result = md(str(el), heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
     return result or None
+
+
+_HTML_TAG_RE = re.compile(r"<[a-zA-Z][^>]*>")
+
+
+def normalize_description(description: str | None) -> str | None:
+    """Guard against HTML-entity-escaped markup landing in `description` verbatim.
+
+    Some ingest sources (e.g. an ATS JSON API's rich-text field) hand back
+    HTML pre-escaped for embedding — a raw copy shows up as literal
+    `&lt;div&gt;` text instead of rendered content. Unescape, and if that
+    reveals real HTML tags, convert to markdown so storage stays consistent
+    with the normal parse_html path.
+    """
+    if description is None:
+        return None
+    unescaped = html_module.unescape(description)
+    if _HTML_TAG_RE.search(unescaped):
+        result = md(unescaped, heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
+        return result or None
+    return unescaped.strip() or None
 
 
 # ---------------------------------------------------------------------------

@@ -310,6 +310,7 @@ For each URL that passed the anchor-text filter in 4d:
      "description": "..."
    }
    ```
+   The `description` value **must** be copied verbatim from step 2's `scout_fetch` JSON output field of the same name — never hand-write it from a raw page fetch, a WebFetch summary, or an ATS JSON API response. Those sources return rich text pre-escaped for HTML embedding (literal `&lt;div&gt;`, `&quot;`, etc.); only `scout_fetch`'s own parser (which renders the real page and converts it to clean markdown) produces a value safe to store as-is. If you ever bypass `scout_fetch` for a job (e.g. hitting an ATS API directly instead of running step 2), do not paste its raw content field into `description` — it needs `html.unescape()` at minimum, ideally re-parsed to markdown, before it's usable.
 
 6. POST to ingest:
    ```bash
