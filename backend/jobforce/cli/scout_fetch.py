@@ -105,6 +105,10 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     "jobs.twilio.com": (
         "document.querySelector('h2[class*=\"position-title\"]')?.textContent.trim().length > 0"
     ),
+    # surgehq.ai/careers?id=... renders a static "Careers" <h1> shell for the
+    # index list immediately; the actual job's h2.js-title only fills in once
+    # the Webflow CMS list finishes hydrating and matches the ?id= param.
+    "surgehq.ai": "document.querySelector('h2.js-title')?.textContent.trim().length > 0",
     # careers.chime.com's <h1>/title render immediately, but the ".jobCopy"
     # description div is present-but-empty until the SPA hydrates and fills
     # in the job body client-side.
