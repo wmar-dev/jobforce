@@ -82,6 +82,14 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     "careers.docusign.com": (
         "document.querySelector('#header-locations')?.textContent.trim().length > 0"
     ),
+    # Phenom People boards (Yelp, Adobe) attach an empty <h1 class="job-title">
+    # template shell immediately, satisfying the bare "h1, main h2" wait
+    # before the client-side hydration that fills in the real title,
+    # location, and description (and the page's JobPosting JSON-LD block)
+    # has run — left job 3106's Adobe listing with everything but
+    # company_name null on first crawl.
+    "yelp.careers": "document.querySelector('h1.job-title')?.textContent.trim().length > 0",
+    "careers.adobe.com": ("document.querySelector('h1.job-title')?.textContent.trim().length > 0"),
 }
 
 

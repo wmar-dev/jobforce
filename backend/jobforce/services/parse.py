@@ -1433,21 +1433,22 @@ def _intuitivesurgical_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Yelp (www.yelp.careers/us/en/job/<id>/<slug>) — a Phenom People board.
-# title and company_name already extract fine via the generic adapter (h1 +
-# og:site_name); location and description do not. The page renders a
-# duplicate, unfilled "job-description"/".jd-info" template block alongside
-# the real one (a Phenom quirk that leaves the generic description selector
-# picking up nav/footer/widget cruft instead), so description is pulled from
-# the page's own schema.org JobPosting JSON-LD block. location isn't a
-# single plain-text element either — the JobPosting has multiple
-# jobLocation entries for multi-office reqs — so it's parsed from the page
-# <title>'s "job in <location> |" segment, which names the specific location
-# this URL represents. role_type comes from the JSON-LD employmentType list.
+# Phenom People boards — Yelp (www.yelp.careers) and Adobe (careers.adobe.com)
+# share this ATS template. title and company_name already extract fine via
+# the generic adapter (h1 + og:site_name); location and description do not.
+# The page renders a duplicate, unfilled "job-description"/".jd-info"
+# template block alongside the real one (a Phenom quirk that leaves the
+# generic description selector picking up nav/footer/widget cruft instead),
+# so description is pulled from the page's own schema.org JobPosting
+# JSON-LD block. location isn't a single plain-text element either — the
+# JobPosting's jobLocation can be a single Place (Adobe) or a list of them
+# for multi-office reqs (Yelp) — so it's parsed from the page <title>'s
+# "job in <location> |" segment, which names the specific location this URL
+# represents. role_type comes from the JSON-LD employmentType list.
 # ---------------------------------------------------------------------------
 
 
-def _yelp_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
+def _phenom_people_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
     import json as _json
 
     for script in doc.find_all("script", type="application/ld+json"):
@@ -1462,26 +1463,32 @@ def _yelp_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
     return {}
 
 
-def _yelp_location(doc: BeautifulSoup, url: str) -> str | None:
+def _phenom_people_location(doc: BeautifulSoup, url: str) -> str | None:
+    # The title format varies by tenant: Yelp's is "<title> job in <location> |
+    # ...", Adobe's is "<title> in <location> | ..." — so find the last " in "
+    # before the pipe rather than anchoring on the word "job".
     title = _text(doc.title)
     if not title:
         return None
-    m = re.search(r"\bjob in (.+?) \|", title)
-    return m.group(1).strip() if m else None
+    before_pipe = title.split(" | ")[0]
+    idx = before_pipe.rfind(" in ")
+    if idx == -1:
+        return None
+    return before_pipe[idx + len(" in ") :].strip() or None
 
 
-def _yelp_description(doc: BeautifulSoup, url: str) -> str | None:
+def _phenom_people_description(doc: BeautifulSoup, url: str) -> str | None:
     import html as _html
 
-    raw = _yelp_jsonld(doc).get("description")
+    raw = _phenom_people_jsonld(doc).get("description")
     if not raw:
         return None
     result = md(_html.unescape(raw), heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
     return result or None
 
 
-def _yelp_role_type(doc: BeautifulSoup, url: str) -> str | None:
-    types = _yelp_jsonld(doc).get("employmentType")
+def _phenom_people_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    types = _phenom_people_jsonld(doc).get("employmentType")
     if not types:
         return None
     joined = " ".join(types if isinstance(types, list) else [types]).upper()
@@ -1721,9 +1728,14 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "description": _dropbox_description,
     },
     "yelp.careers": {
-        "location": _yelp_location,
-        "description": _yelp_description,
-        "role_type": _yelp_role_type,
+        "location": _phenom_people_location,
+        "description": _phenom_people_description,
+        "role_type": _phenom_people_role_type,
+    },
+    "careers.adobe.com": {
+        "location": _phenom_people_location,
+        "description": _phenom_people_description,
+        "role_type": _phenom_people_role_type,
     },
 }
 
