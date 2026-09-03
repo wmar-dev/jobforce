@@ -101,7 +101,7 @@ backend/jobforce/
 | `meeting_notes`      | Notes per company/job from recruiter calls                                     |
 | `interview_sessions` | Coach-generated prep questions                                                 |
 
-Resume `structured_data` is a JSON string with keys: `headline`, `skills`, `experience` (company/title/duration/bullets), `education`.
+Resume `structured_data` is a JSON string with keys: `personal_info`, `summary`, `skills`, `work_history` (company/title/start_date/end_date/location/bullets), `education`, `projects`, `certifications`, `coursework`, `patents`.
 
 ### Frontend Structure
 
