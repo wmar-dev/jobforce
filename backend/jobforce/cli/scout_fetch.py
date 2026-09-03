@@ -90,6 +90,14 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     # company_name null on first crawl.
     "yelp.careers": "document.querySelector('h1.job-title')?.textContent.trim().length > 0",
     "careers.adobe.com": ("document.querySelector('h1.job-title')?.textContent.trim().length > 0"),
+    # apply.careers.microsoft.com is the same Eightfold-powered ATS as
+    # jobs.twilio.com: the static <h1> ("Single Position") attaches
+    # immediately, satisfying the bare "h1, main h2" wait before the real
+    # title/location/description hydrate into the <h2> and description
+    # container below it.
+    "apply.careers.microsoft.com": (
+        "document.querySelector('h2[class*=\"position-title\"]')?.textContent.trim().length > 0"
+    ),
 }
 
 
