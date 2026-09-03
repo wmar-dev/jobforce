@@ -34,6 +34,8 @@ class JobListingSummary(BaseModel):
     role_type: str | None
     location: str | None
     created_at: str
+    fit_score: float | None
+    fit_scored: bool
 
 
 class NoteOut(BaseModel):
@@ -117,8 +119,13 @@ async def get_company(
             role_type=j.role_type,
             location=j.location,
             created_at=j.created_at,
+            fit_score=j.fit_score,
+            fit_scored=bool(j.fit_scored),
         )
-        for j in company.job_listings
+        for j in sorted(
+            company.job_listings,
+            key=lambda j: (j.fit_score is None, -(j.fit_score or 0)),
+        )
     ]
 
     notes = [

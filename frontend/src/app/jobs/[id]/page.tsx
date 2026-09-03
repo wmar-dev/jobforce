@@ -137,7 +137,12 @@ export default function JobDetailPage({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">{job.title}</h1>
-            <p className="text-gray-400 text-base">{job.company.name}</p>
+            <Link
+              href={`/companies/${job.company.id}`}
+              className="text-gray-400 hover:text-emerald-400 text-base transition-colors"
+            >
+              {job.company.name}
+            </Link>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <StatusBadge status={job.status} />

@@ -92,6 +92,13 @@ export default function CompanyDetailPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {job.fit_scored && job.fit_score != null ? (
+                      <span className="text-violet-300 font-mono text-xs">
+                        {Math.round(job.fit_score * 100)}%
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 text-xs">Not scored</span>
+                    )}
                     <StatusBadge status={job.status as PipelineStatus} />
                     <button
                       onClick={() => {

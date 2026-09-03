@@ -189,6 +189,8 @@ export interface CompanyDetail {
     role_type?: RoleType | null;
     location?: string | null;
     created_at: string;
+    fit_score?: number | null;
+    fit_scored: boolean;
   }>;
   notes: MeetingNote[];
 }
