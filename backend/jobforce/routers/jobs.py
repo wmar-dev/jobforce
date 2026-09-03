@@ -328,7 +328,7 @@ async def reparse_job(
 ) -> Any:
     """Re-extract fields from the stored HTML snapshot using the current site adapter.
 
-    Use this after improving a site adapter in `services/parse.py` to update
+    Use this after improving a site adapter in `services/parse/sites/` to update
     title, location, role_type, and description without re-crawling the page.
     Returns 404 if the job or its snapshot does not exist.
     """

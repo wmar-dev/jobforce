@@ -1,6 +1,6 @@
 ---
 name: parse-adapter-update
-description: Inspect a job posting URL, capture an HTML fixture, write failing tests, and add or update the backend's site-specific parser adapter in backend/jobforce/services/parse.py — the parser used by scout_fetch and /scout-companies for automated crawling. Use when scout_fetch fails to extract title/company_name/location/description for a site, or when /scout-companies reports a parse check failure (step 4f/4h).
+description: Inspect a job posting URL, capture an HTML fixture, write failing tests, and add or update the backend's site-specific parser adapter as its own module in backend/jobforce/services/parse/sites/ — the parser used by scout_fetch and /scout-companies for automated crawling. Use when scout_fetch fails to extract title/company_name/location/description for a site, or when /scout-companies reports a parse check failure (step 4f/4h).
 argument-hint: "<url> [job_id]"
 user-invocable: true
 ---
@@ -8,11 +8,20 @@ user-invocable: true
 # Parse Adapter Update
 
 Inspect a job posting URL, capture a minimal HTML fixture, write test-first
-assertions, then add or update the site-specific adapter in
-`backend/jobforce/services/parse.py`. This is the **backend** parser used by
-`scout_fetch` / `/scout-companies` for automated crawling — a separate
-registry from the Chrome extension's `content.js` (see `/site-adapter-update`
-for that one).
+assertions, then add or update the site-specific adapter as its own module
+under `backend/jobforce/services/parse/sites/`. This is the **backend**
+parser used by `scout_fetch` / `/scout-companies` for automated crawling — a
+separate registry from the Chrome extension's `content.js` (see
+`/site-adapter-update` for that one).
+
+`backend/jobforce/services/parse/` is a package, not a single file:
+`sites/__init__.py` auto-discovers every module in `sites/` at import time —
+each module contributes its own `HOSTNAME` (or `HOSTNAMES` for a
+multi-tenant ATS) plus an `ADAPTER` dict. **Adding a new adapter means
+creating a new file — there is no shared registry dict to edit**, so
+adapter work for different sites never conflicts. Shared helpers
+(`_text`, `_to_markdown`, `slug_to_location`, `GENERIC_ADAPTER`) live in
+`backend/jobforce/services/parse/_common.py`.
 
 ## Usage
 
@@ -85,7 +94,10 @@ client-rendered SPAs, and `parse_html` must work against the same DOM
 Compute `hostname = urlparse(url).hostname`, stripping a leading `www.` —
 this must match `parse.py`'s own normalization (`parse_html`).
 
-Check `backend/jobforce/services/parse.py`'s `SITE_ADAPTERS` dict:
+Check `backend/jobforce/services/parse`'s `SITE_ADAPTERS` (assembled at
+import time from every module in `backend/jobforce/services/parse/sites/` —
+`python -c "from jobforce.services.parse import SITE_ADAPTERS; print(sorted(SITE_ADAPTERS))"`
+or just `ls backend/jobforce/services/parse/sites/` to see what exists):
 
 - **Hostname not present** (and no suffix match via `_match_adapter`'s
   subdomain logic, e.g. `*.myworkdayjobs.com`): this is a **new adapter**.
@@ -93,25 +105,27 @@ Check `backend/jobforce/services/parse.py`'s `SITE_ADAPTERS` dict:
   copyright, `<title>`, or `og:site_name`) — cross-check against
   `config.yaml`'s `search.target_companies` for this domain if an entry
   exists, for correct casing.
-  - Fixture name: `<company_slug>_job.html` (lowercase, underscores —
-    e.g. `larridin_job.html`)
-  - Test section name: `<company_slug>` (e.g. `larridin`)
+  - New module: `backend/jobforce/services/parse/sites/<company_slug>.py`
+    (lowercase, underscores — e.g. `larridin.py`)
+  - Fixture name: `<company_slug>_job.html` (e.g. `larridin_job.html`)
+  - New test file: `backend/tests/unit/test_parse_<company_slug>.py`
 
 - **Hostname already present**: this is an **existing shared-ATS adapter**
   (Ashby, Greenhouse, Workday, Lever, Workable, Notion, etc.) that doesn't
-  handle this particular company's page layout correctly. Use the
-  `<ats>_<company>_job.html` naming convention already established for this
-  case (e.g. `ashby_decagon_job.html`):
+  handle this particular company's page layout correctly. Edit that
+  adapter's existing module and test file directly — don't create a new
+  one. Use the `<ats>_<company>_job.html` fixture naming convention already
+  established for this case (e.g. `ashby_decagon_job.html`):
 
-  | `SITE_ADAPTERS` key | prefix |
+  | Adapter module | fixture/test prefix |
   | --- | --- |
-  | `jobs.ashbyhq.com` | `ashby` |
-  | `job-boards.greenhouse.io` / `boards.greenhouse.io` | `greenhouse` |
-  | `myworkdayjobs.com` | `workday` |
-  | `jobs.lever.co` | `lever` |
-  | `jobs.workable.com` | `workable` |
-  | `notion.site` | `notion` |
-  | anything else | derive from the existing adapter's hostname |
+  | `sites/ashby.py` (`jobs.ashbyhq.com`) | `ashby` |
+  | `sites/greenhouse.py` (`job-boards.greenhouse.io` / `boards.greenhouse.io`) | `greenhouse` |
+  | `sites/workday.py` (`myworkdayjobs.com`) | `workday` |
+  | `sites/lever.py` (`jobs.lever.co`) | `lever` |
+  | `sites/workable.py` (`jobs.workable.com` / `apply.workable.com`) | `workable` |
+  | `sites/notion.py` (`notion.site`) | `notion` |
+  | anything else | derive from the existing adapter module's name |
 
 ## Step 5: Trim and Write the Fixture
 
@@ -132,16 +146,17 @@ Write the trimmed HTML to `backend/tests/fixtures/<name>.html`.
 
 ## Step 6: Git Guard
 
-Run:
+Only relevant for the **existing-ATS adapter** case, since a new adapter's
+module/test file don't exist yet and can't have pending edits. Run:
 
 ```bash
-git diff --name-only backend/jobforce/services/parse.py backend/tests/unit/test_parse_service.py
+git diff --name-only backend/jobforce/services/parse/sites/<ats>.py backend/tests/unit/test_parse_<ats>.py
 ```
 
 If this produces any output, print:
 
 ```
-⚠️ parse.py or test_parse_service.py has uncommitted changes.
+⚠️ sites/<ats>.py or test_parse_<ats>.py has uncommitted changes.
    Commit or stash them before running this skill.
 ```
 
@@ -150,16 +165,25 @@ untracked and fine.)
 
 ## Step 7: Write Failing Tests (Test-First)
 
-`test_parse_service.py` is written test-first — new adapter coverage follows
-the same pattern as the existing `# AdaL (adalagent.ai)` section near the end
-of the file.
+Every site's tests are written test-first, in their own file — follow the
+pattern of an existing one (e.g. `backend/tests/unit/test_parse_larridin.py`
+or `test_parse_service_hn.py`) for the `FIXTURES` / `_read()` boilerplate.
 
-**New adapter**: append a new section:
+**New adapter**: create `backend/tests/unit/test_parse_<company>.py`:
 
 ```python
-# ---------------------------------------------------------------------------
-# <Company> (<hostname>) — <one-line note on page structure / quirks>
-# ---------------------------------------------------------------------------
+"""Unit tests for the <Company> (<hostname>) adapter — <one-line note on page structure / quirks>."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+FIXTURES = Path(__file__).parent.parent / "fixtures"
+
+
+def _read(name: str) -> str:
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
 
 _<COMPANY>_URL = "<url>"
 
@@ -193,14 +217,14 @@ extracts correctly via the generic adapter, don't add a redundant test/override
 for it.
 
 **Existing-ATS adapter with a layout bug**: add tests to that adapter's
-existing test section (don't create a new section), parameterized on the new
+existing test file (`test_parse_<ats>.py`), parameterized on the new
 fixture — mirror how `ashby_decagon_job.html` tests sit alongside the base
-`ashby_job.html` tests.
+`ashby_job.html` tests in `test_parse_ashby.py`.
 
 Run the new tests and confirm they **fail**:
 
 ```bash
-cd backend && uv run pytest tests/unit/test_parse_service.py -q -k "<company>"
+cd backend && uv run pytest tests/unit/test_parse_<company>.py -q
 ```
 
 If a test unexpectedly passes already, the generic adapter handles that
@@ -208,30 +232,60 @@ field — delete that test rather than writing a needless override.
 
 ## Step 8: Implement the Adapter, Then Verify
 
-Add/update functions in `parse.py` near the relevant section (or a new
-section, following the existing `# --- Company (hostname) ---` comment-block
-style):
+**New adapter**: create `backend/jobforce/services/parse/sites/<company>.py`,
+following the style of an existing site module (e.g. `sites/larridin.py`):
+
+```python
+# ---------------------------------------------------------------------------
+# <Company> (<hostname>) — <one-line note on page structure / quirks>
+# ---------------------------------------------------------------------------
+
+from __future__ import annotations
+
+from typing import Any
+
+from bs4 import BeautifulSoup
+
+from .._common import _text, _to_markdown  # only what you actually use
+
+HOSTNAME = "<hostname>"  # or HOSTNAMES = [...] for a multi-tenant ATS
+
+
+def _<company>_location(doc: BeautifulSoup, url: str) -> str | None:
+    ...
+
+
+ADAPTER: dict[str, Any] = {
+    "location": _<company>_location,
+    # only the fields this adapter overrides — everything else falls
+    # through to GENERIC_ADAPTER
+}
+```
+
+No registry file to touch — `sites/__init__.py` auto-discovers this module
+the next time anything imports `jobforce.services.parse`.
 
 - Prefer `doc.select_one(...)` with real classes/ids from the fixture, or
   structural relationships (`find_next_sibling`, heading + next element)
   over brittle nth-child paths.
-- Use `_text()` for plain-text fields, `_to_markdown()` for `description`.
+- Use `_text()` for plain-text fields, `_to_markdown()` for `description`
+  (both importable from `.._common`).
 - A field with a fixed value (the adapter only ever serves one company) is a
   one-line lambda: `"company_name": lambda doc, url: "<Company>"`.
-- **Existing-ATS adapter**: keep the old selector working as a fallback
-  (try the new selector first, fall back to the old) so existing fixtures for
-  other companies on that ATS continue to pass.
-- Register/update the entry in `SITE_ADAPTERS`, including only the fields
-  this adapter overrides — everything else falls through to
-  `GENERIC_ADAPTER`.
+
+**Existing-ATS adapter**: edit the functions in `sites/<ats>.py` directly —
+keep the old selector working as a fallback (try the new selector first,
+fall back to the old) so existing fixtures for other companies on that ATS
+continue to pass. `ADAPTER` in that same file already registers every field
+it overrides.
 
 Iterate until green, then check for regressions and quality gates:
 
 ```bash
-cd backend && uv run pytest tests/unit/test_parse_service.py -q
-cd backend && uv run ruff check jobforce/services/parse.py tests/unit/test_parse_service.py
-cd backend && uv run ruff format --check jobforce/services/parse.py tests/unit/test_parse_service.py
-cd backend && uv run mypy jobforce/services/parse.py
+cd backend && uv run pytest tests/unit/ -q -k "parse"
+cd backend && uv run ruff check jobforce/services/parse/ tests/unit/test_parse_<company>.py
+cd backend && uv run ruff format --check jobforce/services/parse/ tests/unit/test_parse_<company>.py
+cd backend && uv run mypy jobforce/services/parse/
 ```
 
 Fix anything that doesn't pass before continuing.
@@ -282,9 +336,10 @@ Print a completion report:
   ("Verify location parsed correctly" → fix adapter) — run it directly when
   you already have a failing URL, or when `/scout-companies` flags a parse
   check failure (step 4f).
-- This skill only touches `backend/jobforce/services/parse.py`,
-  `backend/tests/unit/test_parse_service.py`, and
-  `backend/tests/fixtures/`. For the Chrome extension's capture-on-click
-  adapter (`chrome-extension/content.js`), use `/site-adapter-update`.
+- This skill only touches `backend/jobforce/services/parse/` (adding or
+  editing one module under `sites/`), one `backend/tests/unit/test_parse_*.py`
+  file, and `backend/tests/fixtures/`. For the Chrome extension's
+  capture-on-click adapter (`chrome-extension/content.js`), use
+  `/site-adapter-update`.
 - Run the skill twice on the same URL to verify idempotency — the second run
   should report "already parses correctly" in Step 2.

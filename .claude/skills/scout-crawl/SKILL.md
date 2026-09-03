@@ -46,5 +46,5 @@ Capture a job listing from a URL and ingest it into Jobforce using a determinist
 - `playwright` and Chromium must be installed: `cd backend && uv sync && uv run playwright install chromium`
 - The parser uses site-specific adapters. For unsupported sites the generic adapter runs.
 - Login-gated pages are not supported; the tool will time out or return incomplete data.
-- To add a new site adapter, edit `backend/jobforce/services/parse.py`.
+- To add a new site adapter, add a module to `backend/jobforce/services/parse/sites/` (see `/parse-adapter-update`).
 - Use `--dry-run` to parse without writing to the database.

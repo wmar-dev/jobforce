@@ -1,0 +1,111 @@
+"""Shared helpers plus the generic/fallback adapter used by every site module."""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from bs4 import BeautifulSoup, Tag
+from markdownify import markdownify as md
+
+_CITIES = [
+    "san-francisco",
+    "new-york",
+    "london",
+    "seattle",
+    "remote",
+    "boston",
+    "chicago",
+    "austin",
+]
+
+
+def slug_to_location(pathname: str) -> str | None:
+    seg = pathname.rstrip("/").split("/")[-1] or ""
+    # Check suffix match first (e.g. "...-san-francisco")
+    hit = next((c for c in _CITIES if seg.endswith(c)), None)
+    if not hit:
+        # Also match city anywhere in slug (e.g. "...-remote-us")
+        hit = next((c for c in _CITIES if f"-{c}-" in seg or seg.startswith(f"{c}-")), None)
+    if not hit:
+        return None
+    return " ".join(w.capitalize() for w in hit.split("-"))
+
+
+def _text(el: Tag | None) -> str | None:
+    if el is None:
+        return None
+    t = (el.get_text(separator=" ") or "").strip()
+    return t or None
+
+
+def _to_markdown(el: Tag | None) -> str | None:
+    if el is None:
+        return None
+    result = md(str(el), heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
+    return result or None
+
+
+# ---------------------------------------------------------------------------
+# Generic adapter — equivalent to genericAdapter in content.js
+# ---------------------------------------------------------------------------
+
+
+def _generic_title(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("h1")
+    if el and (t := _text(el)):
+        return t
+    title_tag = doc.find("title")
+    if title_tag:
+        raw = (title_tag.get_text() or "").strip()
+        return re.sub(r"\s*[-|].*$", "", raw).strip() or None
+    return None
+
+
+def _generic_company(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("[data-company], .company-name, .employer-name")
+    if el and (t := _text(el)):
+        return t
+    meta = doc.find("meta", attrs={"property": "og:site_name"})
+    if meta:
+        return (meta.get("content") or "").strip() or None  # type: ignore[union-attr]
+    return None
+
+
+def _generic_location(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one("[data-location], .job-location, .location")
+    if el and (t := _text(el)):
+        return t
+    meta = doc.find("meta", attrs={"name": "job:location"})
+    if meta:
+        return (meta.get("content") or "").strip() or None  # type: ignore[union-attr]
+    return None
+
+
+def _generic_description(doc: BeautifulSoup, url: str) -> str | None:
+    el = doc.select_one('[class*="description"], [class*="job-desc"], #job-description')
+    return _to_markdown(el)
+
+
+def _generic_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    body = doc.body
+    t = (body.get_text() if body else "").lower()
+    if "full-time" in t or "full time" in t:
+        return "full-time"
+    if "part-time" in t or "part time" in t:
+        return "part-time"
+    # Use word boundary to avoid matching "contractor" / "government contractor"
+    if re.search(r"\bcontract\b", t):
+        return "contract"
+    if re.search(r"\bintern(ship)?\b", t):
+        return "internship"
+    return None
+
+
+GENERIC_ADAPTER: dict[str, Any] = {
+    "title": _generic_title,
+    "company_name": _generic_company,
+    "location": _generic_location,
+    "description": _generic_description,
+    "role_type": _generic_role_type,
+}
