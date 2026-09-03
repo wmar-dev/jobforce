@@ -50,6 +50,43 @@ async def _fetch_nebius_greenhouse_html(url: str) -> str | None:
     )
 
 
+async def _fetch_coreweave_greenhouse_html(url: str) -> str | None:
+    """coreweave.com/careers/job embeds the actual Greenhouse job description
+    and apply flow in a cross-origin iframe
+    (job-boards.greenhouse.io/embed/job_app?...) that the wrapper page's own
+    DOM never exposes — same root cause as careers.nebius.com above. Bypass
+    rendering entirely and pull the job data from Greenhouse's public,
+    unauthenticated Jobs API instead, then synthesize minimal HTML for
+    parse_html to read.
+    """
+    import httpx
+
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").removeprefix("www.")
+    if hostname != "coreweave.com":
+        return None
+    gh_jid_values = parse_qs(parsed.query).get("gh_jid") or []
+    if not gh_jid_values:
+        return None
+    gh_jid = gh_jid_values[0]
+    api_url = f"https://boards-api.greenhouse.io/v1/boards/coreweave/jobs/{gh_jid}?content=true"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(api_url)
+    if resp.status_code != 200:
+        return None
+    data = resp.json()
+    title = html_module.escape((data.get("title") or "").strip())
+    location = html_module.escape((data.get("location") or {}).get("name") or "")
+    description_html = html_module.unescape(data.get("content") or "")
+    return (
+        f"<!doctype html><html><head><title>{title} | CoreWeave</title></head><body>"
+        f'<h1 class="coreweave-gh-title">{title}</h1>'
+        f'<div class="coreweave-gh-location">{location}</div>'
+        f'<div class="coreweave-gh-description">{description_html}</div>'
+        "</body></html>"
+    )
+
+
 # Hosts whose job content hydrates in client-side after the initial DOM
 # marker (h1/h2) is already attached, so a bare "h1, main h2" wait resolves
 # before the real title/location/description are present. Maps a hostname
@@ -105,6 +142,9 @@ async def _fetch_html(url: str) -> str:
     nebius_html = await _fetch_nebius_greenhouse_html(url)
     if nebius_html is not None:
         return nebius_html
+    coreweave_html = await _fetch_coreweave_greenhouse_html(url)
+    if coreweave_html is not None:
+        return coreweave_html
 
     from playwright.async_api import TimeoutError as PlaywrightTimeout
     from playwright.async_api import async_playwright
