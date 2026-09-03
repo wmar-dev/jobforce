@@ -1432,6 +1432,70 @@ def _intuitivesurgical_description(doc: BeautifulSoup, url: str) -> str | None:
     return _to_markdown(doc.select_one("article.cms-content"))
 
 
+# ---------------------------------------------------------------------------
+# Yelp (www.yelp.careers/us/en/job/<id>/<slug>) — a Phenom People board.
+# title and company_name already extract fine via the generic adapter (h1 +
+# og:site_name); location and description do not. The page renders a
+# duplicate, unfilled "job-description"/".jd-info" template block alongside
+# the real one (a Phenom quirk that leaves the generic description selector
+# picking up nav/footer/widget cruft instead), so description is pulled from
+# the page's own schema.org JobPosting JSON-LD block. location isn't a
+# single plain-text element either — the JobPosting has multiple
+# jobLocation entries for multi-office reqs — so it's parsed from the page
+# <title>'s "job in <location> |" segment, which names the specific location
+# this URL represents. role_type comes from the JSON-LD employmentType list.
+# ---------------------------------------------------------------------------
+
+
+def _yelp_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
+    import json as _json
+
+    for script in doc.find_all("script", type="application/ld+json"):
+        if script.get("id"):
+            continue
+        try:
+            d = _json.loads(script.string or "")
+        except Exception:
+            continue
+        if isinstance(d, dict) and "hiringOrganization" in d:
+            return d
+    return {}
+
+
+def _yelp_location(doc: BeautifulSoup, url: str) -> str | None:
+    title = _text(doc.title)
+    if not title:
+        return None
+    m = re.search(r"\bjob in (.+?) \|", title)
+    return m.group(1).strip() if m else None
+
+
+def _yelp_description(doc: BeautifulSoup, url: str) -> str | None:
+    import html as _html
+
+    raw = _yelp_jsonld(doc).get("description")
+    if not raw:
+        return None
+    result = md(_html.unescape(raw), heading_style="ATX", bullets="-", strip=["a", "img"]).strip()
+    return result or None
+
+
+def _yelp_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    types = _yelp_jsonld(doc).get("employmentType")
+    if not types:
+        return None
+    joined = " ".join(types if isinstance(types, list) else [types]).upper()
+    if "FULL_TIME" in joined:
+        return "full-time"
+    if "PART_TIME" in joined:
+        return "part-time"
+    if "CONTRACT" in joined:
+        return "contract"
+    if "INTERN" in joined:
+        return "internship"
+    return None
+
+
 SITE_ADAPTERS: dict[str, dict[str, Any]] = {
     "careers.airbnb.com": {
         "company_name": lambda doc, url: "Airbnb",
@@ -1655,6 +1719,11 @@ SITE_ADAPTERS: dict[str, dict[str, Any]] = {
         "company_name": _dropbox_company,
         "location": _dropbox_location,
         "description": _dropbox_description,
+    },
+    "yelp.careers": {
+        "location": _yelp_location,
+        "description": _yelp_description,
+        "role_type": _yelp_role_type,
     },
 }
 

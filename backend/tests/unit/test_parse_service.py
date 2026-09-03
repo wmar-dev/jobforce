@@ -2127,3 +2127,45 @@ def test_parse_html_intuitivesurgical_description() -> None:
     result = parse_html(html, _INTUITIVE_URL)
     assert result["description"] is not None
     assert "react native and native android" in result["description"]
+
+
+# ---------------------------------------------------------------------------
+# Yelp (www.yelp.careers/us/en/job/<id>/<slug>) — a Phenom People board.
+# title and company_name already extract fine via the generic adapter
+# (h1 + og:site_name); location and description do not. The page renders a
+# duplicate, unfilled "job-description"/".jd-info" template block alongside
+# the real one (a Phenom quirk), so description is pulled from the page's
+# own schema.org JobPosting JSON-LD block instead of that CSS selector.
+# location isn't a single plain-text element either — the JobPosting has
+# multiple jobLocation entries (this req spans 3 offices) — so it's parsed
+# from the page <title>'s "job in <location> |" segment, which names the
+# specific location this URL represents. role_type comes from the JSON-LD
+# employmentType list.
+# ---------------------------------------------------------------------------
+
+_YELP_URL = "https://www.yelp.careers/us/en/job/13815/Senior-Machine-Learning-Engineer-Content-and-Contributor-Intelligence-Remote-United-States"
+
+
+def test_parse_html_yelp_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("yelp_job.html")
+    result = parse_html(html, _YELP_URL)
+    assert result["location"] == "San Francisco, California, United States"
+
+
+def test_parse_html_yelp_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("yelp_job.html")
+    result = parse_html(html, _YELP_URL)
+    assert result["description"] is not None
+    assert "cutting-edge Machine Learning" in result["description"]
+
+
+def test_parse_html_yelp_role_type() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("yelp_job.html")
+    result = parse_html(html, _YELP_URL)
+    assert result["role_type"] == "full-time"
