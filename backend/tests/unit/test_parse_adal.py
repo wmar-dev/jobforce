@@ -1,4 +1,4 @@
-"""Unit tests for the AdaL (adalagent.ai) site adapter — custom React SPA."""
+"""Unit tests for the SylphAI (adalagent.ai) site adapter — custom React SPA."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def test_parse_html_adal_company() -> None:
 
     html = _read("adal_job.html")
     result = parse_html(html, _ADAL_URL)
-    assert result["company_name"] == "AdaL"
+    assert result["company_name"] == "SylphAI"
 
 
 def test_parse_html_adal_location() -> None:

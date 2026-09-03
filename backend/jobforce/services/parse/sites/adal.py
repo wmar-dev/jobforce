@@ -1,5 +1,6 @@
 # ---------------------------------------------------------------------------
-# AdaL (adalagent.ai) — custom React SPA; location in subtitle paragraph
+# SylphAI (adalagent.ai) — custom React SPA; company name and location both
+# come from the subtitle paragraph ("SylphAI. San Francisco, United States.").
 # ---------------------------------------------------------------------------
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ def _adal_description(doc: BeautifulSoup, url: str) -> str | None:
 
 
 ADAPTER: dict[str, Any] = {
-    "company_name": lambda doc, url: "AdaL",
+    "company_name": lambda doc, url: "SylphAI",
     "location": _adal_location,
     "description": _adal_description,
 }

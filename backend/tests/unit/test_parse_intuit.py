@@ -47,3 +47,26 @@ def test_parse_html_intuit_location() -> None:
         result["location"]
         == "Charlotte, North Carolina; Mountain View, California; Oakland, California"
     )
+
+
+def test_parse_html_intuit_company_ignores_non_brand_suffix() -> None:
+    """ " - Back End" is a team name, not an Intuit brand — must not become the company."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuit_creditkarma_job.html").replace(
+        "Staff Software Engineer - Credit Karma", "Staff Software Engineer - Back End"
+    )
+    result = parse_html(html, _INTUIT_CK_URL)
+    assert result["company_name"] == "Intuit"
+
+
+def test_parse_html_intuit_company_ignores_prefix_shaped_like_suffix() -> None:
+    """A "<Initiative> - <Title>" title has no brand suffix at all."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("intuit_creditkarma_job.html").replace(
+        "Staff Software Engineer - Credit Karma",
+        "Fintech Futures - Senior Staff Software Engineer",
+    )
+    result = parse_html(html, _INTUIT_CK_URL)
+    assert result["company_name"] == "Intuit"
