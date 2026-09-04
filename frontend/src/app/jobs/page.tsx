@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import useSWR from "swr";
 import { useJobs } from "@/hooks/useJobs";
 import { JobTable } from "@/components/jobs/JobTable";
@@ -30,21 +30,37 @@ const PAGE_SIZE = 50;
 
 function JobsPageInner() {
   const searchParams = useSearchParams();
-  const initialStatus = ((): PipelineStatus | "all" => {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const status = ((): PipelineStatus | "all" => {
     const s = searchParams.get("status");
     return s && VALID_STATUSES.has(s as PipelineStatus) ? (s as PipelineStatus) : "all";
   })();
-  const [status, setStatus] = useState<PipelineStatus | "all">(initialStatus);
-  const [companyId, setCompanyId] = useState<number | "">("");
-  const [location, setLocation] = useState("");
-  const [roleType, setRoleType] = useState<RoleType | "">("");
-  const [sortBy, setSortBy] = useState<JobSortKey>("fit_score");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [page, setPage] = useState(0);
+  const companyId = ((): number | "" => {
+    const c = searchParams.get("company_id");
+    return c ? Number(c) : "";
+  })();
+  const location = searchParams.get("location") ?? "";
+  const roleType = (searchParams.get("role_type") as RoleType | null) ?? "";
+  const sortBy = (searchParams.get("sort_by") as JobSortKey | null) ?? "fit_score";
+  const sortDir = (searchParams.get("sort_dir") as SortDir | null) ?? "desc";
+  const page = Number(searchParams.get("page") ?? "0");
+
   const [bulkArchiveMsg, setBulkArchiveMsg] = useState<string | null>(null);
   const [isBulkArchiving, setIsBulkArchiving] = useState(false);
 
-  function resetPage() { setPage(0); }
+  const updateSearch = useCallback(
+    (updates: Record<string, string | number | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === undefined || value === "") params.delete(key);
+        else params.set(key, String(value));
+      }
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
 
   const { data: companies } = useSWR<Company[]>("companies", getCompanies);
 
@@ -63,12 +79,14 @@ function JobsPageInner() {
 
   function handleSort(key: JobSortKey) {
     if (key === sortBy) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      updateSearch({ sort_dir: sortDir === "asc" ? "desc" : "asc", page: undefined });
     } else {
-      setSortBy(key);
-      setSortDir(key === "fit_score" || key === "created_at" ? "desc" : "asc");
+      updateSearch({
+        sort_by: key,
+        sort_dir: key === "fit_score" || key === "created_at" ? "desc" : "asc",
+        page: undefined,
+      });
     }
-    resetPage();
   }
 
   async function handleBulkArchive() {
@@ -103,7 +121,7 @@ function JobsPageInner() {
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => { setStatus(tab.value); resetPage(); setBulkArchiveMsg(null); }}
+            onClick={() => { updateSearch({ status: tab.value === "all" ? undefined : tab.value, page: undefined }); setBulkArchiveMsg(null); }}
             className={`px-3 py-2 text-sm rounded-t transition-colors ${
               status === tab.value
                 ? "bg-gray-800 text-emerald-400 border-b-2 border-emerald-400"
@@ -119,7 +137,7 @@ function JobsPageInner() {
       <div className="flex gap-3 mb-4 flex-wrap">
         <select
           value={companyId}
-          onChange={(e) => { setCompanyId(e.target.value ? Number(e.target.value) : ""); resetPage(); }}
+          onChange={(e) => updateSearch({ company_id: e.target.value || undefined, page: undefined })}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-500 w-44"
         >
           <option value="">All companies</option>
@@ -131,12 +149,12 @@ function JobsPageInner() {
           type="text"
           placeholder="Filter by location..."
           value={location}
-          onChange={(e) => { setLocation(e.target.value); resetPage(); }}
+          onChange={(e) => updateSearch({ location: e.target.value || undefined, page: undefined })}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500 w-48"
         />
         <select
           value={roleType}
-          onChange={(e) => { setRoleType(e.target.value as RoleType | ""); resetPage(); }}
+          onChange={(e) => updateSearch({ role_type: e.target.value || undefined, page: undefined })}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-500"
         >
           <option value="">All role types</option>
@@ -185,7 +203,7 @@ function JobsPageInner() {
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6">
               <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                onClick={() => updateSearch({ page: Math.max(0, page - 1) || undefined })}
                 disabled={page === 0}
                 className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
@@ -195,7 +213,7 @@ function JobsPageInner() {
                 {page + 1} / {totalPages}
               </span>
               <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                onClick={() => updateSearch({ page: Math.min(totalPages - 1, page + 1) || undefined })}
                 disabled={page >= totalPages - 1}
                 className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
