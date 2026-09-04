@@ -167,7 +167,7 @@ export interface MeetingNote {
 }
 
 export interface DashboardSummary {
-  counts: Record<PipelineStatus, number>;
+  counts: Record<Exclude<PipelineStatus, "archived">, number>;
   recent_transitions: Array<{
     job_id: number;
     job_title: string;

@@ -9,6 +9,7 @@ import type {
   TailoredResumeResponse,
   InterviewSession,
   DashboardSummary,
+  Company,
   CompanyDetail,
   MeetingNote,
   UserProfile,
@@ -144,8 +145,8 @@ export function putBaseResume(resume: Resume): Promise<Resume> {
 }
 
 export function getTailoredResume(jobId: number): Promise<TailoredResumeResponse | null> {
-  return apiFetch(`/api/resume/tailored?job_id=${jobId}`).then(
-    (r: TailoredResumeResponse | null) => r,
+  return apiFetch<TailoredResumeResponse | null>(`/api/resume/tailored?job_id=${jobId}`).then(
+    (r) => r,
     () => null,
   );
 }

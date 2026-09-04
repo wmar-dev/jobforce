@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { PipelineStatus } from "@/lib/types";
 
 const STATUS_CONFIG: Record<
-  PipelineStatus,
+  Exclude<PipelineStatus, "archived">,
   { label: string; bg: string; text: string; border: string }
 > = {
   saved: { label: "Saved", bg: "bg-gray-900", text: "text-gray-200", border: "border-gray-700" },
@@ -32,11 +32,11 @@ const STATUS_CONFIG: Record<
 };
 
 interface PipelineSummaryProps {
-  counts: Record<PipelineStatus, number>;
+  counts: Record<Exclude<PipelineStatus, "archived">, number>;
 }
 
 export function PipelineSummary({ counts }: PipelineSummaryProps) {
-  const statuses: PipelineStatus[] = [
+  const statuses: Array<Exclude<PipelineStatus, "archived">> = [
     "saved",
     "shortlisted",
     "applied",

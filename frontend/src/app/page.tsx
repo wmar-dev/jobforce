@@ -37,8 +37,9 @@ const HEROES = [
   },
 ];
 
-const EMPTY_COUNTS: Record<PipelineStatus, number> = {
+const EMPTY_COUNTS: Record<Exclude<PipelineStatus, "archived">, number> = {
   saved: 0,
+  shortlisted: 0,
   applied: 0,
   interviewing: 0,
   offer: 0,
