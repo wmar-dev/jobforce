@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { getJobs, getLatestCoachSession } from "@/lib/api";
 import { QuestionCard } from "@/components/coach/QuestionCard";
@@ -13,7 +13,7 @@ const CATEGORIES: Array<{ key: QuestionItem["category"]; label: string; icon: st
   { key: "role_specific", label: "Role-Specific", icon: "🎯" },
 ];
 
-export default function CoachPage() {
+function CoachPageInner() {
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
@@ -158,5 +158,13 @@ export default function CoachPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function CoachPage() {
+  return (
+    <Suspense>
+      <CoachPageInner />
+    </Suspense>
   );
 }
