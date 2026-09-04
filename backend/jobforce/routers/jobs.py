@@ -230,10 +230,21 @@ async def bulk_archive_jobs(
             "score, instead of only low-score (<0.50) saved jobs. Requires company_id."
         ),
     ),
+    saved_only: bool = Query(
+        False,
+        description=(
+            "Archive every saved job for company_id regardless of fit score, "
+            "leaving shortlisted jobs untouched. Requires company_id."
+        ),
+    ),
 ) -> dict[str, int]:
-    if all_active and company_id is None:
-        raise HTTPException(422, "all_active requires company_id")
-    count = await bulk_archive_low_score(session, company_id=company_id, all_active=all_active)
+    if (all_active or saved_only) and company_id is None:
+        raise HTTPException(422, "all_active/saved_only requires company_id")
+    if all_active and saved_only:
+        raise HTTPException(422, "all_active and saved_only are mutually exclusive")
+    count = await bulk_archive_low_score(
+        session, company_id=company_id, all_active=all_active, saved_only=saved_only
+    )
     return {"archived_count": count}
 
 

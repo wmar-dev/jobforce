@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import Link from "next/link";
-import { getCompany, createMeetingNote } from "@/lib/api";
+import { getCompany, createMeetingNote, bulkArchive } from "@/lib/api";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { StatusTransitionModal } from "@/components/jobs/StatusTransitionModal";
 import type { CompanyDetail, PipelineStatus } from "@/lib/types";
@@ -23,6 +23,24 @@ export default function CompanyDetailPage() {
   const [transitionJobId, setTransitionJobId] = useState<number | null>(null);
   const [transitionCurrentStatus, setTransitionCurrentStatus] =
     useState<PipelineStatus | null>(null);
+  const [isBulkArchiving, setIsBulkArchiving] = useState(false);
+  const [bulkArchiveMsg, setBulkArchiveMsg] = useState<string | null>(null);
+
+  const handleBulkArchive = async () => {
+    setIsBulkArchiving(true);
+    setBulkArchiveMsg(null);
+    try {
+      const result = await bulkArchive(companyId, { savedOnly: true });
+      setBulkArchiveMsg(
+        `Archived ${result.archived_count} saved job${result.archived_count !== 1 ? "s" : ""}.`
+      );
+      await mutate();
+    } catch {
+      setBulkArchiveMsg("Bulk archive failed. Is the backend running?");
+    } finally {
+      setIsBulkArchiving(false);
+    }
+  };
 
   const handleAddNote = async () => {
     if (!noteContent.trim()) return;
@@ -68,9 +86,24 @@ export default function CompanyDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Job Listings */}
         <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Listings ({company.listings.length})
-          </h2>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+              Listings ({company.listings.length})
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBulkArchive}
+                disabled={isBulkArchiving}
+                className="px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="Archive every saved job for this company, regardless of fit score"
+              >
+                {isBulkArchiving ? "Archiving..." : "Bulk Archive Saved"}
+              </button>
+              {bulkArchiveMsg && (
+                <span className="text-xs text-gray-500">{bulkArchiveMsg}</span>
+              )}
+            </div>
+          </div>
           {company.listings.length === 0 ? (
             <div className="text-gray-600 text-sm">No listings for this company.</div>
           ) : (

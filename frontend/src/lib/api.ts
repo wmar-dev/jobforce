@@ -74,9 +74,16 @@ export function patchJobStatus(
   });
 }
 
-export function bulkArchive(companyId?: number): Promise<{ archived_count: number }> {
-  const qs = companyId !== undefined ? `?company_id=${companyId}` : "";
-  return apiFetch(`/api/jobs/bulk-archive${qs}`, { method: "POST" });
+export function bulkArchive(
+  companyId?: number,
+  opts?: { allActive?: boolean; savedOnly?: boolean }
+): Promise<{ archived_count: number }> {
+  const params = new URLSearchParams();
+  if (companyId !== undefined) params.set("company_id", String(companyId));
+  if (opts?.allActive) params.set("all_active", "true");
+  if (opts?.savedOnly) params.set("saved_only", "true");
+  const qs = params.toString();
+  return apiFetch(`/api/jobs/bulk-archive${qs ? `?${qs}` : ""}`, { method: "POST" });
 }
 
 // Job notes
