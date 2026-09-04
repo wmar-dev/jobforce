@@ -280,9 +280,9 @@ For each URL that passed the anchor-text filter in 4d:
      ⏭ duplicate (already captured): <url>
    ```
 
-2. Run scout_fetch:
+2. Run scout_fetch with `--dry-run` — this step is parse-only. Without `--dry-run`, scout_fetch writes the job straight to the database itself (see `_ingest` in `backend/jobforce/cli/scout_fetch.py`), which would ingest it before the title/location re-check in step 4 has a chance to reject it:
    ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<url>"
+   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<url>"
    ```
 
 3. If scout_fetch fails or returns non-JSON output, log: `  ❌ fetch failed: <url>` and continue.
@@ -340,9 +340,9 @@ for j in bad[:5]: print(f'  id={j[\"id\"]} {j[\"title\"]}')
 
 If any jobs are missing location, the site adapter's location selector is broken (e.g. ATS updated its CSS classes). Fix it before continuing:
 
-1. **Inspect the live page** — fetch one failing URL with scout_fetch and check what came back:
+1. **Inspect the live page** — fetch one failing URL with scout_fetch (`--dry-run`: this is a parse-only diagnostic, the job is already ingested) and check what came back:
    ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<failing_url>" 2>/dev/null
+   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<failing_url>" 2>/dev/null
    ```
    If `location` is null, the adapter selector needs updating.
 
