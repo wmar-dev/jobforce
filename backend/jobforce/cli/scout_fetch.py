@@ -14,6 +14,27 @@ from jobforce.services.parse import parse_html
 _TIMEOUT_MS = 30_000
 
 
+def _normalize_ashby_embed_url(url: str) -> str:
+    """ashbyhq.com/careers?ashby_jid=<uuid> is Ashby's own marketing site, which
+    embeds its job board in an <iframe title="Ashby Job Board">. scout_fetch's
+    outerHTML capture only sees the top-level document, so it never sees the
+    real job content (title/location/description all come back null/wrong,
+    same root cause as the Nebius/CoreWeave cross-origin-iframe cases below —
+    but simpler to fix here since the un-embedded page for the same posting
+    already exists and already parses correctly via sites/ashby.py: rewrite to
+    the canonical jobs.ashbyhq.com/Ashby/<jid> URL and let the normal fetch +
+    parse flow run against that instead.
+    """
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").removeprefix("www.")
+    if hostname != "ashbyhq.com":
+        return url
+    jid_values = parse_qs(parsed.query).get("ashby_jid") or []
+    if not jid_values:
+        return url
+    return f"https://jobs.ashbyhq.com/Ashby/{jid_values[0]}"
+
+
 async def _fetch_nebius_greenhouse_html(url: str) -> str | None:
     """careers.nebius.com embeds the actual Greenhouse job description and
     apply flow in a cross-origin iframe that the wrapper page's own DOM never
@@ -221,6 +242,7 @@ async def _ingest(url: str, html: str, parsed: dict) -> dict:  # type: ignore[ty
 
 
 async def _run(url: str, dry_run: bool) -> dict:  # type: ignore[type-arg]
+    url = _normalize_ashby_embed_url(url)
     html = await _fetch_html(url)
     parsed = parse_html(html, url)
     if not parsed.get("company_name") or not parsed.get("title"):

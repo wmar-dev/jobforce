@@ -82,3 +82,46 @@ def test_validate_url_rejects_empty_netloc() -> None:
 
     with pytest.raises(argparse.ArgumentTypeError):
         _validate_url("https://")
+
+
+# ---------------------------------------------------------------------------
+# CLI — _normalize_ashby_embed_url
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_ashby_embed_url_rewrites_careers_query_param() -> None:
+    from jobforce.cli.scout_fetch import _normalize_ashby_embed_url
+
+    url = "https://www.ashbyhq.com/careers?ashby_jid=751768c6-8d97-4e91-a57d-6b85ce4b5a37"
+    assert (
+        _normalize_ashby_embed_url(url)
+        == "https://jobs.ashbyhq.com/Ashby/751768c6-8d97-4e91-a57d-6b85ce4b5a37"
+    )
+
+
+def test_normalize_ashby_embed_url_without_www() -> None:
+    from jobforce.cli.scout_fetch import _normalize_ashby_embed_url
+
+    url = "https://ashbyhq.com/careers?ashby_jid=abc123"
+    assert _normalize_ashby_embed_url(url) == "https://jobs.ashbyhq.com/Ashby/abc123"
+
+
+def test_normalize_ashby_embed_url_leaves_jobs_subdomain_unchanged() -> None:
+    from jobforce.cli.scout_fetch import _normalize_ashby_embed_url
+
+    url = "https://jobs.ashbyhq.com/figma/abc123"
+    assert _normalize_ashby_embed_url(url) == url
+
+
+def test_normalize_ashby_embed_url_leaves_unrelated_urls_unchanged() -> None:
+    from jobforce.cli.scout_fetch import _normalize_ashby_embed_url
+
+    url = "https://factory.com/careers/software-engineer-product"
+    assert _normalize_ashby_embed_url(url) == url
+
+
+def test_normalize_ashby_embed_url_leaves_careers_without_jid_unchanged() -> None:
+    from jobforce.cli.scout_fetch import _normalize_ashby_embed_url
+
+    url = "https://www.ashbyhq.com/careers"
+    assert _normalize_ashby_embed_url(url) == url
