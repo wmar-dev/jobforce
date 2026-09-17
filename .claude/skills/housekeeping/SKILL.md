@@ -1,6 +1,6 @@
 ---
 name: housekeeping
-description: Periodic maintenance pass over the repo — updates backend (uv) and frontend (npm) dependencies within their existing declared version ranges, flags any available major-version bumps for manual review instead of applying them, runs `make check` (lint + typecheck + test across backend and frontend), and verifies the "no `anthropic` SDK import outside coach.py" invariant from CLAUDE.md. Use when the user wants to update dependencies, do routine maintenance, or run a periodic health check on the repo.
+description: Periodic maintenance pass over the repo — updates backend (uv) and frontend (npm) dependencies within their existing declared version ranges, flags any available major-version bumps for manual review instead of applying them, runs `make check` (lint + typecheck + test across backend and frontend), flags notable test coverage gaps for a follow-up pass, and verifies the "no `anthropic` SDK import outside coach.py" invariant from CLAUDE.md. Use when the user wants to update dependencies, do routine maintenance, or run a periodic health check on the repo.
 argument-hint: (none)
 user-invocable: true
 ---
@@ -61,7 +61,18 @@ make check   # backend: ruff lint + mypy + pytest; frontend: ESLint + Jest
 
 If anything fails, stop here — report the failure output and do not proceed to committing. A housekeeping pass should never leave the repo in a broken state.
 
-## Step 5: Verify the AI-in-skills invariant
+## Step 5: Flag test coverage gaps
+
+`make check` already ran backend tests with coverage (`--cov=jobforce --cov-report=term-missing`, configured in `backend/pyproject.toml`). Skim that output for:
+
+- Modules with notably low coverage or large blocks of missing lines — especially in `backend/jobforce/services/` and `backend/jobforce/routers/` (business logic), not boilerplate like `db/models.py`.
+- Any package bumped in Step 3 whose touched code has thin coverage — a good sign the upgrade path itself is under-tested.
+
+Frontend has no coverage reporting configured (`npm test` runs `jest --passWithNoTests`, no `--coverage` flag). As a lightweight substitute, check whether files under `frontend/src/components/` and `frontend/src/hooks/` have a colocated or `__tests__` test file at all — skip trivial presentational components.
+
+This is a lightweight flag, not a full coverage audit: only note real gaps (0%/near-0% coverage, or business logic with no test file at all), and don't write the tests yourself — collect them to report in Step 7 for the user to decide on a follow-up pass. Coverage gaps need judgment about what's worth testing, which is out of scope for a routine dependency-maintenance run.
+
+## Step 6: Verify the AI-in-skills invariant
 
 Per CLAUDE.md, all AI reasoning except Coach must live in Claude Code skills, not the backend:
 
@@ -71,13 +82,14 @@ grep -rn "import anthropic" backend/
 
 Expected: zero matches, or matches only in `backend/jobforce/services/coach.py`. If any other file imports `anthropic`, flag it clearly — it means the skill-driven AI architecture has regressed.
 
-## Step 6: Report and hand off
+## Step 7: Report and hand off
 
 Summarize:
 
 - **Applied**: each package bumped, with old → new version.
 - **Flagged for manual review**: each major-version bump available, with current → latest version, left for a dedicated upgrade pass rather than applied here.
 - **Quality gates**: pass/fail.
+- **Test coverage gaps**: any modules/files flagged in Step 5, or "none notable" if the pass was clean.
 - **Invariant check**: pass/fail (with offending file(s) if it failed).
 
 Do not commit automatically. Ask the user whether to commit the lockfile/dependency changes — following the project's normal commit convention (only commit when asked).
