@@ -42,6 +42,7 @@ config.yaml
 config/resume.json
 config/resume.json.bak
 config/tailoring-instructions.md
+config/scouting-notes.md
 
 # SQLite database and raw HTML snapshots
 backend/data/jobforce.db

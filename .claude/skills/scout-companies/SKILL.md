@@ -62,6 +62,12 @@ If `target_locations` is empty, print a warning and proceed without location fil
 ⚠ No target_locations set in config.yaml — all locations will be ingested.
 ```
 
+Also read `config/scouting-notes.md` from disk if it exists. This file may
+contain `## Avoid` and `## Prefer` sections with freeform guidance on
+companies, industries, or role patterns — use it as an additional judgment
+signal in the title checks in 4d and 4g (alongside, not instead of,
+`target_roles`). If the file is absent, proceed without it.
+
 **If an argument was provided** (e.g. `/scout-companies "Acme Corp"`):
 - If the argument looks like a URL (starts with `http://` or `https://`):
   - Treat it as a `careers_url` for an unknown company
@@ -222,6 +228,10 @@ For each `(anchor_text, location_text, href)` tuple (where `location_text` is an
    ```
      ⏭ skipped (off-target title): <anchor_text> — <url>
    ```
+   If `target_roles` matches (or is empty) but the anchor text clearly matches an `## Avoid` entry from `config/scouting-notes.md` (e.g. the anchor text or nearby context indicates a staffing agency posting), skip it the same way:
+   ```
+     ⏭ skipped (scouting-notes: avoid): <anchor_text> — <url>
+   ```
 
 2. **Location check**: if `target_locations` is non-empty and the location text does not contain any entry from `target_locations` (case-insensitive substring match, also treat "Remote" as matching), skip immediately:
    ```
@@ -295,6 +305,10 @@ For each URL that passed the anchor-text filter in 4d:
    - If `target_locations` is non-empty, check the extracted `location` against `target_locations`. If it doesn't match, log and skip:
      ```
        ⏭ skipped (off-target location): <title> @ <location> — <url>
+     ```
+   - Re-apply the `## Avoid` check from `config/scouting-notes.md` against the extracted `title` and `description` (now that the full description is available, this catches cases the anchor-text-only check in 4d couldn't). If it matches, log and skip:
+     ```
+       ⏭ skipped (scouting-notes: avoid): <title> — <url>
      ```
    Count skipped-off-target separately from duplicates.
 
@@ -439,6 +453,8 @@ Total: <n> ingested, <n> duplicate, <n> off-target, <n> company/companies failed
 | Location not visible near link in snapshot | Skip location pre-filter for that entry, fetch it anyway |
 | No target_roles in config | Warn once, skip title filtering, ingest all titles |
 | No target_locations in config | Warn once, skip location filtering, ingest all locations |
+| `config/scouting-notes.md` absent | Proceed without it — no `## Avoid`/`## Prefer` judgment applied |
+| Anchor text or fetched title/description matches an `## Avoid` entry in scouting-notes.md | Log as off-target (scouting-notes), skip, continue |
 | Ingest creates a duplicate Company record (4i) | Merge via `merge_companies` CLI into the canonical company, log merge |
 
 ## Step 6: Run oracle-rank on newly ingested jobs
@@ -461,3 +477,4 @@ This scores only unscored jobs, so it will pick up exactly what was just ingeste
 - Job extraction uses Claude's judgment — page layouts vary across ATS platforms
 - On large listing pages, the page's own Location/Team filter controls are tried first (4c2) to shrink the crawl before falling back to a full unfiltered crawl
 - Duplicate company records left over from past runs (or runs predating step 4i) can be cleaned up at any time with `cd backend && uv run python -m jobforce.cli.merge_companies <duplicate_id> <canonical_id>`
+- `config/scouting-notes.md` (optional, copy from `config/scouting-notes.example.md`) adds freeform `## Avoid`/`## Prefer` guidance on top of the structured `target_roles`/`target_locations` filters

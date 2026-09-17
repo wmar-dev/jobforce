@@ -52,6 +52,10 @@ cp config/tailoring-instructions.example.md config/tailoring-instructions.md
 # Edit config/tailoring-instructions.md: add constraints to prevent false
 # information in AI-tailored resume bullets
 
+cp config/scouting-notes.example.md config/scouting-notes.md
+# Optional: edit config/scouting-notes.md with freeform guidance on which
+# jobs to capture (Avoid/Prefer) and how Oracle should score fit
+
 # 4. Initialize and seed the database
 cd backend && uv run python -m jobforce.db.init
 cd backend && uv run python -m jobforce.db.seed
@@ -82,13 +86,15 @@ Once setup is done and `make dev` is running, this is the day-to-day loop. Skill
    /scout-companies         # Crawl all target_companies from config.yaml
    ```
 
+   `/scout-companies` filters on `target_roles`/`target_locations` from `config.yaml`, plus any `## Avoid` guidance in `config/scouting-notes.md` if you've set one up.
+
 2. **Rank captured jobs** against your profile:
 
    ```bash
    /oracle-rank
    ```
 
-   Writes a `fit_score` and rationale back to each job; open the dashboard to see them ranked.
+   Writes a `fit_score` and rationale back to each job; open the dashboard to see them ranked. Factors in `## Scoring notes` from `config/scouting-notes.md` if present.
 
 3. **Tailor your resume** for a job you're applying to:
 

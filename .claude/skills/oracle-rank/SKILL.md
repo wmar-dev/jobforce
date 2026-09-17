@@ -92,6 +92,8 @@ GET http://localhost:8000/api/resume/base
 
 Store the structured JSON. The `structured_data` field is returned as a **dict** (already parsed) — do NOT call `json.loads()` on it. If this returns 404, note "No base resume configured" — scores will still be produced but with `confidence: low`.
 
+Also read `config/scouting-notes.md` from disk if it exists. If present, use its `## Scoring notes` section as additional context when reasoning about fit in Step 4 — it captures preferences the resume alone can't express (e.g. "don't penalize on-call requirements", "deprioritize people-management roles"). If the file is absent, or has no `## Scoring notes` section, proceed without it.
+
 ---
 
 ### Step 4: Score jobs in batches of 5
@@ -101,7 +103,7 @@ Store the structured JSON. The `structured_data` field is returned as a **dict**
 For each batch of up to 5 jobs:
 
 1. Load only the job fields needed for scoring: `id`, `title`, `company_name`, `location`, `role_type`, `description` (first 2000 chars only — truncate longer descriptions).
-2. For each job in the batch, reason about fit against the resume and produce:
+2. For each job in the batch, reason about fit against the resume — and against `## Scoring notes` from `config/scouting-notes.md`, if present — and produce:
    - `score`: float between 0.0 (no fit) and 1.0 (perfect fit), clamped to [0.0, 1.0]
    - `confidence`:
      - score ≥ 0.7 → "high"
@@ -166,6 +168,7 @@ Total ranked: 2  |  High: 1  |  Medium: 1  |  Low: 0
 
 - Backend must be running: `cd backend && make dev`
 - Add your resume at `config/resume.json` (see `config/resume.example.json`) and restart for accurate scoring
-- Scores are overwritten on each run — re-run after updating your resume
+- `config/scouting-notes.md` (optional, copy from `config/scouting-notes.example.md`) lets you add freeform scoring context under `## Scoring notes` that the resume alone can't capture
+- Scores are overwritten on each run — re-run after updating your resume or scouting-notes.md
 - The Oracle UI at http://localhost:3000/oracle displays stored scores from
   previously completed ranking sessions
