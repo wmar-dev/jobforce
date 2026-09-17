@@ -176,6 +176,13 @@ user:
   skills: ["Python", "FastAPI", "React"]
 ```
 
+### `target_companies.yaml`
+
+A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled
+in where verified. It isn't read by any code — it's a shared starting point
+for `search.target_companies` above. Copy the entries you want into your own
+`config.yaml`.
+
 ## Project Structure
 
 ```text
