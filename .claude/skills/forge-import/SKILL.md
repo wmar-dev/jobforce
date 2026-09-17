@@ -1,29 +1,32 @@
 ---
 name: forge-import
-description: Parse a resume PDF into config/resume.json's structured_data schema, merging with any existing personal info and flagging sections that need template support. Use when you have an updated resume PDF and want to refresh your Jobforce base profile.
-argument-hint: "[path-to-resume-pdf]"
+description: Parse a resume PDF or DOCX into config/resume.json's structured_data schema, merging with any existing personal info and flagging sections that need template support. Use when you have an updated resume file and want to refresh your Jobforce base profile.
+argument-hint: "[path-to-resume-pdf-or-docx]"
 user-invocable: true
 ---
 
-# Forge Import — Resume PDF → resume.json
+# Forge Import — Resume PDF/DOCX → resume.json
 
-Parse a resume PDF and write it into `config/resume.json`, matching the schema
-documented in `config/resume.example.json`. All reasoning happens here in
-Claude Code — no backend calls are required.
+Parse a resume file (PDF or DOCX) and write it into `config/resume.json`,
+matching the schema documented in `config/resume.example.json`. All reasoning
+happens here in Claude Code — no backend calls are required.
 
 ## Usage
 
 ```
-/forge-import [path-to-resume-pdf]
+/forge-import [path-to-resume-pdf-or-docx]
 ```
 
 ## Steps
 
-### Step 1: Locate the source PDF
+### Step 1: Locate the source file
 
-If a path was given as an argument, use it. Otherwise look for `*.pdf` files in
-the repository root. If exactly one match, use it. If multiple, list them and
-ask the user which one. If none, stop and ask for a path.
+If a path was given as an argument, use it. Otherwise look for `*.pdf` and
+`*.docx` files in the repository root. If exactly one match, use it. If
+multiple, list them and ask the user which one. If none, stop and ask for a
+path.
+
+Reject any other extension — ask the user to convert it to PDF or DOCX first.
 
 ---
 
@@ -36,19 +39,47 @@ Read config/resume.json
 If it doesn't exist or contains only placeholder data (e.g. name "Bob Dev"),
 treat it as empty — there's nothing to merge.
 
-This existing data matters because the PDF often **won't** contain contact
-info (email, phone, links) that's already correct in `resume.json`. Don't
-null those out just because the new PDF doesn't repeat them.
+This existing data matters because the source file often **won't** contain
+contact info (email, phone, links) that's already correct in `resume.json`.
+Don't null those out just because the new file doesn't repeat them.
 
 ---
 
-### Step 3: Read the PDF
+### Step 3: Read the source file
+
+**PDF:**
 
 ```
-Read <path-to-resume-pdf>
+Read <path-to-resume.pdf>
 ```
 
 The Read tool returns the PDF's text content directly (multimodal).
+
+**DOCX:** the Read tool doesn't parse `.docx`, so extract its text with
+`python-docx` via an ephemeral `uv` run (no permanent dependency added to
+`backend/pyproject.toml` — this only runs inside the skill):
+
+```bash
+uv run --with python-docx python3 -c "
+import sys
+from docx import Document
+
+doc = Document(sys.argv[1])
+for para in doc.paragraphs:
+    if para.text.strip():
+        print(para.text)
+
+for table in doc.tables:
+    for row in table.rows:
+        cells = [c.text.strip() for c in row.cells]
+        if any(cells):
+            print(' | '.join(cells))
+" <path-to-resume.docx>
+```
+
+Treat the printed output as the resume text for Step 4. This only captures
+paragraphs and tables — if the resume puts content in headers/footers or text
+boxes, note that to the user since it will be missed.
 
 ---
 
@@ -60,8 +91,8 @@ schema reference. Mapping rules:
 | Resume section | JSON field | Rules |
 | --- | --- | --- |
 | Name (header) | `personal_info.name` | Required |
-| Email | `personal_info.email` | **Required** by the LaTeX template. If the PDF doesn't list one, keep the existing `resume.json` value. If neither has one, ask the user. |
-| Phone / Location / LinkedIn / GitHub / Website | `personal_info.*` | Optional. If the PDF doesn't include one, **preserve the existing value** rather than nulling it. |
+| Email | `personal_info.email` | **Required** by the LaTeX template. If the source file doesn't list one, keep the existing `resume.json` value. If neither has one, ask the user. |
+| Phone / Location / LinkedIn / GitHub / Website | `personal_info.*` | Optional. If the source file doesn't include one, **preserve the existing value** rather than nulling it. |
 | Summary / Objective / Profile | `summary` | `null` if absent. Don't invent one. |
 | Experience / Work History / Employment | `work_history[]` | See date and bullet rules below. |
 | Education | `education[]` | `degree`, `institution`, `end_date` = graduation year (string), `gpa` if shown, else `null`. |
@@ -112,11 +143,11 @@ template without asking.
 ### Step 6: Merge and write
 
 - Start from the existing `resume.json` (Step 2), then overlay everything
-  parsed from the PDF.
-- For `personal_info`, merge field-by-field per the rules in Step 4 (PDF wins
-  if present, otherwise keep existing).
+  parsed from the source file.
+- For `personal_info`, merge field-by-field per the rules in Step 4 (source
+  file wins if present, otherwise keep existing).
 - For list fields (`work_history`, `education`, `skills`, extension fields),
-  **replace wholesale** with the PDF's content — the PDF is the source of
+  **replace wholesale** with the source file's content — it is the source of
   truth for resume content, contact info is the exception.
 - Back up the previous file first: `cp config/resume.json config/resume.json.bak`
   (skip if it didn't exist or was placeholder data).
@@ -130,7 +161,7 @@ template without asking.
 Print a short summary in this style:
 
 ```
-✅ config/resume.json updated from <pdf filename>
+✅ config/resume.json updated from <source filename>
 
 - personal_info: kept existing email/phone/location, name updated
 - work_history: 4 entries (Meta, Google, BloomReach, Manoharan Lab)
