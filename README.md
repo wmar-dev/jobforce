@@ -211,3 +211,5 @@ jobforce/
 ├── config/tailoring-instructions.example.md  # tailoring constraints template
 └── Makefile                                   # dev, check, seed, install
 ```
+
+Maintaining the repo itself (dependency upgrade policy, maintainer-only skills like `/housekeeping`)? See [DEVELOPMENT.md](DEVELOPMENT.md).
