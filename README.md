@@ -74,6 +74,35 @@ make dev
 - **Backend API**: <http://localhost:8000>
 - **API docs**: <http://localhost:8000/docs>
 
+## Configuration
+
+`config.yaml` (gitignored — copy from `config.example.yaml`):
+
+```yaml
+database:
+  path: "backend/data/jobforce.db"
+
+search:
+  queries:
+    - query: "Senior Python Engineer"
+      location: "Remote, US"
+  target_companies:
+    - name: "Anthropic"
+      domain: "anthropic.com"
+
+user:
+  full_name: "Your Name"
+  headline: "Senior Software Engineer"
+  skills: ["Python", "FastAPI", "React"]
+```
+
+### `target_companies.yaml`
+
+A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled
+in where verified. It isn't read by any code — it's a shared starting point
+for `search.target_companies` above. Copy the entries you want into your own
+`config.yaml`.
+
 ## Chrome Extension
 
 1. Open Chrome → `chrome://extensions`
@@ -159,35 +188,6 @@ make check   # ruff lint + mypy + pytest (backend) + ESLint + Jest (frontend)
 ```
 
 All gates must pass before committing.
-
-## Configuration
-
-`config.yaml` (gitignored — copy from `config.example.yaml`):
-
-```yaml
-database:
-  path: "backend/data/jobforce.db"
-
-search:
-  queries:
-    - query: "Senior Python Engineer"
-      location: "Remote, US"
-  target_companies:
-    - name: "Anthropic"
-      domain: "anthropic.com"
-
-user:
-  full_name: "Your Name"
-  headline: "Senior Software Engineer"
-  skills: ["Python", "FastAPI", "React"]
-```
-
-### `target_companies.yaml`
-
-A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled
-in where verified. It isn't read by any code — it's a shared starting point
-for `search.target_companies` above. Copy the entries you want into your own
-`config.yaml`.
 
 ## Project Structure
 
