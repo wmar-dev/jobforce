@@ -24,12 +24,18 @@ I wanted to practice spec-driven design and ran out of tokens when I tried to us
 
 ## Prerequisites
 
+Developed and tested on macOS; should also run on Linux without changes (both are POSIX).
+
 - Python 3.12+ with [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 20+
 - LaTeX (optional — for PDF resume export, requires `latexmk`):
-  - Full install: `brew install --cask mactex` (~5GB, includes `latexmk`)
-  - Lightweight: `brew install --cask basictex`, then `sudo tlmgr update --self && sudo tlmgr install latexmk geometry hyperref parskip`
+  - macOS full install: `brew install --cask mactex` (~5GB, includes `latexmk`)
+  - macOS lightweight: `brew install --cask basictex`, then `sudo tlmgr update --self && sudo tlmgr install latexmk geometry hyperref parskip`
+  - Linux (Debian/Ubuntu): `sudo apt install texlive-latex-extra latexmk`
+  - Linux (Fedora): `sudo dnf install texlive-latexmk texlive-collection-latexextra`
 - Chrome (for the extension)
+
+**Windows**: use [WSL2](https://learn.microsoft.com/windows/wsl/install) (Ubuntu). The Makefiles, `uv` venv paths, and shell commands below all assume a POSIX environment — running natively in PowerShell/cmd is unsupported. Inside WSL2, follow the Linux instructions above and below as-is.
 
 ## Setup
 
