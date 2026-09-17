@@ -35,10 +35,23 @@ Capture a job listing from a URL and ingest it into Jobforce using a determinist
    - `status` — pipeline status (always `"saved"` on first capture)
    - `duplicate` — `true` if this URL was already in the database
 
+4a. **Check for a broken adapter**: if `title`, `company_name`, `location`, or `description` came back null — the job was already written to the database in step 1 with those fields missing. Attempt an automatic fix before reporting:
+   ```
+   /parse-adapter-update <URL> <id>
+   ```
+   This fixes the site adapter and (if the backend is reachable) backfills the already-ingested record via PATCH. If the backend isn't running, the adapter is still fixed for future captures, but this record's null fields will need a manual backfill once it is (re-run `/parse-adapter-update <URL> <id>` then).
+
+   Re-run the dry-run fetch to get corrected values for the report:
+   ```bash
+   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<URL>"
+   ```
+   Use these corrected values (or the original ones, if the fix didn't fully resolve them) in step 5's report.
+
 5. Report result:
    - **`duplicate: false`**: "✅ Captured: [title] at [company] — Job #[id]"
    - **`duplicate: true`**: "Already saved — this listing is in your board (Job #[id])"
    - **Command error / non-zero exit**: "❌ Ingest failed: [stderr detail]"
+   - **Fields still null after auto-fix attempt (4a)**: append a warning: "⚠ Captured with missing fields ([list]) — adapter fix did not fully resolve; may need manual attention"
 
 ## Notes
 

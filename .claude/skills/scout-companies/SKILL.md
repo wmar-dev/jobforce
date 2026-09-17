@@ -260,22 +260,26 @@ cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<first_
 ```
 
 Inspect the JSON output:
-- If `title` is empty or null → stop this company and report:
+- If `title` is empty or null, or the command fails or returns non-JSON → attempt an automatic fix before giving up. Invoke the parse-adapter-update skill on this URL:
   ```
-  🏢 <name> — parse check failed: title not extracted from <first_url>
-    ⚠ Skipped batch. Fix the site adapter in backend/jobforce/services/parse/sites/ before re-running.
+  /parse-adapter-update <first_url>
   ```
+  Then re-run the dry-run parse check above.
+  - If `title` now extracts correctly → log and proceed to ingest the full list:
+    ```
+    🔧 <name> — adapter fixed for <hostname>, proceeding with batch
+    ```
+  - If it still fails after the fix attempt → stop this company and report:
+    ```
+    🏢 <name> — parse check failed: title not extracted from <first_url> (auto-fix attempted, still failing)
+      ⚠ Skipped batch. Fix the site adapter in backend/jobforce/services/parse/sites/ before re-running.
+    ```
 - If `location` is null and `target_locations` is non-empty → warn but continue (location check will fall back to per-URL skipping):
   ```
     ⚠ location not extracted — location filtering will be skipped for this site
   ```
-- If the command fails or returns non-JSON → stop this company and report:
-  ```
-  🏢 <name> — parse check failed: scout_fetch error on <first_url>
-    ⚠ Skipped batch.
-  ```
 
-If the parse check passes, proceed to ingest the full list (including the first URL).
+If the parse check passes (on the first try or after an auto-fix), proceed to ingest the full list (including the first URL).
 
 ### 4g: Ingest each pre-filtered job listing URL
 
@@ -352,36 +356,23 @@ for j in bad[:5]: print(f'  id={j[\"id\"]} {j[\"title\"]}')
 "
 ```
 
-If any jobs are missing location, the site adapter's location selector is broken (e.g. ATS updated its CSS classes). Fix it before continuing:
+If any jobs are missing location, the site adapter's location selector is broken (e.g. ATS updated its CSS classes). Fix it before continuing, using the parse-adapter-update skill rather than redoing its fixture/test/adapter procedure inline:
 
-1. **Inspect the live page** — fetch one failing URL with scout_fetch (`--dry-run`: this is a parse-only diagnostic, the job is already ingested) and check what came back:
-   ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<failing_url>" 2>/dev/null
+1. **Fix the adapter and backfill the first bad record** — invoke parse-adapter-update on the first failing job's URL and id (found via `source_url` on that job's record, `GET /api/jobs/<id>`):
    ```
-   If `location` is null, the adapter selector needs updating.
-
-2. **Capture a fixture** — save a minimal but representative HTML snippet from the broken page as a new fixture file in `backend/tests/fixtures/`. Name it `<ats>_<company>_job.html` (e.g. `ashby_decagon_job.html`). Include enough markup to exercise the location selector: the `<h1>` title element, the location container, and the description container. Strip unrelated boilerplate.
-
-3. **Add failing tests first** — in `backend/tests/unit/test_parse_<ats>.py`, add tests using the new fixture that assert the correct `location` value. Run them to confirm they fail:
-   ```bash
-   cd backend && uv run pytest tests/unit/test_parse_<ats>.py -q -k "new_fixture_name"
+   /parse-adapter-update <first_failing_url> <first_failing_id>
    ```
+   This captures a fixture, writes failing tests, fixes the adapter's location selector (keeping the old selector as a fallback), runs the full parse test suite, and backfills that one job's `location` via PATCH.
 
-4. **Fix the adapter** — update the relevant `_<ats>_location()` function in `backend/jobforce/services/parse/sites/<ats>.py`. Keep the old selector as a fallback so existing fixtures continue to pass. Add a comment explaining what changed and why.
-
-5. **Run all parse tests** — confirm all fixtures pass (new and old):
+2. **Backfill any remaining bad records** — if step 6's spot-check found more than one job missing location, the adapter is now fixed but the others still have null `location` in the DB. For each remaining bad job id:
    ```bash
-   cd backend && uv run pytest tests/unit/ -q -k "parse"
-   ```
-
-6. **Backfill locations** — update the already-ingested jobs missing location via PATCH:
-   ```bash
+   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<its_url>" 2>/dev/null
    curl -s -X PATCH "http://localhost:8000/api/jobs/<id>" \
      -H "Content-Type: application/json" \
-     -d '{"location": "<location>"}'
+     -d '{"location": "<location from dry-run output>"}'
    ```
 
-7. **Commit** — include the fixture, the tests, and the parse fix in one commit.
+3. **Commit** — parse-adapter-update does not commit on your behalf; include the new fixture, the new tests, and the adapter fix in one commit.
 
 ### 4i: Detect and merge duplicate company records
 
