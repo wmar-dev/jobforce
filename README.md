@@ -17,7 +17,7 @@ I wanted to practice spec-driven design and ran out of tokens when I tried to us
 ## Stack
 
 - **Backend**: FastAPI + SQLAlchemy 2.0 async + aiosqlite (SQLite WAL)
-- **Frontend**: Next.js 14 + Tailwind CSS + SWR
+- **Frontend**: Next.js 15 + Tailwind CSS + SWR
 - **AI**: Claude Haiku via Anthropic SDK
 - **Chrome Extension**: Manifest V3 — capture jobs while browsing
 - **Crawling**: Playwright MCP skill for automated job ingestion
