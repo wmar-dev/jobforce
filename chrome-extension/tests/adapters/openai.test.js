@@ -37,8 +37,8 @@ describe("slugToLocation", () => {
 });
 
 describe("openaiAdapter — location", () => {
-  test("reads <p> immediately after h1", () => {
-    makeDoc('<h1>Engineer</h1><p>San Francisco, CA</p>');
+  test("reads <p> immediately after h2 inside main", () => {
+    makeDoc('<main><h2>Engineer</h2><p>San Francisco, CA</p></main>');
     const result = runAdapter(openaiAdapter, document);
     expect(result.location).toBe("San Francisco, CA");
   });
@@ -57,8 +57,8 @@ describe("openaiAdapter — location", () => {
 });
 
 describe("openaiAdapter — description", () => {
-  test("reads article element", () => {
-    makeDoc('<h1>Job</h1><article>This is the job description.</article>');
+  test("reads article element inside main", () => {
+    makeDoc('<main><h2>Job</h2><article>This is the job description.</article></main>');
     expect(runAdapter(openaiAdapter, document).description).toBe("This is the job description.");
   });
 

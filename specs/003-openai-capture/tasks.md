@@ -12,13 +12,13 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Add Jest + jsdom to chrome-extension/: create chrome-extension/package.json with jest, jest-environment-jsdom, and test script
+- [x] T001 Add Jest + jsdom to chrome-extension/: create chrome-extension/package.json with jest, jest-environment-jsdom, and test script
 
 ---
 
 ## Phase 2: Foundational
 
-- [ ] T002 Create chrome-extension/tests/adapters/ directory structure
+- [x] T002 Create chrome-extension/tests/adapters/ directory structure
 
 ---
 
@@ -30,13 +30,13 @@
 
 ### Tests (write first — confirm they fail)
 
-- [ ] T003 [US1] Write generic adapter tests in chrome-extension/tests/adapters/generic.test.js: h1 title, og:site_name company, data-location, role_type from body text
-- [ ] T004 [US1] Write OpenAI adapter tests in chrome-extension/tests/adapters/openai.test.js: company="OpenAI", slugToLocation san-francisco→"San Francisco", h1+p location, unknown slug→null
-- [ ] T005 [US1] Write integration test in chrome-extension/tests/content.test.js: OpenAI DOM → company="OpenAI"; generic DOM → same result as before (regression guard)
+- [x] T003 [US1] Write generic adapter tests in chrome-extension/tests/adapters/generic.test.js: h1 title, og:site_name company, data-location, role_type from body text
+- [x] T004 [US1] Write OpenAI adapter tests in chrome-extension/tests/adapters/openai.test.js: company="OpenAI", slugToLocation san-francisco→"San Francisco", h1+p location, unknown slug→null
+- [x] T005 [US1] Write integration test in chrome-extension/tests/content.test.js: OpenAI DOM → company="OpenAI"; generic DOM → same result as before (regression guard)
 
 ### Implementation
 
-- [ ] T006 [US1] Rewrite chrome-extension/content.js with adapter registry framework (ADAPTERS map, runAdapter, merge, genericAdapter, openaiAdapter, slugToLocation)
+- [x] T006 [US1] Rewrite chrome-extension/content.js with adapter registry framework (ADAPTERS map, runAdapter, merge, genericAdapter, openaiAdapter, slugToLocation)
 
 ---
 
@@ -48,14 +48,14 @@
 
 ### Implementation
 
-- [ ] T007 [US2] Verify merge() returns empty string (not null/undefined) for missing company_name so background.js validation passes
+- [x] T007 [US2] Verify merge() returns empty string (not null/undefined) for missing company_name so background.js validation passes
 
 ---
 
 ## Phase 5: Polish & Verification
 
-- [ ] T008 Run `npm test` in chrome-extension/ — all tests pass
-- [ ] T009 Run `make check` from project root — no regressions in backend or frontend
+- [x] T008 Run `npm test` in chrome-extension/ — all tests pass
+- [x] T009 Run `make check` from project root — no regressions in backend or frontend
 
 ---
 

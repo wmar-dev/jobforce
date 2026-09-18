@@ -31,8 +31,8 @@ describe("extractJobData — OpenAI DOM", () => {
     expect(result.title).toBe("Full Stack Software Engineer");
   });
 
-  test("location comes from p near h1", () => {
-    setDoc('<h1>Engineer</h1><p>San Francisco, CA</p>');
+  test("location comes from p near h2 inside main", () => {
+    setDoc('<main><h2>Engineer</h2><p>San Francisco, CA</p></main>');
     const result = extractJobData();
     expect(result.location).toBe("San Francisco, CA");
   });
