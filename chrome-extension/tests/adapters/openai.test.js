@@ -1,3 +1,6 @@
+/**
+ * @jest-environment-options {"url": "https://openai.com/careers/engineer-applied/"}
+ */
 "use strict";
 
 const { openaiAdapter, slugToLocation, runAdapter } = require("../../content.js");
@@ -45,12 +48,7 @@ describe("openaiAdapter — location", () => {
 
   test("returns null when no p near h1 (falls back to generic via merge)", () => {
     makeDoc('<h1>Engineer</h1><div>other content</div>');
-    // Override window.location.pathname to unknown city
-    Object.defineProperty(window, "location", {
-      value: { ...window.location, pathname: "/careers/engineer-applied/" },
-      writable: true,
-      configurable: true,
-    });
+    // window.location.pathname (set via docblock above) is an unknown-city slug
     const result = runAdapter(openaiAdapter, document);
     expect(result.location).toBeNull();
   });
