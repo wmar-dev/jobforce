@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
@@ -67,10 +67,12 @@ export default function JobDetailPage({
   const [showModal, setShowModal] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
+  const [prevNote, setPrevNote] = useState(note);
 
-  useEffect(() => {
+  if (note !== prevNote) {
+    setPrevNote(note);
     setNoteBody(note?.body ?? "");
-  }, [note]);
+  }
 
   async function handleSaveNote() {
     if (noteSaving) return;

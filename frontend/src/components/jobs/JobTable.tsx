@@ -13,6 +13,33 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return <span className="ml-1 text-emerald-400">{dir === "asc" ? "↑" : "↓"}</span>;
 }
 
+function Th({
+  col,
+  label,
+  sortable,
+  last,
+  sortBy,
+  sortDir,
+  onSort,
+}: {
+  col: JobSortKey | null;
+  label: string;
+  sortable?: boolean;
+  last?: boolean;
+  sortBy: JobSortKey;
+  sortDir: SortDir;
+  onSort: (key: JobSortKey) => void;
+}) {
+  return (
+    <th
+      className={`pb-3 ${last ? "" : "pr-4"} font-medium ${sortable && col ? "cursor-pointer select-none hover:text-white transition-colors" : ""}`}
+      onClick={() => sortable && col && onSort(col)}
+    >
+      {label}{sortable && col && <SortIcon active={sortBy === col} dir={sortDir} />}
+    </th>
+  );
+}
+
 interface JobTableProps {
   jobs: JobListing[];
   sortBy: JobSortKey;
@@ -50,29 +77,18 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
     );
   }
 
-  function Th({ col, label, sortable, last }: { col: JobSortKey | null; label: string; sortable?: boolean; last?: boolean }) {
-    return (
-      <th
-        className={`pb-3 ${last ? "" : "pr-4"} font-medium ${sortable && col ? "cursor-pointer select-none hover:text-white transition-colors" : ""}`}
-        onClick={() => sortable && col && onSort(col)}
-      >
-        {label}{sortable && col && <SortIcon active={sortBy === col} dir={sortDir} />}
-      </th>
-    );
-  }
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-800 text-gray-400 text-left">
-            <Th col="title"      label="Title"     sortable />
-            <Th col="company"    label="Company"   sortable />
-            <Th col={null}       label="Location" />
-            <Th col="status"     label="Status"    sortable />
-            <Th col="fit_score"  label="Fit Score" sortable />
-            <Th col="created_at" label="Captured"  sortable />
-            <Th col={null}       label=""          last />
+            <Th col="title"      label="Title"     sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col="company"    label="Company"   sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col={null}       label="Location"  sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col="status"     label="Status"    sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col="fit_score"  label="Fit Score" sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col="created_at" label="Captured"  sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col={null}       label=""          last sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           </tr>
         </thead>
         <tbody>

@@ -20,6 +20,21 @@ function ForgePageInner() {
   const [rawJson, setRawJson] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const handleJobSelect = async (jobId: number | null) => {
+    setSelectedJobId(jobId);
+    setTailored(null);
+    setError(null);
+    setCopied(false);
+    if (!jobId) return;
+    setIsLoadingTailored(true);
+    try {
+      const result = await getTailoredResume(jobId);
+      setTailored(result);
+    } finally {
+      setIsLoadingTailored(false);
+    }
+  };
+
   useEffect(() => {
     const linkedJobId = Number(searchParams.get("jobId")) || null;
 
@@ -40,6 +55,7 @@ function ForgePageInner() {
     });
 
     if (linkedJobId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount, not a state sync
       handleJobSelect(linkedJobId);
     }
 
@@ -61,21 +77,6 @@ function ForgePageInner() {
       setIsEditingBase(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid JSON or save failed");
-    }
-  };
-
-  const handleJobSelect = async (jobId: number | null) => {
-    setSelectedJobId(jobId);
-    setTailored(null);
-    setError(null);
-    setCopied(false);
-    if (!jobId) return;
-    setIsLoadingTailored(true);
-    try {
-      const result = await getTailoredResume(jobId);
-      setTailored(result);
-    } finally {
-      setIsLoadingTailored(false);
     }
   };
 

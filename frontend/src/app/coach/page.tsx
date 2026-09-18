@@ -16,7 +16,10 @@ const CATEGORIES: Array<{ key: QuestionItem["category"]; label: string; icon: st
 function CoachPageInner() {
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<JobListing[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(() => {
+    const jobParam = searchParams.get("job");
+    return jobParam ? Number(jobParam) : null;
+  });
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +56,9 @@ function CoachPageInner() {
   }, [selectedJobId]);
 
   useEffect(() => {
-    const jobParam = searchParams.get("job");
-    if (jobParam) {
-      const id = Number(jobParam);
-      setSelectedJobId(id);
-      handleLoadSession(id);
+    if (selectedJobId != null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount, not a state sync
+      handleLoadSession(selectedJobId);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
