@@ -1,6 +1,6 @@
 ---
 name: housekeeping
-description: Periodic maintenance pass over the repo — updates backend (uv) and frontend (npm) dependencies within their existing declared version ranges, flags any available major-version bumps for manual review instead of applying them, runs `make check` (lint + typecheck + test across backend and frontend), flags notable test coverage gaps for a follow-up pass, and verifies the "no `anthropic` SDK import outside coach.py" invariant from CLAUDE.md. Use when the user wants to update dependencies, do routine maintenance, or run a periodic health check on the repo.
+description: Periodic maintenance pass over the repo — updates backend (uv), frontend (npm), and chrome-extension (npm) dependencies within their existing declared version ranges, flags any available major-version bumps for manual review instead of applying them, runs `make check` (lint + typecheck + test across backend, frontend, and chrome-extension), flags notable test coverage gaps for a follow-up pass, and verifies the "no `anthropic` SDK import outside coach.py" invariant from CLAUDE.md. Use when the user wants to update dependencies, do routine maintenance, or run a periodic health check on the repo.
 argument-hint: (none)
 user-invocable: true
 ---
@@ -22,6 +22,7 @@ If this prints anything, stop and tell the user: uncommitted changes exist, comm
 ```bash
 cd backend && uv pip list --outdated
 cd frontend && npm outdated   # exits 1 when packages are outdated — that's expected, not a failure
+cd chrome-extension && npm outdated   # same exit-1 caveat; small dep set (jest, jest-environment-jsdom) but easy to forget
 ```
 
 For each outdated package, classify it:
@@ -51,12 +52,18 @@ cd backend && uv sync --extra dev
 cd frontend && npm update
 ```
 
+The same applies to **chrome-extension** — `npm update` there is safe unconditionally:
+
+```bash
+cd chrome-extension && npm update
+```
+
 Do not edit `package.json`/`pyproject.toml` version constraints yourself for major bumps — that's a deliberate decision for the user to make, not something to apply during routine housekeeping.
 
 ## Step 4: Run quality gates
 
 ```bash
-make check   # backend: ruff lint + mypy + pytest; frontend: ESLint + Jest
+make check   # backend: ruff lint + mypy + pytest; frontend: ESLint + Jest; chrome-extension: Jest
 ```
 
 If anything fails, stop here — report the failure output and do not proceed to committing. A housekeeping pass should never leave the repo in a broken state.
@@ -69,6 +76,8 @@ If anything fails, stop here — report the failure output and do not proceed to
 - Any package bumped in Step 3 whose touched code has thin coverage — a good sign the upgrade path itself is under-tested.
 
 Frontend has no coverage reporting configured (`npm test` runs `jest --passWithNoTests`, no `--coverage` flag). As a lightweight substitute, check whether files under `frontend/src/components/` and `frontend/src/hooks/` have a colocated or `__tests__` test file at all — skip trivial presentational components.
+
+Same for chrome-extension: no coverage flag configured. Spot-check that each site adapter in `content.js` (the `ADAPTERS` map) has a corresponding fixture in `tests/adapters/` or `tests/content.test.js`, and that those fixtures' DOM shape actually matches what the adapter's selectors expect (not just that a test file exists) — a passing test suite with stale fixtures is exactly what let the regression above go unnoticed.
 
 This is a lightweight flag, not a full coverage audit: only note real gaps (0%/near-0% coverage, or business logic with no test file at all), and don't write the tests yourself — collect them to report in Step 7 for the user to decide on a follow-up pass. Coverage gaps need judgment about what's worth testing, which is out of scope for a routine dependency-maintenance run.
 
