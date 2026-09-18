@@ -15,12 +15,16 @@ check:
 	@cd backend && $(MAKE) check
 	@echo "=== Frontend quality gates ==="
 	@cd frontend && npm run lint && npm test
+	@echo "=== Chrome extension quality gates ==="
+	@cd chrome-extension && npm test
 
 test:
 	@echo "=== Backend tests ==="
 	@cd backend && $(MAKE) test
 	@echo "=== Frontend tests ==="
 	@cd frontend && npm test
+	@echo "=== Chrome extension tests ==="
+	@cd chrome-extension && npm test
 
 seed:
 	@echo "Seeding database from config.yaml..."
@@ -31,3 +35,5 @@ install:
 	@cd backend && uv sync --extra dev
 	@echo "Installing frontend dependencies..."
 	@cd frontend && npm install
+	@echo "Installing chrome-extension dependencies..."
+	@cd chrome-extension && npm install
