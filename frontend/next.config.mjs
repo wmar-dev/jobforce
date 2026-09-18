@@ -1,6 +1,9 @@
 
 
 const nextConfig = {
+  // This repo has its own root-level CLAUDE.md; don't let Next.js generate
+  // a second, conflicting one under frontend/.
+  agentRules: false,
   async rewrites() {
     return [
       {

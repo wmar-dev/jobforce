@@ -146,7 +146,7 @@ export default function JobDetailPage({
               {job.company.name}
             </Link>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <StatusBadge status={job.status} />
             <button
               onClick={() => setShowModal(true)}
@@ -270,7 +270,7 @@ export default function JobDetailPage({
           value={noteBody}
           onChange={(e) => setNoteBody(e.target.value)}
           placeholder="Add notes from recruiter meetings or company research..."
-          className="w-full h-36 bg-gray-900 border border-gray-800 rounded-lg p-3 text-sm text-gray-300 placeholder-gray-600 resize-y focus:outline-none focus:border-gray-600 transition-colors"
+          className="w-full h-36 bg-gray-900 border border-gray-800 rounded-lg p-3 text-sm text-gray-300 placeholder-gray-600 resize-y focus:outline-hidden focus:border-gray-600 transition-colors"
         />
         <div className="flex items-center justify-between mt-2">
           <div className="text-xs text-gray-600">

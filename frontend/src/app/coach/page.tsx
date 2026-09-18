@@ -88,7 +88,7 @@ function CoachPageInner() {
             setSelectedJobId(id);
             if (id) handleLoadSession(id);
           }}
-          className="flex-1 max-w-xs px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-blue-500"
+          className="flex-1 max-w-xs px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-blue-500"
         >
           <option value="">Select a job...</option>
           {jobs.map((job) => (

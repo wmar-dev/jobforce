@@ -160,7 +160,7 @@ export default function CompanyDetailPage() {
               onChange={(e) => setNoteContent(e.target.value)}
               placeholder="Add a meeting note..."
               rows={3}
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500 resize-none"
+              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-600 focus:outline-hidden focus:border-emerald-500 resize-none"
             />
             <button
               onClick={handleAddNote}

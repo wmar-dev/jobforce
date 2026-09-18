@@ -138,7 +138,7 @@ function JobsPageInner() {
         <select
           value={companyId}
           onChange={(e) => updateSearch({ company_id: e.target.value || undefined, page: undefined })}
-          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-500 w-44"
+          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-emerald-500 w-44"
         >
           <option value="">All companies</option>
           {companies?.map((c) => (
@@ -150,12 +150,12 @@ function JobsPageInner() {
           placeholder="Filter by location..."
           value={location}
           onChange={(e) => updateSearch({ location: e.target.value || undefined, page: undefined })}
-          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500 w-48"
+          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-500 focus:outline-hidden focus:border-emerald-500 w-48"
         />
         <select
           value={roleType}
           onChange={(e) => updateSearch({ role_type: e.target.value || undefined, page: undefined })}
-          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-500"
+          className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-emerald-500"
         >
           <option value="">All role types</option>
           <option value="full-time">Full-time</option>

@@ -104,7 +104,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                 >
                   {job.title}
                   {job.has_note && (
-                    <StickyNote size={12} className="text-yellow-500 flex-shrink-0" />
+                    <StickyNote size={12} className="text-yellow-500 shrink-0" />
                   )}
                 </Link>
               </td>

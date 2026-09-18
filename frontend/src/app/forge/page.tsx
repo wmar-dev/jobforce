@@ -119,7 +119,7 @@ function ForgePageInner() {
                 value={rawJson}
                 onChange={(e) => setRawJson(e.target.value)}
                 rows={16}
-                className="w-full px-3 py-2 text-xs font-mono bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-amber-500 resize-none"
+                className="w-full px-3 py-2 text-xs font-mono bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-amber-500 resize-none"
               />
               <button
                 onClick={handleSaveBase}
@@ -173,7 +173,7 @@ function ForgePageInner() {
             <select
               value={selectedJobId ?? ""}
               onChange={(e) => handleJobSelect(e.target.value ? Number(e.target.value) : null)}
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-amber-500"
             >
               <option value="">Select a job...</option>
               {(() => {
