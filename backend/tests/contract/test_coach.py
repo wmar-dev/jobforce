@@ -130,6 +130,31 @@ async def test_submit_answer_returns_stub_feedback(test_client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
+async def test_submit_answer_session_not_found_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.post(
+        "/api/coach/sessions/99999/answer",
+        json={"question_id": "q1", "answer": "Some answer."},
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_submit_answer_unknown_question_id_returns_404(test_client: AsyncClient) -> None:
+    job = await _ingest_job(test_client)
+    prep_resp = await test_client.post(
+        "/api/coach/prep",
+        json={"job_id": job["id"], "questions": SAMPLE_QUESTIONS},
+    )
+    session_id = prep_resp.json()["session_id"]
+
+    resp = await test_client.post(
+        f"/api/coach/sessions/{session_id}/answer",
+        json={"question_id": "does-not-exist", "answer": "Some answer."},
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_session_summary_returns_overall_score_and_areas(
     test_client: AsyncClient,
 ) -> None:

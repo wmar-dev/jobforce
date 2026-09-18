@@ -58,3 +58,4 @@ addopts = "--cov=jobforce --cov-report=term-missing"
 
 [tool.coverage.run]
 omit = ["tests/*"]
+concurrency = ["greenlet", "thread"]

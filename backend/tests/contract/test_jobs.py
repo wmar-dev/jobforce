@@ -148,6 +148,55 @@ async def test_get_job_not_found_returns_404(test_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_patch_job_not_found_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.patch("/api/jobs/99999", json={"location": "Remote"})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_patch_job_updates_only_supplied_fields(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(
+        test_client,
+        source_url="https://example.com/j/patch-partial",
+        title="Original Title",
+        location="Original Location",
+        role_type="full-time",
+    )
+    job_id = ingest_resp["id"]
+    resp = await test_client.patch(f"/api/jobs/{job_id}", json={"location": "New York"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["location"] == "New York"
+    assert data["title"] == "Original Title"
+    assert data["role_type"] == "full-time"
+
+
+@pytest.mark.asyncio
+async def test_delete_job_removes_job(test_client: AsyncClient) -> None:
+    ingest_resp = await _ingest(test_client, source_url="https://example.com/j/delete-me")
+    job_id = ingest_resp["id"]
+    resp = await test_client.delete(f"/api/jobs/{job_id}")
+    assert resp.status_code == 204
+    resp = await test_client.get(f"/api/jobs/{job_id}")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_job_not_found_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.delete("/api/jobs/99999")
+    assert resp.status_code == 404
+    # Repeating the delete on the same (still-missing) id must also 404.
+    resp = await test_client.delete("/api/jobs/99999")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_patch_job_status_not_found_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.patch("/api/jobs/99999/status", json={"status": "applied"})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_patch_job_status_valid_transition(test_client: AsyncClient) -> None:
     ingest_resp = await _ingest(test_client, source_url="https://example.com/j/patch1")
     job_id = ingest_resp["id"]
@@ -198,6 +247,190 @@ async def test_get_jobs_pagination_limit_offset(test_client: AsyncClient) -> Non
 
 
 # ---------------------------------------------------------------------------
+# Additional GET /api/jobs filters, sort, and combined queries (US1)
+# ---------------------------------------------------------------------------
+
+
+async def _write_score(client: AsyncClient, job_id: int, score: float, scored: int = 1) -> None:
+    resp = await client.patch(
+        f"/api/jobs/{job_id}",
+        json={"fit_score": score, "fit_scored": scored},
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_company_id(test_client: AsyncClient) -> None:
+    a = await _ingest(
+        test_client, source_url="https://example.com/j/companyid-a", company_name="CompanyIdCoA"
+    )
+    await _ingest(
+        test_client, source_url="https://example.com/j/companyid-b", company_name="CompanyIdCoB"
+    )
+    resp = await test_client.get(f"/api/jobs?company_id={a['company_id']}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 1
+    assert all(item["company"]["id"] == a["company_id"] for item in data["items"])
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_fit_scored(test_client: AsyncClient) -> None:
+    scored = await _ingest(
+        test_client, source_url="https://example.com/j/fitscored-yes", title="Scored Job"
+    )
+    await _write_score(test_client, scored["id"], score=0.7, scored=1)
+    await _ingest(
+        test_client, source_url="https://example.com/j/fitscored-no", title="Unscored Job"
+    )
+
+    resp = await test_client.get("/api/jobs?fit_scored=true")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert any(item["id"] == scored["id"] for item in data["items"])
+    assert all(item["fit_scored"] is True for item in data["items"])
+
+    resp = await test_client.get("/api/jobs?fit_scored=false")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert all(item["fit_scored"] is False for item in data["items"])
+    assert not any(item["id"] == scored["id"] for item in data["items"])
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_min_score(test_client: AsyncClient) -> None:
+    low = await _ingest(test_client, source_url="https://example.com/j/minscore-low")
+    high = await _ingest(test_client, source_url="https://example.com/j/minscore-high")
+    await _write_score(test_client, low["id"], score=0.3)
+    await _write_score(test_client, high["id"], score=0.8)
+
+    resp = await test_client.get("/api/jobs?min_score=0.5")
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = {item["id"] for item in data["items"]}
+    assert high["id"] in ids
+    assert low["id"] not in ids
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_title_substring(test_client: AsyncClient) -> None:
+    match = await _ingest(
+        test_client,
+        source_url="https://example.com/j/title-match",
+        title="Staff Backend Engineer",
+    )
+    await _ingest(
+        test_client,
+        source_url="https://example.com/j/title-nomatch",
+        title="Marketing Manager",
+    )
+
+    resp = await test_client.get("/api/jobs?title=backend")
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = {item["id"] for item in data["items"]}
+    assert match["id"] in ids
+    assert all("backend" in item["title"].lower() for item in data["items"])
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_filter_by_description_substring(test_client: AsyncClient) -> None:
+    match = await _ingest(
+        test_client,
+        source_url="https://example.com/j/desc-match",
+        description="Work with distributed systems and Kubernetes.",
+    )
+    await _ingest(
+        test_client,
+        source_url="https://example.com/j/desc-nomatch",
+        description="Front-end React role.",
+    )
+
+    resp = await test_client.get("/api/jobs?q=kubernetes")
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = {item["id"] for item in data["items"]}
+    assert match["id"] in ids
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_sort_by_company_without_company_filter(test_client: AsyncClient) -> None:
+    await _ingest(
+        test_client, source_url="https://example.com/j/sortcompany-a", company_name="AlphaSortCo"
+    )
+    await _ingest(
+        test_client, source_url="https://example.com/j/sortcompany-b", company_name="ZetaSortCo"
+    )
+
+    resp = await test_client.get("/api/jobs?sort_by=company&sort_dir=asc&limit=200")
+    assert resp.status_code == 200
+    names = [item["company"]["name"] for item in resp.json()["items"]]
+    alpha_idx = names.index("AlphaSortCo")
+    zeta_idx = names.index("ZetaSortCo")
+    assert alpha_idx < zeta_idx
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_combined_filters_and_sort(test_client: AsyncClient) -> None:
+    keep = await _ingest(
+        test_client,
+        source_url="https://example.com/j/combined-keep",
+        company_name="CombinedCo",
+        title="Combined Keep Job",
+    )
+    await _write_score(test_client, keep["id"], score=0.9)
+    await _ingest(
+        test_client,
+        source_url="https://example.com/j/combined-drop-score",
+        company_name="CombinedCo",
+        title="Combined Drop Job",
+    )
+    await _ingest(
+        test_client,
+        source_url="https://example.com/j/combined-drop-company",
+        company_name="OtherCombinedCo",
+        title="Combined Other Company Job",
+    )
+
+    resp = await test_client.get(
+        "/api/jobs?company=CombinedCo&min_score=0.5&status=saved&sort_by=fit_score&sort_dir=desc"
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = [item["id"] for item in data["items"]]
+    assert ids == [keep["id"]]
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_sort_nulls_last_and_tiebreak(test_client: AsyncClient) -> None:
+    scored_low = await _ingest(test_client, source_url="https://example.com/j/nullsort-low")
+    scored_high = await _ingest(test_client, source_url="https://example.com/j/nullsort-high")
+    unscored = await _ingest(test_client, source_url="https://example.com/j/nullsort-null")
+    await _write_score(test_client, scored_low["id"], score=0.3)
+    await _write_score(test_client, scored_high["id"], score=0.8)
+    # unscored has fit_score left as null
+
+    for sort_dir in ("asc", "desc"):
+        resp = await test_client.get(f"/api/jobs?sort_by=fit_score&sort_dir={sort_dir}&limit=200")
+        assert resp.status_code == 200
+        ids = [item["id"] for item in resp.json()["items"]]
+        # The null-score job must sort after every non-null-score job, regardless of direction.
+        assert ids.index(unscored["id"]) > ids.index(scored_low["id"])
+        assert ids.index(unscored["id"]) > ids.index(scored_high["id"])
+
+    tie_older = await _ingest(test_client, source_url="https://example.com/j/tiebreak-older")
+    await _write_score(test_client, tie_older["id"], score=0.5)
+    tie_newer = await _ingest(test_client, source_url="https://example.com/j/tiebreak-newer")
+    await _write_score(test_client, tie_newer["id"], score=0.5)
+
+    resp = await test_client.get("/api/jobs?sort_by=fit_score&sort_dir=desc&limit=200")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    # Equal fit_score ties break by created_at desc — the more recently created job comes first.
+    assert ids.index(tie_newer["id"]) < ids.index(tie_older["id"])
+
+
+# ---------------------------------------------------------------------------
 # Reparse endpoint
 # ---------------------------------------------------------------------------
 
@@ -219,6 +452,12 @@ async def _create_job_without_snapshot(db_session: AsyncSession) -> JobListing:
     await db_session.commit()
     await db_session.refresh(job)
     return job
+
+
+@pytest.mark.asyncio
+async def test_reparse_job_not_found_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.post("/api/jobs/99999/reparse")
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -282,6 +521,24 @@ async def test_get_job_note_returns_404_when_no_note(test_client: AsyncClient) -
     ingest_resp = await _ingest(test_client, source_url="https://example.com/j/note1")
     job_id = ingest_resp["id"]
     resp = await test_client.get(f"/api/jobs/{job_id}/note")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_job_note_not_found_job_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.get("/api/jobs/99999/note")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_put_job_note_not_found_job_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.put("/api/jobs/99999/note", json={"body": "orphan note"})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_job_note_not_found_job_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.delete("/api/jobs/99999/note")
     assert resp.status_code == 404
 
 
