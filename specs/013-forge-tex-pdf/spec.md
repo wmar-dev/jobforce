@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-05
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Enable forge to take a resume and generate a tex file and a rendered pdf tailored for each specific job."
 

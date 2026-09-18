@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-01
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "I need a state for jobs that have low score, so I can ignore them, but keep track that I have crawled them. Having to many jobs in saved is overwhelming. I will only apply to a few jobs per company, so i need a way to mark the the jobs."
 

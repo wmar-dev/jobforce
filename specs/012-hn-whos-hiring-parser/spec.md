@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-05
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Add a parser specific to hacker news who's hiring to save tokens rather than using LLM to extract and process all the text. Example url: `https://news.ycombinator.com/item?id=48357725`"
 

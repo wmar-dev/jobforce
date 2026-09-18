@@ -155,5 +155,5 @@ Key changes:
 **Verify invariant**: `grep -r "import anthropic" backend/` → zero results
 
 <!-- SPECKIT START -->
-Active feature plan: specs/013-forge-tex-pdf/plan.md
+Active feature plan: none — specs/013-forge-tex-pdf/plan.md is complete (all tasks done, spec Status: Implemented)
 <!-- SPECKIT END -->

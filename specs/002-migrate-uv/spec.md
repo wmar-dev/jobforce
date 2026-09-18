@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-27
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: Change app to use uv for dependencies instead of pip.
 

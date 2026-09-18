@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-27
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Fix Oracle, so it doesn't use anthropic sdk, give me some alternatives, particularly using claude code."
 

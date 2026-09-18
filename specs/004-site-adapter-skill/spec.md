@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-27
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "use playwright mcp server to check format of a job posting URL and update google chrome extension code to parse page. Make a claude skill that can take a url and update the chrome extension."
 

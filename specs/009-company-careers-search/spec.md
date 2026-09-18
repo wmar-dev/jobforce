@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-28
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Add functionality to search the career pages of target_companies from config.yaml. Maybe this should be a skill?"
 

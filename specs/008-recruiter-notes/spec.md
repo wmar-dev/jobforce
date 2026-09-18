@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-28
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "There should be the ability to take notes in the web app to write notes from meetings with recruiters and additional research on the company."
 

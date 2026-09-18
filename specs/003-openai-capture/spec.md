@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-27
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: Make chrome extension work for capturing https://openai.com/careers/full-stack-software-engineer-applied-foundations-san-francisco/
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-27
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "the scout-crawl command should use a tool and python code to parse the webpage similar to the chrome extension, so we can be more deterministic and accurate with the parsing."
 
