@@ -48,6 +48,17 @@ def test_parse_html_greenhouse_job_boards_subdomain() -> None:
     assert result["company_name"] == "Stripe"
 
 
+def test_parse_html_greenhouse_eu_subdomain() -> None:
+    # job-boards.eu.greenhouse.io (e.g. Groww) is the same Greenhouse product
+    # on an EU-region host — was missing from HOSTNAMES entirely, so
+    # company_name (parsed from the URL path) never ran.
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://job-boards.eu.greenhouse.io/groww/jobs/4728765101")
+    assert result["company_name"] == "Groww"
+
+
 def test_parse_html_greenhouse_detects_full_time() -> None:
     from jobforce.services.parse import parse_html
 

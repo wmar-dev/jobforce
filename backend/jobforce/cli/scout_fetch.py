@@ -7,6 +7,7 @@ import asyncio
 import html as html_module
 import json
 import sys
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from jobforce.services.parse import parse_html
@@ -160,7 +161,85 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     "apply.careers.microsoft.com": (
         "document.querySelector('h2[class*=\"position-title\"]')?.textContent.trim().length > 0"
     ),
+    # Same Eightfold ATS as jobs.twilio.com / apply.careers.microsoft.com, on
+    # tenants' own eightfold.ai subdomains (e.g. lockheedmartin.eightfold.ai).
+    "eightfold.ai": (
+        "document.querySelector('h2[class*=\"position-title\"]')?.textContent.trim().length > 0"
+    ),
 }
+
+# Newer Eightfold tenants (e.g. lockheedmartin.eightfold.ai) render the job
+# body behind a "Job Description" tab that doesn't fetch/render its content
+# until clicked — unlike jobs.twilio.com's single-page layout, waiting for
+# hydration alone leaves #job-description-container empty.
+_TAB_CLICK_HOSTS: tuple[str, ...] = ("eightfold.ai",)
+
+
+async def _extract_icims_frame_html(page: Any) -> str | None:
+    """iCIMS always renders the real job content inside a same-origin
+    <iframe src="*.icims.com/...?in_iframe=1">, even on the "canonical"
+    (non-iframe) job URL — the wrapper page is just a branded "welcome" shell
+    with nav chrome and no job content of its own, so capturing its
+    outerHTML alone yields null location/description/role_type. The iframe
+    is same-origin, so its contentDocument is reachable from the wrapper's
+    JS context; merge its job container into the wrapper's own <head> (which
+    carries a clean company og:site_name meta the iframe's own head lacks —
+    the iframe's og:site_name is just the generic literal "careers").
+    """
+    result = await page.evaluate(
+        """() => {
+            const frame = document.querySelector('iframe[src*="icims.com"]');
+            const fdoc = frame && frame.contentDocument;
+            if (!fdoc) return null;
+            const job = fdoc.querySelector('.iCIMS_JobContainer') || fdoc.body;
+            if (!job) return null;
+            return '<!doctype html><html><head>' + document.head.innerHTML +
+                '</head><body>' + job.outerHTML + '</body></html>';
+        }"""
+    )
+    return result if isinstance(result, str) else None
+
+
+async def _wait_for_icims_and_extract(page: Any, hostname: str) -> str | None:
+    if not hostname.endswith("icims.com"):
+        return None
+    from playwright.async_api import TimeoutError as PlaywrightTimeout
+
+    try:
+        await page.wait_for_function(
+            "document.querySelector('iframe[src*=\"icims.com\"]')"
+            "?.contentDocument?.querySelector('h1')"
+            "?.textContent?.trim()?.length > 0",
+            timeout=10_000,
+        )
+    except PlaywrightTimeout:
+        pass
+    return await _extract_icims_frame_html(page)
+
+
+async def _click_eightfold_description_tab(page: Any, hostname: str) -> None:
+    """Newer Eightfold tenants (e.g. lockheedmartin.eightfold.ai) render the
+    job body behind a "Job Description" tab that doesn't fetch/render its
+    content until clicked — unlike jobs.twilio.com's single-page layout,
+    waiting for hydration alone leaves #job-description-container empty."""
+    if not any(hostname.endswith(h) for h in _TAB_CLICK_HOSTS):
+        return
+    from playwright.async_api import TimeoutError as PlaywrightTimeout
+
+    # Some tenants (e.g. Lockheed Martin) show a one-time welcome modal on
+    # first load that intercepts pointer events and blocks the tab click.
+    try:
+        await page.click(".modalClose", timeout=2_000)
+    except PlaywrightTimeout:
+        pass
+    try:
+        await page.click("button:has-text('Job Description')", timeout=3_000)
+        await page.wait_for_function(
+            "document.querySelector('#job-description-container')?.textContent?.trim()?.length > 0",
+            timeout=8_000,
+        )
+    except PlaywrightTimeout:
+        pass
 
 
 async def _fetch_html(url: str) -> str:
@@ -191,6 +270,9 @@ async def _fetch_html(url: str) -> str:
             # "h1, main h2" wait resolves before the job title/location/description
             # are in the DOM. Wait on the job-specific marker for those hosts instead.
             hostname = urlparse(url).hostname or ""
+            icims_html = await _wait_for_icims_and_extract(page, hostname)
+            if icims_html is not None:
+                return icims_html
             is_workday = "myworkdayjobs.com" in hostname
             hydration_condition = next(
                 (cond for host, cond in _HYDRATION_WAIT_CONDITIONS.items() if host in hostname),
@@ -212,6 +294,7 @@ async def _fetch_html(url: str) -> str:
             except PlaywrightTimeout:
                 # SPA pages without the expected marker (e.g. TikTok): wait for JS to hydrate content
                 await page.wait_for_timeout(5_000)
+            await _click_eightfold_description_tab(page, hostname)
             return str(await page.evaluate("document.documentElement.outerHTML"))
         finally:
             await browser.close()

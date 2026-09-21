@@ -1,5 +1,6 @@
 # ---------------------------------------------------------------------------
 # Greenhouse site adapter — boards.greenhouse.io / job-boards.greenhouse.io
+# (plus the EU-region job-boards.eu.greenhouse.io tenants, e.g. Groww)
 # URL: boards.greenhouse.io/<company>/jobs/<id>
 # ---------------------------------------------------------------------------
 
@@ -12,7 +13,7 @@ from bs4 import BeautifulSoup
 
 from .._common import _text
 
-HOSTNAMES = ["boards.greenhouse.io", "job-boards.greenhouse.io"]
+HOSTNAMES = ["boards.greenhouse.io", "job-boards.greenhouse.io", "job-boards.eu.greenhouse.io"]
 
 
 def _greenhouse_company(doc: BeautifulSoup, url: str) -> str | None:
