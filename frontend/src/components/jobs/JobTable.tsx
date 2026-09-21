@@ -6,6 +6,7 @@ import Link from "next/link";
 import { StickyNote } from "lucide-react";
 import type { JobSortKey, SortDir } from "@/lib/api";
 import { patchJobStatus } from "@/lib/api";
+import { parseDateOnly } from "@/lib/format";
 import { useSWRConfig } from "swr";
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
@@ -87,6 +88,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
             <Th col={null}       label="Location"  sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <Th col="status"     label="Status"    sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <Th col="fit_score"  label="Fit Score" sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th col="posted_at"  label="Posted"    sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <Th col="created_at" label="Captured"  sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <Th col={null}       label=""          last sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           </tr>
@@ -133,6 +135,9 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                 ) : (
                   <span className="text-gray-600 text-xs">Not scored</span>
                 )}
+              </td>
+              <td className="py-3 pr-4 text-gray-500 text-xs">
+                {job.posted_at ? parseDateOnly(job.posted_at).toLocaleDateString() : "—"}
               </td>
               <td className="py-3 pr-4 text-gray-500 text-xs">
                 {job.crawled_at

@@ -83,7 +83,7 @@ function JobsPageInner() {
     } else {
       updateSearch({
         sort_by: key,
-        sort_dir: key === "fit_score" || key === "created_at" ? "desc" : "asc",
+        sort_dir: key === "fit_score" || key === "created_at" || key === "posted_at" ? "desc" : "asc",
         page: undefined,
       });
     }

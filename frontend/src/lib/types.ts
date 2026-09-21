@@ -31,6 +31,7 @@ export interface JobListing {
   company: Company;
   location?: string | null;
   role_type?: RoleType | null;
+  posted_at?: string | null;
   source_url: string;
   status: PipelineStatus;
   fit_scored: boolean;

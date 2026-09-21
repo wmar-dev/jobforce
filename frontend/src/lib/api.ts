@@ -37,7 +37,13 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // Jobs
-export type JobSortKey = "fit_score" | "created_at" | "title" | "status" | "company";
+export type JobSortKey =
+  | "fit_score"
+  | "created_at"
+  | "posted_at"
+  | "title"
+  | "status"
+  | "company";
 export type SortDir = "asc" | "desc";
 
 export interface JobFilters {
@@ -46,6 +52,7 @@ export interface JobFilters {
   min_score?: number;
   location?: string;
   role_type?: RoleType;
+  posted_after?: string;
   sort_by?: JobSortKey;
   sort_dir?: SortDir;
   limit?: number;

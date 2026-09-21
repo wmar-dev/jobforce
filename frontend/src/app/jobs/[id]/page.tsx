@@ -10,6 +10,7 @@ import { upsertJobNote, deleteJobNote } from "@/lib/api";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { StatusTransitionModal } from "@/components/jobs/StatusTransitionModal";
 import type { PipelineStatus } from "@/lib/types";
+import { parseDateOnly } from "@/lib/format";
 
 function JobDescription({ text }: { text: string }) {
   const isMarkdown = /[#*\-`\[\]]/.test(text);
@@ -170,6 +171,17 @@ export default function JobDetailPage({
           <span>
             <span className="text-gray-600 mr-1">💼</span>
             {job.role_type}
+          </span>
+        )}
+        {job.posted_at && (
+          <span>
+            <span className="text-gray-600 mr-1">🗓️</span>
+            Posted{" "}
+            {parseDateOnly(job.posted_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
           </span>
         )}
         <span>
