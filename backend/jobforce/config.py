@@ -7,6 +7,11 @@ import yaml
 from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings
 
+# backend/jobforce/config.py -> backend/jobforce -> backend -> repo root
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+RESUME_FILE = REPO_ROOT / "config" / "resume.json"
+OUTPUT_DIR = REPO_ROOT / "output"
+
 
 class DatabaseConfig(BaseModel):
     path: str = "backend/data/jobforce.db"

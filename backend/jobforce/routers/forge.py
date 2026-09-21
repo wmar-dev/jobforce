@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated, Any
 
@@ -12,11 +11,12 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from jobforce.config import RESUME_FILE
 from jobforce.db.engine import get_session
 from jobforce.db.models import Company, JobListing, Resume
 from jobforce.services.forge import ExportResult, compute_diff, export_resume
 
-_RESUME_FILE = Path(__file__).parents[3] / "config" / "resume.json"
+_RESUME_FILE = RESUME_FILE
 
 router = APIRouter(prefix="/resume", tags=["forge"])
 

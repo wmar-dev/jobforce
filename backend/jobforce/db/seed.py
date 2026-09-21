@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobforce.config import AppConfig
+from jobforce.config import RESUME_FILE, AppConfig
 from jobforce.db.models import Company, Resume, SearchConfigRecord
 
 logger = logging.getLogger(__name__)
 
-_RESUME_FILE = Path(__file__).parents[3] / "config" / "resume.json"
+_RESUME_FILE = RESUME_FILE
 
 
 async def seed_from_config(session: AsyncSession, config: AppConfig) -> None:

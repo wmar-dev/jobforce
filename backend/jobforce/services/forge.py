@@ -19,10 +19,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from jobforce.config import OUTPUT_DIR
+
 logger = logging.getLogger(__name__)
 
 _SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
-_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "output"
+_OUTPUT_DIR = OUTPUT_DIR
 
 
 def _slugify(value: str) -> str:
