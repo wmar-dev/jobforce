@@ -17,7 +17,7 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .._common import _text, _to_markdown
+from .._common import _text, _to_markdown, normalize_posted_at
 
 HOSTNAME = "eightfold.ai"
 
@@ -44,9 +44,19 @@ def _eightfold_description(doc: BeautifulSoup, url: str) -> str | None:
     return _to_markdown(doc.select_one("#job-description-container"))
 
 
+def _eightfold_posted_at(doc: BeautifulSoup, url: str) -> str | None:
+    # CSS-module class names are hashed per build; anchor on the "Date
+    # Posted" label text and read its sibling <dd> instead.
+    label = doc.find("dt", string="Date Posted")
+    if label is None:
+        return None
+    return normalize_posted_at(_text(label.find_next_sibling("dd")))
+
+
 ADAPTER: dict[str, Any] = {
     "title": _eightfold_title,
     "company_name": _eightfold_company,
     "location": _eightfold_location,
     "description": _eightfold_description,
+    "posted_at": _eightfold_posted_at,
 }

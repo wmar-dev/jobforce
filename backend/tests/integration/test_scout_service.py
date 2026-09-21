@@ -34,6 +34,22 @@ async def test_ingest_creates_job_and_company(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
+async def test_ingest_stores_posted_at(db_session: AsyncSession) -> None:
+    payload = IngestPayload(
+        source_url="https://example.com/job/posted-at",
+        html="<html>job</html>",
+        title="Python Engineer",
+        company_name="NewCo",
+        posted_at="2026-08-11",
+    )
+    result = await ingest_listing(db_session, payload)
+
+    job = await db_session.get(JobListing, result["id"])
+    assert job is not None
+    assert job.posted_at == "2026-08-11"
+
+
+@pytest.mark.asyncio
 async def test_dedup_by_url_returns_existing(db_session: AsyncSession) -> None:
     payload = IngestPayload(
         source_url="https://example.com/job/dup",

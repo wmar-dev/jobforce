@@ -50,3 +50,13 @@ def test_parse_html_smartrecruiters_description_non_null() -> None:
     result = parse_html(html, _SMARTRECRUITERS_URL)
     assert result["description"] is not None
     assert "Competency Engineers" in result["description"]
+
+
+def test_parse_html_smartrecruiters_posted_at() -> None:
+    # Not a smartrecruiters.py override — the generic adapter's posted_at
+    # extractor already picks up meta[itemprop="datePosted"].
+    from jobforce.services.parse import parse_html
+
+    html = _read("smartrecruiters_job.html")
+    result = parse_html(html, _SMARTRECRUITERS_URL)
+    assert result["posted_at"] == "2023-02-09"

@@ -17,6 +17,47 @@ def _read(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# normalize_posted_at
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_posted_at_iso_datetime_with_z() -> None:
+    from jobforce.services.parse._common import normalize_posted_at
+
+    assert normalize_posted_at("2026-08-11T06:02:43.000Z") == "2026-08-11"
+
+
+def test_normalize_posted_at_iso_datetime_with_offset() -> None:
+    from jobforce.services.parse._common import normalize_posted_at
+
+    assert normalize_posted_at("2026-04-23T16:07:33+02:00") == "2026-04-23"
+
+
+def test_normalize_posted_at_bare_iso_date() -> None:
+    from jobforce.services.parse._common import normalize_posted_at
+
+    assert normalize_posted_at("2026-08-28") == "2026-08-28"
+
+
+def test_normalize_posted_at_human_readable() -> None:
+    from jobforce.services.parse._common import normalize_posted_at
+
+    assert normalize_posted_at("September 20, 2026") == "2026-09-20"
+
+
+def test_normalize_posted_at_unparseable_returns_none() -> None:
+    from jobforce.services.parse._common import normalize_posted_at
+
+    assert normalize_posted_at("Posted a few days ago") is None
+
+
+def test_normalize_posted_at_none_returns_none() -> None:
+    from jobforce.services.parse._common import normalize_posted_at
+
+    assert normalize_posted_at(None) is None
+
+
+# ---------------------------------------------------------------------------
 # slug_to_location
 # ---------------------------------------------------------------------------
 

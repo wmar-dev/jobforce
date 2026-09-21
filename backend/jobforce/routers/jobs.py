@@ -37,6 +37,7 @@ class JobListingOut(BaseModel):
     company: CompanyRef
     location: str | None
     role_type: str | None
+    posted_at: str | None
     source_url: str
     status: str
     fit_scored: bool
@@ -67,6 +68,7 @@ class JobPatchRequest(BaseModel):
     title: str | None = None
     location: str | None = None
     role_type: str | None = None
+    posted_at: str | None = None
     description: str | None = None
     fit_score: float | None = None
     fit_scored: int | None = None
@@ -103,6 +105,7 @@ def _to_out(job: JobListing, *, has_note: bool = False) -> JobListingOut:
         company=CompanyRef(id=job.company.id, name=job.company.name),
         location=job.location,
         role_type=job.role_type,
+        posted_at=job.posted_at,
         source_url=job.source_url,
         status=job.status,
         fit_scored=bool(job.fit_scored),
@@ -142,9 +145,38 @@ def _apply_company_filter(
     return stmt
 
 
+def _apply_field_filters(
+    stmt: Select[tuple[JobListing]],
+    *,
+    fit_scored: bool | None,
+    min_score: float | None,
+    location: str | None,
+    role_type: str | None,
+    title: str | None,
+    q: str | None,
+    posted_after: str | None,
+) -> Select[tuple[JobListing]]:
+    if fit_scored is not None:
+        stmt = stmt.where(JobListing.fit_scored == (1 if fit_scored else 0))
+    if min_score is not None:
+        stmt = stmt.where(JobListing.fit_score >= min_score)
+    if location:
+        stmt = stmt.where(JobListing.location.ilike(f"%{location}%"))
+    if role_type:
+        stmt = stmt.where(JobListing.role_type == role_type)
+    if title:
+        stmt = stmt.where(JobListing.title.ilike(f"%{title}%"))
+    if q:
+        stmt = stmt.where(JobListing.description.ilike(f"%{q}%"))
+    if posted_after:
+        stmt = stmt.where(JobListing.posted_at >= posted_after)
+    return stmt
+
+
 _SORT_COLUMNS: dict[str, Any] = {
     "fit_score": JobListing.fit_score,
     "created_at": JobListing.created_at,
+    "posted_at": JobListing.posted_at,
     "title": JobListing.title,
     "status": JobListing.status,
     "company": Company.name,
@@ -166,7 +198,12 @@ async def get_jobs(
     source_url: str | None = Query(None),
     title: str | None = Query(None, description="Case-insensitive substring match on title"),
     q: str | None = Query(None, description="Case-insensitive substring match on description"),
-    sort_by: str = Query("fit_score", pattern="^(fit_score|created_at|title|status|company)$"),
+    posted_after: str | None = Query(
+        None, description="Only jobs posted on/after this ISO date (YYYY-MM-DD)"
+    ),
+    sort_by: str = Query(
+        "fit_score", pattern="^(fit_score|created_at|posted_at|title|status|company)$"
+    ),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -178,18 +215,16 @@ async def get_jobs(
     if company_id:
         stmt = stmt.where(JobListing.company_id == company_id)
     stmt = _apply_company_filter(stmt, company, sort_by)
-    if fit_scored is not None:
-        stmt = stmt.where(JobListing.fit_scored == (1 if fit_scored else 0))
-    if min_score is not None:
-        stmt = stmt.where(JobListing.fit_score >= min_score)
-    if location:
-        stmt = stmt.where(JobListing.location.ilike(f"%{location}%"))
-    if role_type:
-        stmt = stmt.where(JobListing.role_type == role_type)
-    if title:
-        stmt = stmt.where(JobListing.title.ilike(f"%{title}%"))
-    if q:
-        stmt = stmt.where(JobListing.description.ilike(f"%{q}%"))
+    stmt = _apply_field_filters(
+        stmt,
+        fit_scored=fit_scored,
+        min_score=min_score,
+        location=location,
+        role_type=role_type,
+        title=title,
+        q=q,
+        posted_after=posted_after,
+    )
 
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total_result = await session.execute(count_stmt)
@@ -350,7 +385,7 @@ async def reparse_job(
     if not html_bytes:
         raise HTTPException(status_code=404, detail="No HTML snapshot stored for this job")
     parsed = parse_html(html_bytes.decode("utf-8", errors="replace"), job.source_url)
-    for field in ("title", "location", "role_type", "description"):
+    for field in ("title", "location", "role_type", "description", "posted_at"):
         v = parsed.get(field)
         if v is not None:
             setattr(job, field, v)

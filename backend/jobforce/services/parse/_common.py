@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import html as html_module
+import json
 import re
+from datetime import datetime
 from typing import Any
 
 from bs4 import BeautifulSoup, Tag
@@ -68,6 +70,60 @@ def normalize_description(description: str | None) -> str | None:
     return unescaped.strip() or None
 
 
+_POSTED_AT_FORMATS = (
+    "%B %d, %Y",  # "September 20, 2026" (Eightfold)
+    "%b %d, %Y",  # "Sep 20, 2026"
+)
+
+
+def normalize_posted_at(raw: str | None) -> str | None:
+    """Coerce a site's "date posted" text to a plain ISO date (YYYY-MM-DD).
+
+    Sources hand this back in wildly different shapes — ISO datetimes
+    ("2026-08-11T06:02:43.000Z"), bare ISO dates ("2026-08-28"), or
+    human-readable text ("September 20, 2026"). Storing whatever a site
+    happens to use verbatim would make `posted_at` unsortable/unfilterable
+    as plain text (e.g. "September ..." sorts alphabetically, not
+    chronologically, against "2026-08-28"), so every adapter normalizes
+    through here rather than returning raw source text directly.
+    """
+    if raw is None:
+        return None
+    text = raw.strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        pass
+    for fmt in _POSTED_AT_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def find_jobposting_jsonld(doc: BeautifulSoup) -> dict[str, Any] | None:
+    """Return the first schema.org JobPosting JSON-LD block on the page, if any.
+
+    Widely used across ATS platforms (Teamtailor, Jobvite, Kula, and many
+    custom career sites) for SEO — shared here so both the generic adapter
+    and site-specific ones can pull fields (title, description, datePosted,
+    jobLocation, hiringOrganization, ...) from it without each re-parsing it.
+    """
+    for script in doc.find_all("script", attrs={"type": "application/ld+json"}):
+        if not script.string:
+            continue
+        try:
+            data = json.loads(script.string)
+        except ValueError:
+            continue
+        if isinstance(data, dict) and data.get("@type") == "JobPosting":
+            return data
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Generic adapter — equivalent to genericAdapter in content.js
 # ---------------------------------------------------------------------------
@@ -124,10 +180,27 @@ def _generic_role_type(doc: BeautifulSoup, url: str) -> str | None:
     return None
 
 
+def _generic_posted_at(doc: BeautifulSoup, url: str) -> str | None:
+    data = find_jobposting_jsonld(doc)
+    if data is not None:
+        posted = data.get("datePosted")
+        if isinstance(posted, str) and (normalized := normalize_posted_at(posted)):
+            return normalized
+    meta = doc.find("meta", attrs={"itemprop": "datePosted"}) or doc.find(
+        "meta", attrs={"property": "article:published_time"}
+    )
+    if meta:
+        content = meta.get("content")
+        if isinstance(content, str) and (normalized := normalize_posted_at(content)):
+            return normalized
+    return None
+
+
 GENERIC_ADAPTER: dict[str, Any] = {
     "title": _generic_title,
     "company_name": _generic_company,
     "location": _generic_location,
     "description": _generic_description,
     "role_type": _generic_role_type,
+    "posted_at": _generic_posted_at,
 }

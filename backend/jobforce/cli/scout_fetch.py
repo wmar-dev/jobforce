@@ -318,6 +318,7 @@ async def _ingest(url: str, html: str, parsed: dict) -> dict:  # type: ignore[ty
                 location=parsed.get("location"),
                 role_type=parsed.get("role_type"),
                 description=parsed.get("description"),
+                posted_at=parsed.get("posted_at"),
             )
             return await ingest_listing(session, payload)
     finally:

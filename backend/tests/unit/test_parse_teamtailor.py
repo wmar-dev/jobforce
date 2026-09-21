@@ -31,3 +31,14 @@ def test_parse_html_teamtailor_description_non_null() -> None:
     result = parse_html(html, _TEAMTAILOR_URL)
     assert result["description"] is not None
     assert "Tempo" in result["description"]
+
+
+def test_parse_html_teamtailor_posted_at() -> None:
+    # Not a teamtailor.py override — the generic adapter's posted_at
+    # extractor already reads datePosted off the same JobPosting JSON-LD
+    # block location/description come from.
+    from jobforce.services.parse import parse_html
+
+    html = _read("teamtailor_job.html")
+    result = parse_html(html, _TEAMTAILOR_URL)
+    assert result["posted_at"] == "2026-04-23"

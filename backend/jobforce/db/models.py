@@ -63,6 +63,7 @@ class JobListing(Base):
     location: Mapped[str | None] = mapped_column(Text, nullable=True)
     role_type: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    posted_at: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="saved")
     fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)

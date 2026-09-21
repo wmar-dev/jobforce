@@ -37,6 +37,7 @@ class IngestPayload(BaseModel):
     location: str | None = None
     role_type: str | None = None
     description: str | None = None
+    posted_at: str | None = None
 
 
 async def ingest_listing(
@@ -72,6 +73,7 @@ async def ingest_listing(
         location=payload.location,
         role_type=payload.role_type,
         description=normalize_description(payload.description),
+        posted_at=payload.posted_at,
         source_url=payload.source_url,
         status="saved",
         crawled_at=now,

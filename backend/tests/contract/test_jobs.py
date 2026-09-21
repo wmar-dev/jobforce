@@ -298,6 +298,38 @@ async def test_get_jobs_filter_by_fit_scored(test_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_jobs_filter_by_posted_after(test_client: AsyncClient) -> None:
+    old = await _ingest(
+        test_client, source_url="https://example.com/j/posted-old", posted_at="2026-01-01"
+    )
+    recent = await _ingest(
+        test_client, source_url="https://example.com/j/posted-recent", posted_at="2026-06-01"
+    )
+
+    resp = await test_client.get("/api/jobs?posted_after=2026-03-01")
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = {item["id"] for item in data["items"]}
+    assert recent["id"] in ids
+    assert old["id"] not in ids
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_sort_by_posted_at(test_client: AsyncClient) -> None:
+    older = await _ingest(
+        test_client, source_url="https://example.com/j/sort-posted-older", posted_at="2026-01-01"
+    )
+    newer = await _ingest(
+        test_client, source_url="https://example.com/j/sort-posted-newer", posted_at="2026-06-01"
+    )
+
+    resp = await test_client.get("/api/jobs?sort_by=posted_at&sort_dir=desc&limit=200")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    assert ids.index(newer["id"]) < ids.index(older["id"])
+
+
+@pytest.mark.asyncio
 async def test_get_jobs_filter_by_min_score(test_client: AsyncClient) -> None:
     low = await _ingest(test_client, source_url="https://example.com/j/minscore-low")
     high = await _ingest(test_client, source_url="https://example.com/j/minscore-high")

@@ -48,3 +48,11 @@ def test_parse_html_eightfold_description_non_null() -> None:
     result = parse_html(html, _EIGHTFOLD_URL)
     assert result["description"] is not None
     assert "EVM reporting" in result["description"]
+
+
+def test_parse_html_eightfold_posted_at() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("eightfold_job.html")
+    result = parse_html(html, _EIGHTFOLD_URL)
+    assert result["posted_at"] == "2026-09-20"

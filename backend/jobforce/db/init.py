@@ -21,6 +21,11 @@ async def create_all() -> None:
             )
         except Exception:  # noqa: BLE001
             pass
+        # Idempotent migration: add posted_at to job_listings for existing DBs.
+        try:
+            await conn.execute(text("ALTER TABLE job_listings ADD COLUMN posted_at TEXT"))
+        except Exception:  # noqa: BLE001
+            pass
 
 
 if __name__ == "__main__":
