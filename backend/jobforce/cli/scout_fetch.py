@@ -72,6 +72,46 @@ async def _fetch_nebius_greenhouse_html(url: str) -> str | None:
     )
 
 
+async def _fetch_sentinelone_greenhouse_html(url: str) -> str | None:
+    """sentinelone.com/jobs/?gh_jid=... embeds the actual Greenhouse job
+    description and apply flow in a cross-origin iframe
+    (job-boards.greenhouse.io/embed/job_app?for=sentinellabs&...) that the
+    wrapper page's own DOM never exposes — title/company_name happen to come
+    through fine (from the wrapper's own <title>/og:site_name), but
+    location/description come back null/bogus. Same root cause and fix as
+    careers.nebius.com / coreweave.com above: bypass rendering entirely and
+    pull the job data from Greenhouse's public, unauthenticated Jobs API
+    instead, using the "sentinellabs" board token discovered from the
+    iframe's `for=` query param.
+    """
+    import httpx
+
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").removeprefix("www.")
+    if hostname != "sentinelone.com":
+        return None
+    gh_jid_values = parse_qs(parsed.query).get("gh_jid") or []
+    if not gh_jid_values:
+        return None
+    gh_jid = gh_jid_values[0]
+    api_url = f"https://boards-api.greenhouse.io/v1/boards/sentinellabs/jobs/{gh_jid}?content=true"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(api_url)
+    if resp.status_code != 200:
+        return None
+    data = resp.json()
+    title = html_module.escape((data.get("title") or "").strip())
+    location = html_module.escape((data.get("location") or {}).get("name") or "")
+    description_html = html_module.unescape(data.get("content") or "")
+    return (
+        f"<!doctype html><html><head><title>{title} | SentinelOne</title></head><body>"
+        f'<h1 class="sentinelone-gh-title">{title}</h1>'
+        f'<div class="sentinelone-gh-location">{location}</div>'
+        f'<div class="sentinelone-gh-description">{description_html}</div>'
+        "</body></html>"
+    )
+
+
 async def _fetch_coreweave_greenhouse_html(url: str) -> str | None:
     """coreweave.com/careers/job embeds the actual Greenhouse job description
     and apply flow in a cross-origin iframe
@@ -249,6 +289,9 @@ async def _fetch_html(url: str) -> str:
     coreweave_html = await _fetch_coreweave_greenhouse_html(url)
     if coreweave_html is not None:
         return coreweave_html
+    sentinelone_html = await _fetch_sentinelone_greenhouse_html(url)
+    if sentinelone_html is not None:
+        return sentinelone_html
 
     from playwright.async_api import TimeoutError as PlaywrightTimeout
     from playwright.async_api import async_playwright
