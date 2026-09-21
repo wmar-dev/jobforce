@@ -17,8 +17,8 @@ I wanted to practice spec-driven design and ran out of tokens when I tried to us
 ## Stack
 
 - **Backend**: FastAPI + SQLAlchemy 2.0 async + aiosqlite (SQLite WAL)
-- **Frontend**: Next.js 15 + Tailwind CSS + SWR
-- **AI**: Claude Haiku via Anthropic SDK
+- **Frontend**: Next.js 16 + React 19 + Tailwind CSS v4 + SWR
+- **AI**: Claude Code skills reasoning in-context (no API key required) — the backend has no Anthropic SDK dependency
 - **Chrome Extension**: Manifest V3 — capture jobs while browsing
 - **Crawling**: Playwright MCP skill for automated job ingestion
 
@@ -61,7 +61,11 @@ cp config/tailoring-instructions.example.md config/tailoring-instructions.md
 cp config/scouting-notes.example.md config/scouting-notes.md
 # Optional: edit config/scouting-notes.md with freeform guidance on which
 # jobs to capture (Avoid/Prefer) and how Oracle should score fit
+```
 
+All four files are gitignored so your personal details never get committed. See [Configuration](#configuration) below for what belongs in each one.
+
+```bash
 # 4. Initialize and seed the database
 cd backend && uv run python -m jobforce.db.init
 cd backend && uv run python -m jobforce.db.seed
@@ -76,32 +80,54 @@ make dev
 
 ## Configuration
 
-`config.yaml` (gitignored — copy from `config.example.yaml`):
+Four files under this section are gitignored and personal to you — each is copied from a checked-in `*.example.*` template during [Setup](#setup). Nothing you write into them is ever committed.
+
+### `config.yaml`
+
+Copy from `config.example.yaml`. Drives search queries, the company seed list, and your profile — startup fails if required fields are missing.
 
 ```yaml
 database:
   path: "backend/data/jobforce.db"
 
 search:
-  queries:
+  queries:                    # [REQUIRED] at least one, used to seed SearchConfig records
     - query: "Senior Python Engineer"
       location: "Remote, US"
-  target_companies:
+      source: "linkedin"
+  target_locations:           # optional case-insensitive substring filter for scout-companies
+    - "Remote"
+  target_companies:           # optional — pre-seeds companies into the DB
     - name: "Anthropic"
       domain: "anthropic.com"
+      careers_url: ""         # optional direct ATS URL; auto-discovered if blank
 
 user:
-  full_name: "Your Name"
+  full_name: "Your Name"      # [REQUIRED for Forge PDF export]
   headline: "Senior Software Engineer"
-  skills: ["Python", "FastAPI", "React"]
+  skills: ["Python", "FastAPI", "React"]   # [REQUIRED for Oracle ranking]
+  preferences:
+    target_roles: ["Senior Backend Engineer", "Staff Engineer"]
+    locations: ["Remote", "San Francisco, CA"]
+    role_types: ["full-time"]
+    min_salary: null          # optional
 ```
+
+### `config/resume.json`
+
+Copy from `config/resume.example.json`. Your base profile — seeded into the `resumes` table (`is_base=1`) on `db.seed`, and the source Oracle scores against and Forge tailors from. Fill in `personal_info`, `summary`, `skills`, `work_history` (with `bullets` per role), `education`, `projects`, `certifications`, and `coursework`. Refresh it later with `/forge-import <resume-file>` instead of hand-editing once your real resume changes.
+
+### `config/tailoring-instructions.md`
+
+Copy from `config/tailoring-instructions.example.md`. Guardrails applied on every `/forge-tailor` run, mainly to stop the AI from fabricating or exaggerating bullets — e.g. "never invent metrics/tools not already in the base resume," "never change titles, companies, or dates." Also has a **Clarifications** section that Forge appends to automatically as it asks you disambiguating questions during tailoring, so it doesn't ask the same thing twice.
+
+### `config/scouting-notes.md`
+
+Copy from `config/scouting-notes.example.md`. Optional — both skills run fine without it. Freeform guidance that `config.yaml`'s structured fields can't express: an **Avoid** section (company types/role patterns to skip during `/scout-companies`, e.g. staffing agencies, in-office-only roles), a **Prefer** section (positive signals for `/oracle-rank` to weight up), and **Scoring notes** (context for Oracle's fit rationale that isn't derivable from the resume alone, e.g. "don't penalize on-call requirements").
 
 ### `target_companies.yaml`
 
-A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled
-in where verified. It isn't read by any code — it's a shared starting point
-for `search.target_companies` above. Copy the entries you want into your own
-`config.yaml`.
+Checked-in (not gitignored). A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled in where verified. It isn't read by any code — it's a shared starting point for `search.target_companies` above. Copy the entries you want into your own `config.yaml`.
 
 ## Chrome Extension
 
@@ -196,19 +222,22 @@ jobforce/
 ├── backend/                  # FastAPI app
 │   ├── jobforce/
 │   │   ├── routers/          # scout, oracle, forge, coach, dashboard, …
-│   │   ├── services/         # business logic + Claude API calls
+│   │   ├── services/         # business logic (incl. services/parse/sites/ site adapters)
+│   │   ├── cli/              # one-off scripts (scout_fetch, merge_companies, …)
 │   │   ├── db/               # models, engine, migrations, seed
 │   │   └── templates/        # Jinja2 LaTeX resume template
-│   └── tests/                # contract + integration + unit
+│   └── tests/                # contract + integration + unit + fixtures
 ├── frontend/                 # Next.js app
 │   └── src/
 │       ├── app/              # page routes (HQ, oracle, forge, coach, …)
 │       ├── components/       # per-agent UI components
-│       └── hooks/            # SWR data hooks
+│       ├── hooks/            # SWR data hooks
+│       └── lib/              # API client + shared types
 ├── chrome-extension/         # MV3 extension
 ├── config.example.yaml                        # config template
 ├── config/resume.example.json                 # resume template
 ├── config/tailoring-instructions.example.md  # tailoring constraints template
+├── config/scouting-notes.example.md          # scouting/scoring guidance template
 └── Makefile                                   # dev, check, seed, install
 ```
 
