@@ -206,6 +206,10 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     "eightfold.ai": (
         "document.querySelector('h2[class*=\"position-title\"]')?.textContent.trim().length > 0"
     ),
+    # bubble.io job pages are themselves built on Bubble, so the <h1> shell
+    # attaches immediately (satisfying the bare "h1, main h2" wait) but stays
+    # empty until the client-side app hydrates and fills in the real title.
+    "bubble.io": "document.querySelector('h1')?.textContent.trim().length > 0",
 }
 
 # Newer Eightfold tenants (e.g. lockheedmartin.eightfold.ai) render the job
