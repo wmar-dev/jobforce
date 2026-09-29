@@ -82,6 +82,20 @@ def test_parse_html_stripe_new_layout_description_non_null() -> None:
     assert "Merchant Experience team" in result["description"]
 
 
+def test_parse_html_stripe_new_layout_description_includes_all_sections() -> None:
+    """The new layout splits the description across multiple sibling
+    .careers-listing-details__body divs (Who we are / What you'll do / Pay
+    and benefits / etc.) rather than one container — a select_one() bug
+    silently dropped every section after the first."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("stripe_new_layout_job.html")
+    result = parse_html(html, _STRIPE_NEW_LAYOUT_URL)
+    assert result["description"] is not None
+    assert "Own the architecture and performance" in result["description"]
+    assert "$203,600 - $305,400" in result["description"]
+
+
 # Some new-layout listings use the singular "Office location" label instead
 # of "Office locations" — a plain equality check on the label missed these.
 _STRIPE_SINGULAR_OFFICE_URL = (

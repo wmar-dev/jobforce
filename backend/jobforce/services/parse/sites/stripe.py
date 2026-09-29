@@ -56,8 +56,15 @@ def _stripe_location(doc: BeautifulSoup, url: str) -> str | None:
 
 
 def _stripe_description(doc: BeautifulSoup, url: str) -> str | None:
-    el = doc.select_one(".careers-listing-details__body") or doc.select_one(".ArticleMarkdown")
-    return _to_markdown(el)
+    # New layout splits the description across multiple sibling
+    # .careers-listing-details__body divs (Who we are / What you'll do / Who
+    # you are / Hybrid work / Pay and benefits) rather than one container —
+    # select_one() silently dropped every section after the first.
+    sections = doc.select(".careers-listing-details__body")
+    if sections:
+        parts = [md for s in sections if (md := _to_markdown(s))]
+        return "\n\n".join(parts) or None
+    return _to_markdown(doc.select_one(".ArticleMarkdown"))
 
 
 ADAPTER: dict[str, Any] = {
