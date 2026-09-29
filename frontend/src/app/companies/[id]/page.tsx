@@ -96,7 +96,20 @@ export default function CompanyDetailPage() {
           <h1 className="text-2xl font-bold text-white">{company.name}</h1>
         </div>
         {company.domain && (
-          <p className="text-gray-500 text-sm ml-0">{company.domain}</p>
+          <p className="text-sm ml-0">
+            <a
+              href={
+                /^https?:\/\//.test(company.domain)
+                  ? company.domain
+                  : `https://${company.domain}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-emerald-400 transition-colors"
+            >
+              {company.domain}
+            </a>
+          </p>
         )}
         <div className="mt-3">
           {editingLink ? (
