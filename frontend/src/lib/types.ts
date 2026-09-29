@@ -183,6 +183,7 @@ export interface CompanyDetail {
   id: number;
   name: string;
   domain?: string | null;
+  careers_url?: string | null;
   listings: Array<{
     id: number;
     title: string;

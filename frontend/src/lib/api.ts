@@ -199,3 +199,13 @@ export function createMeetingNote(
     body: JSON.stringify({ content }),
   });
 }
+
+export function patchCompany(
+  companyId: number,
+  careersUrl: string
+): Promise<Company> {
+  return apiFetch(`/api/companies/${companyId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ careers_url: careersUrl }),
+  });
+}

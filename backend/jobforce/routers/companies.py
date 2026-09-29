@@ -49,6 +49,7 @@ class CompanyDetail(BaseModel):
     id: int
     name: str
     domain: str | None
+    careers_url: str | None
     listings: list[JobListingSummary]
     notes: list[NoteOut]
 
@@ -142,6 +143,7 @@ async def get_company(
         id=company.id,
         name=company.name,
         domain=company.domain,
+        careers_url=company.careers_url,
         listings=listings,
         notes=notes,
     )
