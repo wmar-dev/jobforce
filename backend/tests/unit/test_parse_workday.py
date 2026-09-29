@@ -81,6 +81,21 @@ def test_parse_html_workday_location_falls_back_to_dl_dd_list() -> None:
     )
 
 
+def test_parse_html_workday_location_excludes_count_badge() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("workday_job_dl_locations_with_badge.html")
+    result = parse_html(
+        html,
+        "https://salesforce.wd12.myworkdayjobs.com/Slack/job/Washington---Seattle/"
+        "Staff-ML-Engineer--LLM-Fine-Tuning---Slack_JR344115",
+    )
+    assert (
+        result["location"]
+        == "Washington - Seattle; Georgia - Atlanta; California - San Francisco"
+    )
+
+
 def test_parse_html_workday_suffix_match_applies_adapter() -> None:
     from jobforce.services.parse import SITE_ADAPTERS, _match_adapter
 
