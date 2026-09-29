@@ -193,6 +193,12 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     # company_name null on first crawl.
     "yelp.careers": "document.querySelector('h1.job-title')?.textContent.trim().length > 0",
     "careers.adobe.com": ("document.querySelector('h1.job-title')?.textContent.trim().length > 0"),
+    # careers.cisco.com is the same Phenom template but its <h1> has no
+    # "job-title" class; wait for the hydrated JobPosting JSON-LD instead.
+    "careers.cisco.com": (
+        "[...document.querySelectorAll('script[type=\"application/ld+json\"]')]"
+        ".some(s => s.textContent.includes('\"JobPosting\"'))"
+    ),
     # apply.careers.microsoft.com is the same Eightfold-powered ATS as
     # jobs.twilio.com: the static <h1> ("Single Position") attaches
     # immediately, satisfying the bare "h1, main h2" wait before the real

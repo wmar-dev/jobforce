@@ -82,3 +82,40 @@ def test_parse_html_adobe_role_type() -> None:
     html = _read("adobe_job.html")
     result = parse_html(html, _ADOBE_URL)
     assert result["role_type"] == "full-time"
+
+
+_CISCO_URL = "https://careers.cisco.com/global/en/job/2018923/Senior-AI-Researcher"
+
+
+def test_parse_html_cisco_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cisco_job.html")
+    result = parse_html(html, _CISCO_URL)
+    assert result["title"] == "Senior AI Researcher"
+
+
+def test_parse_html_cisco_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cisco_job.html")
+    result = parse_html(html, _CISCO_URL)
+    assert result["location"] == "San Francisco, California, United States of America"
+
+
+def test_parse_html_cisco_description_full() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cisco_job.html")
+    result = parse_html(html, _CISCO_URL)
+    assert result["description"] is not None
+    assert "Meet the Team" in result["description"]
+    assert "leading frontier AI research across Cisco" in result["description"]
+
+
+def test_parse_html_cisco_role_type() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("cisco_job.html")
+    result = parse_html(html, _CISCO_URL)
+    assert result["role_type"] == "full-time"

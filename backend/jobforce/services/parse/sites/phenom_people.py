@@ -1,5 +1,6 @@
 # ---------------------------------------------------------------------------
-# Phenom People boards — Yelp (www.yelp.careers) and Adobe (careers.adobe.com)
+# Phenom People boards — Yelp (www.yelp.careers), Adobe (careers.adobe.com) and
+# Cisco (careers.cisco.com)
 # share this ATS template. title and company_name already extract fine via
 # the generic adapter (h1 + og:site_name); location and description do not.
 # The page renders a duplicate, unfilled "job-description"/".jd-info"
@@ -22,7 +23,7 @@ from markdownify import markdownify as md
 
 from .._common import _text
 
-HOSTNAMES = ["yelp.careers", "careers.adobe.com"]
+HOSTNAMES = ["yelp.careers", "careers.adobe.com", "careers.cisco.com"]
 
 
 def _phenom_people_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
@@ -64,6 +65,11 @@ def _phenom_people_description(doc: BeautifulSoup, url: str) -> str | None:
     return result or None
 
 
+def _phenom_people_title(doc: BeautifulSoup, url: str) -> str | None:
+    title = _phenom_people_jsonld(doc).get("title")
+    return title.strip() or None if isinstance(title, str) else None
+
+
 def _phenom_people_role_type(doc: BeautifulSoup, url: str) -> str | None:
     types = _phenom_people_jsonld(doc).get("employmentType")
     if not types:
@@ -81,6 +87,7 @@ def _phenom_people_role_type(doc: BeautifulSoup, url: str) -> str | None:
 
 
 ADAPTER: dict[str, Any] = {
+    "title": _phenom_people_title,
     "location": _phenom_people_location,
     "description": _phenom_people_description,
     "role_type": _phenom_people_role_type,
