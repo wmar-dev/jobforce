@@ -96,25 +96,59 @@ Also read `config/scouting-notes.md` from disk if it exists. If present, use its
 
 ---
 
-### Step 4: Score jobs in batches of 5
+### Step 4: Score jobs
 
-**Do not load all job descriptions into context at once.** Process in batches to keep context small.
+Score every job fetched in Step 2 against the resume — and against
+`## Scoring notes` from `config/scouting-notes.md`, if present — producing
+for each:
 
-For each batch of up to 5 jobs:
+- `score`: float between 0.0 (no fit) and 1.0 (perfect fit), clamped to [0.0, 1.0]
+- `confidence`:
+  - score ≥ 0.7 → "high"
+  - score ≥ 0.4 → "medium"
+  - score < 0.4 → "low"
+  - description < 100 chars → always "low" regardless of score
+- `rationale`: 1–2 sentences explaining the score
+- `warning` (optional): "Job description is too sparse for reliable scoring" if description < 100 chars
 
-1. Load only the job fields needed for scoring: `id`, `title`, `company_name`, `location`, `role_type`, `description` (first 2000 chars only — truncate longer descriptions).
-2. For each job in the batch, reason about fit against the resume — and against `## Scoring notes` from `config/scouting-notes.md`, if present — and produce:
-   - `score`: float between 0.0 (no fit) and 1.0 (perfect fit), clamped to [0.0, 1.0]
-   - `confidence`:
-     - score ≥ 0.7 → "high"
-     - score ≥ 0.4 → "medium"
-     - score < 0.4 → "low"
-     - description < 100 chars → always "low" regardless of score
-   - `rationale`: 1–2 sentences explaining the score
-   - `warning` (optional): "Job description is too sparse for reliable scoring" if description < 100 chars
+**If there are more than 15 jobs to score, delegate the scoring loop to
+subagents instead of doing it inline.** Dumping dozens of full job
+descriptions into this conversation doesn't go away once scoring finishes —
+it stays in context and gets re-billed as cache-read on every later turn for
+the rest of the session. A subagent's raw tool results never enter this
+conversation; only what it explicitly returns does.
+
+- Split the job ID list into chunks of ~40 jobs.
+- Launch one `Agent` call per chunk (`subagent_type: general-purpose`, all
+  issued in the same message so the chunks run in parallel;
+  `run_in_background: false`, since Step 6 needs every chunk's results
+  before it can print the ranked summary). Each prompt must be
+  **self-contained** — the subagent has no access to this conversation —
+  and include:
+  - The base resume's summary, skills, and work history (from Step 3)
+  - The `## Scoring notes` section from `config/scouting-notes.md`, if present
+  - This chunk's list of job IDs
+  - The scoring rubric above, plus: "For each job ID, `GET
+    http://localhost:8000/api/jobs/{id}`, truncate `description` to 2000
+    chars, score it, then immediately `PATCH` the score (see Step 5). Do not
+    include full job descriptions in your final reply — return only a
+    compact JSON array of `{id, title, company_name, score, confidence}`
+    records."
+- Merge the compact records returned by all chunks into one list for Step 6.
+
+**If there are 15 or fewer jobs**, score them inline instead — the overhead
+of a subagent isn't worth it for a small batch:
+
+1. Process in batches of up to 5. For each job, load only `id`, `title`,
+   `company_name`, `location`, `role_type`, `description` (first 2000 chars
+   only — truncate longer descriptions).
+2. Score each job per the rubric above.
 3. Immediately PATCH each scored job (Step 5 below).
-4. After writing all scores for the batch, **discard the job description text** — retain only the compact score record: `{id, title, company_name, score, confidence}`.
-5. Print a one-line progress update: `Scored batch N/M (jobs X–Y)` then move to the next batch.
+4. After writing all scores for the batch, **discard the job description
+   text** — retain only the compact score record: `{id, title,
+   company_name, score, confidence}`.
+5. Print a one-line progress update: `Scored batch N/M (jobs X–Y)` then move
+   to the next batch.
 
 If no base resume is configured, score with `confidence: low` for all jobs and
 note "No base resume found — add config/resume.json and restart the backend."
