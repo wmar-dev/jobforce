@@ -49,8 +49,10 @@ Then stop.
 Run:
 
 ```bash
-cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<url>"
+cd backend && uv run python -m jobforce.cli.scout_fetch --url "<url>"
 ```
+
+Note: this ingests the job if it parses. That is fine — junk records are fixed afterwards with `POST /api/jobs/{id}/reparse`.
 
 - **Command fails** (`page does not look like a job listing`, `company_name=None`
   and/or `title=None`): proceed — this is the primary case.
@@ -292,10 +294,12 @@ Fix anything that doesn't pass before continuing.
 
 ## Step 9: End-to-End Check, Optional Backfill, Completion Report
 
-Re-run the dry-run fetch to confirm the live page now parses correctly:
+Confirm the live page now parses correctly. If the job is already ingested, reparse it from its stored snapshot; otherwise run the fetch (which ingests it):
 
 ```bash
-cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<url>"
+curl -s -X POST "http://localhost:8000/api/jobs/<job_id>/reparse" | jq
+# or, if not yet ingested:
+cd backend && uv run python -m jobforce.cli.scout_fetch --url "<url>"
 ```
 
 **If `job_id` was provided**: fetch the current record, compare against the
@@ -308,12 +312,7 @@ curl -s -X PATCH "http://localhost:8000/api/jobs/<job_id>" \
   -d '{"location": "...", "description": "..."}'
 ```
 
-**If no `job_id` and the job isn't ingested yet**, offer to ingest it now
-(drop `--dry-run`):
-
-```bash
-cd backend && uv run python -m jobforce.cli.scout_fetch --url "<url>"
-```
+**If no `job_id`**, the fetch above already ingested the job.
 
 Print a completion report:
 

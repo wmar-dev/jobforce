@@ -253,10 +253,10 @@ curl -s -X PATCH http://localhost:8000/api/companies/<id> \
 
 ### 4f: Parse-sanity check on the first URL before batch
 
-Before ingesting the full list, do a dry-run parse on the first URL to confirm the adapter works:
+Before ingesting the full list, run scout_fetch on the first URL to confirm the adapter works (this ingests that job; it is skipped as a duplicate in 4g):
 
 ```bash
-cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<first_url>"
+cd backend && uv run python -m jobforce.cli.scout_fetch --url "<first_url>"
 ```
 
 Inspect the JSON output:
@@ -264,7 +264,7 @@ Inspect the JSON output:
   ```
   /parse-adapter-update <first_url>
   ```
-  Then re-run the dry-run parse check above.
+  Then re-run the parse check above (or `POST /api/jobs/<id>/reparse` using the `id` from the first run's output).
   - If `title` now extracts correctly → log and proceed to ingest the full list:
     ```
     🔧 <name> — adapter fixed for <hostname>, proceeding with batch
@@ -279,7 +279,7 @@ Inspect the JSON output:
     ⚠ location not extracted — location filtering will be skipped for this site
   ```
 
-If the parse check passes (on the first try or after an auto-fix), proceed to ingest the full list (including the first URL).
+If the parse check passes (on the first try or after an auto-fix), proceed to ingest the rest of the list.
 
 ### 4g: Ingest each pre-filtered job listing URL
 
@@ -294,53 +294,31 @@ For each URL that passed the anchor-text filter in 4d:
      ⏭ duplicate (already captured): <url>
    ```
 
-2. Run scout_fetch with `--dry-run` — this step is parse-only. Without `--dry-run`, scout_fetch writes the job straight to the database itself (see `_ingest` in `backend/jobforce/cli/scout_fetch.py`), which would ingest it before the title/location re-check in step 4 has a chance to reject it:
+2. Run scout_fetch. It parses the page and writes the job to the database itself (see `_ingest` in `backend/jobforce/cli/scout_fetch.py`):
    ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<url>"
+   cd backend && uv run python -m jobforce.cli.scout_fetch --url "<url>" | jq '{id, title, location, duplicate}'
    ```
 
 3. If scout_fetch fails or returns non-JSON output, log: `  ❌ fetch failed: <url>` and continue.
 
-4. Parse the JSON output. **Confirm title and location relevance**:
-   - Re-apply the title check against the extracted `title`. If it no longer matches, log and skip:
-     ```
-       ⏭ skipped (off-target title): <title> — <url>
-     ```
-   - If `target_locations` is non-empty, check the extracted `location` against `target_locations`. If it doesn't match, log and skip:
-     ```
-       ⏭ skipped (off-target location): <title> @ <location> — <url>
-     ```
-   - Re-apply the `## Avoid` check from `config/scouting-notes.md` against the extracted `title` and `description` (now that the full description is available, this catches cases the anchor-text-only check in 4d couldn't). If it matches, log and skip:
-     ```
-       ⏭ skipped (scouting-notes: avoid): <title> — <url>
-     ```
-   Count skipped-off-target separately from duplicates.
+4. Parse the JSON output and count the job as ingested (or as a duplicate if `duplicate: true`).
 
-5. Build the ingest payload for matching titles (exclude `compensation`):
-   ```json
-   {
-     "source_url": "...",
-     "html": "",
-     "title": "...",
-     "company_name": "...",
-     "location": "...",
-     "role_type": "...",
-     "description": "..."
-   }
-   ```
-   The `description` value **must** be copied verbatim from step 2's `scout_fetch` JSON output field of the same name — never hand-write it from a raw page fetch, a WebFetch summary, or an ATS JSON API response. Those sources return rich text pre-escaped for HTML embedding (literal `&lt;div&gt;`, `&quot;`, etc.); only `scout_fetch`'s own parser (which renders the real page and converts it to clean markdown) produces a value safe to store as-is. If you ever bypass `scout_fetch` for a job (e.g. hitting an ATS API directly instead of running step 2), do not paste its raw content field into `description` — it needs `html.unescape()` at minimum, ideally re-parsed to markdown, before it's usable.
+5. **Confirm title and location relevance** on the ingested record. Because the job is already in the database, off-target jobs are rejected after the fact rather than skipped:
+   - Re-apply the title check against `title`. If it no longer matches, archive the job via `PATCH /api/jobs/<id>/status` (`{"status": "archived"}`) and log:
+     ```
+       ⏭ archived (off-target title): <title> — <url>
+     ```
+   - If `target_locations` is non-empty, check `location` against `target_locations`. If it doesn't match, archive and log:
+     ```
+       ⏭ archived (off-target location): <title> @ <location> — <url>
+     ```
+   - Re-apply the `## Avoid` check from `config/scouting-notes.md` against `title` and `description`. If it matches, archive and log:
+     ```
+       ⏭ archived (scouting-notes: avoid): <title> — <url>
+     ```
+   Count archived-off-target separately from duplicates.
 
-6. POST to ingest:
-   ```bash
-   curl -s -X POST http://localhost:8000/api/ingest \
-     -H "Content-Type: application/json" \
-     -d '<payload>'
-   ```
-
-7. Track the result:
-   - **201**: count as ingested
-   - **409**: count as duplicate (rare — step 1's pre-check should normally catch these before crawling)
-   - Other: log as error and continue
+Junk or missing fields on ingested records are fixed by fixing the site adapter and calling `POST /api/jobs/<id>/reparse` (see 4h).
 
 ### 4h: Verify location parsed correctly
 
@@ -366,10 +344,7 @@ If any jobs are missing location, the site adapter's location selector is broken
 
 2. **Backfill any remaining bad records** — if step 6's spot-check found more than one job missing location, the adapter is now fixed but the others still have null `location` in the DB. For each remaining bad job id:
    ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<its_url>" 2>/dev/null
-   curl -s -X PATCH "http://localhost:8000/api/jobs/<id>" \
-     -H "Content-Type: application/json" \
-     -d '{"location": "<location from dry-run output>"}'
+   curl -s -X POST "http://localhost:8000/api/jobs/<id>/reparse" | jq '{id, location}'
    ```
 
 3. **Commit** — parse-adapter-update does not commit on your behalf; include the new fixture, the new tests, and the adapter fix in one commit.

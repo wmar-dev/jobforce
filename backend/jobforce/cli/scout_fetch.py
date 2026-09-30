@@ -378,7 +378,7 @@ async def _ingest(url: str, html: str, parsed: dict) -> dict:  # type: ignore[ty
         await engine.dispose()
 
 
-async def _run(url: str, dry_run: bool) -> dict:  # type: ignore[type-arg]
+async def _run(url: str) -> dict:  # type: ignore[type-arg]
     url = _normalize_ashby_embed_url(url)
     html = await _fetch_html(url)
     parsed = parse_html(html, url)
@@ -390,8 +390,6 @@ async def _run(url: str, dry_run: bool) -> dict:  # type: ignore[type-arg]
             file=sys.stderr,
         )
         sys.exit(1)
-    if dry_run:
-        return parsed
     result = await _ingest(url, html, parsed)
     return {**parsed, **result}
 
@@ -406,12 +404,9 @@ def _validate_url(url: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch, parse, and ingest a job listing URL")
     parser.add_argument("--url", required=True, type=_validate_url, help="Job listing URL to fetch")
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Parse only, do not write to database"
-    )
     args = parser.parse_args()
 
-    result = asyncio.run(_run(args.url, args.dry_run))
+    result = asyncio.run(_run(args.url))
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

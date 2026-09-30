@@ -41,9 +41,9 @@ Capture a job listing from a URL and ingest it into Jobforce using a determinist
    ```
    This fixes the site adapter and (if the backend is reachable) backfills the already-ingested record via PATCH. If the backend isn't running, the adapter is still fixed for future captures, but this record's null fields will need a manual backfill once it is (re-run `/parse-adapter-update <URL> <id>` then).
 
-   Re-run the dry-run fetch to get corrected values for the report:
+   Fetch the corrected record to get values for the report:
    ```bash
-   cd backend && uv run python -m jobforce.cli.scout_fetch --dry-run --url "<URL>"
+   curl -s "http://localhost:8000/api/jobs/<id>" | jq '{title, company_name, location, description}'
    ```
    Use these corrected values (or the original ones, if the fix didn't fully resolve them) in step 5's report.
 
@@ -60,4 +60,4 @@ Capture a job listing from a URL and ingest it into Jobforce using a determinist
 - The parser uses site-specific adapters. For unsupported sites the generic adapter runs.
 - Login-gated pages are not supported; the tool will time out or return incomplete data.
 - To add a new site adapter, add a module to `backend/jobforce/services/parse/sites/` (see `/parse-adapter-update`).
-- Use `--dry-run` to parse without writing to the database.
+- To refresh an already-ingested job after fixing an adapter, use `POST /api/jobs/{id}/reparse` rather than re-running `scout_fetch`.
