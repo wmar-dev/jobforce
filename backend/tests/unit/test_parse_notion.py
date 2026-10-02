@@ -64,3 +64,35 @@ def test_match_adapter_notion_site_suffix() -> None:
 
     assert "notion.site" in SITE_ADAPTERS
     assert _match_adapter("paradedb.notion.site") is SITE_ADAPTERS["notion.site"]
+
+
+_NOTION_CLOSURE_URL = (
+    "https://dog-llama-45a.notion.site/Member-of-Technical-Staff-377ebdd632c6801db69efa3a267da149"
+)
+
+
+def test_parse_html_notion_closure_company_from_at_breadcrumb() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("notion_closure_job.html")
+    result = parse_html(html, _NOTION_CLOSURE_URL)
+    assert result["company_name"] == "Closure"
+
+
+def test_parse_html_notion_closure_location_from_colon_heading() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("notion_closure_job.html")
+    result = parse_html(html, _NOTION_CLOSURE_URL)
+    assert result["location"] is not None
+    assert "New York City" in result["location"]
+    assert "Bay Area" in result["location"]
+
+
+def test_parse_html_notion_closure_description_from_expanded_toggles() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("notion_closure_job.html")
+    result = parse_html(html, _NOTION_CLOSURE_URL)
+    assert result["description"] is not None
+    assert "Backend-Depth, AI-Grounding" in result["description"]

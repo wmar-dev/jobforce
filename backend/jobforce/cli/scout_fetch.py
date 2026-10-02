@@ -292,6 +292,25 @@ async def _click_eightfold_description_tab(page: Any, hostname: str) -> None:
         pass
 
 
+async def _expand_notion_toggles(page: Any, hostname: str) -> None:
+    """Notion job pages often hide the real posting inside collapsed toggle
+    blocks whose children aren't in the DOM until clicked, so capture would
+    see only the toggle headings."""
+    if not hostname.endswith("notion.site"):
+        return
+    from playwright.async_api import TimeoutError as PlaywrightTimeout
+
+    try:
+        await page.wait_for_selector(".notion-page-content", timeout=10_000)
+    except PlaywrightTimeout:
+        return
+    await page.evaluate(
+        "document.querySelectorAll('.notion-toggle-block > div > div > div"
+        " > .notion-list-item-box-left [role=button]').forEach(b => b.click())"
+    )
+    await page.wait_for_timeout(1_500)
+
+
 async def _fetch_html(url: str) -> str:
     nebius_html = await _fetch_nebius_greenhouse_html(url)
     if nebius_html is not None:
@@ -348,6 +367,7 @@ async def _fetch_html(url: str) -> str:
                 # SPA pages without the expected marker (e.g. TikTok): wait for JS to hydrate content
                 await page.wait_for_timeout(5_000)
             await _click_eightfold_description_tab(page, hostname)
+            await _expand_notion_toggles(page, hostname)
             return str(await page.evaluate("document.documentElement.outerHTML"))
         finally:
             await browser.close()

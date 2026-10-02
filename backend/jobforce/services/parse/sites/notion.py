@@ -60,8 +60,12 @@ def _notion_company(doc: BeautifulSoup, url: str) -> str | None:
             name = re.sub(
                 r"\s+(Job Board|Careers?|Jobs?|Opportunities)\s*$", "", t, flags=re.IGNORECASE
             )
+            # "Roles @Closure" → "Closure"
+            if "@" in name:
+                name = name.rsplit("@", 1)[1]
+            name = name.strip()
             if name:
-                return name.strip()
+                return name
     # Fallback: subdomain of notion.site URL
     hostname = urlparse(url).hostname or ""
     subdomain = hostname.split(".")[0]
@@ -85,8 +89,23 @@ def _notion_property_value(doc: BeautifulSoup, prop: str) -> str | None:
     return ", ".join(values) if values else None
 
 
+def _notion_location_section(doc: BeautifulSoup) -> str | None:
+    """Location listed as a "Location:" heading in the page body (no property table)."""
+    lines = _notion_text_lines(doc)
+    try:
+        idx = lines.index("Location:")
+    except ValueError:
+        return None
+    values: list[str] = []
+    for line in lines[idx + 1 :]:
+        if line.endswith(":"):
+            break
+        values.append(line)
+    return ", ".join(values) if values else None
+
+
 def _notion_location(doc: BeautifulSoup, url: str) -> str | None:
-    return _notion_property_value(doc, "Location")
+    return _notion_property_value(doc, "Location") or _notion_location_section(doc)
 
 
 def _notion_role_type(doc: BeautifulSoup, url: str) -> str | None:
