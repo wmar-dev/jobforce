@@ -113,3 +113,24 @@ def test_parse_html_anthropic_role_type_none_for_vevraa_boilerplate() -> None:
     html = _read("anthropic_greenhouse_job.html")
     result = parse_html(html, "https://job-boards.greenhouse.io/anthropic/jobs/4980430008")
     assert result["role_type"] is None
+
+
+# ---------------------------------------------------------------------------
+# parse_html — posted_at from the embedded Remix payload (Figma)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_greenhouse_posted_at_from_remix_context() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("figma_greenhouse_job.html")
+    result = parse_html(html, "https://job-boards.greenhouse.io/figma/jobs/5551532004")
+    assert result["posted_at"] == "2025-06-02"
+
+
+def test_parse_html_greenhouse_posted_at_none_when_absent() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    result = parse_html(html, "https://boards.greenhouse.io/stripe/jobs/12345")
+    assert result.get("posted_at") is None
