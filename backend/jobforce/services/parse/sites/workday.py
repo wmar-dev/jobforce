@@ -46,9 +46,7 @@ def _workday_location(doc: BeautifulSoup, url: str) -> str | None:
     # Some Workday tenants render locations as a <dl><dt>locations</dt><dd>...</dd>...</dl>
     # list (one <dd> per location) instead of a single nested "location" element.
     dds = doc.select("[data-automation-id='locations'] dd")
-    locations = [
-        t for dd in dds if (t := _text(dd)) and not _LOCATION_COUNT_BADGE_RE.match(t)
-    ]
+    locations = [t for dd in dds if (t := _text(dd)) and not _LOCATION_COUNT_BADGE_RE.match(t)]
     if locations:
         return "; ".join(locations)
     return None
