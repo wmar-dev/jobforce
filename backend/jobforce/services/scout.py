@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -181,10 +182,22 @@ async def transition_status(session: AsyncSession, job_id: int, new_status: str)
     }
 
 
+_LEGAL_SUFFIX = re.compile(
+    r"[\s,]+(inc|incorporated|llc|ltd|corp|corporation|co)\.?$", re.IGNORECASE
+)
+
+
+def _company_key(name: str) -> str:
+    """Case-insensitive company identity with trailing legal suffixes (Inc., LLC, ...) removed."""
+    stripped = name.strip()
+    return (_LEGAL_SUFFIX.sub("", stripped) or stripped).casefold()
+
+
 async def _get_or_create_company(session: AsyncSession, name: str) -> Company:
     normalised = name.strip()
-    result = await session.execute(select(Company).where(Company.name.ilike(normalised)))
-    company = result.scalar_one_or_none()
+    key = _company_key(normalised)
+    result = await session.execute(select(Company))
+    company = next((c for c in result.scalars() if _company_key(c.name) == key), None)
     if company is None:
         company = Company(name=normalised)
         session.add(company)

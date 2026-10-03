@@ -159,3 +159,49 @@ async def test_post_note_to_nonexistent_company_returns_404(test_client: AsyncCl
         json={"content": "Ghost note"},
     )
     assert resp.status_code == 404
+
+
+async def _company_id(client: AsyncClient, name: str) -> int:
+    companies = (await client.get("/api/companies")).json()
+    return next(c["id"] for c in companies if c["name"] == name)
+
+
+@pytest.mark.asyncio
+async def test_merge_company_moves_listings_and_notes(test_client: AsyncClient) -> None:
+    keep = await _ingest(test_client, "https://example.com/m/1", "Keep Job", "MergeCo")
+    drop = await _ingest(test_client, "https://example.com/m/2", "Drop Job", "Merge Co Labs")
+    keep_id = await _company_id(test_client, "MergeCo")
+    drop_id = await _company_id(test_client, "Merge Co Labs")
+    assert keep_id != drop_id
+    await test_client.post(f"/api/companies/{drop_id}/notes", json={"content": "Recruiter call"})
+
+    resp = await test_client.post(f"/api/companies/{keep_id}/merge", json={"source_id": drop_id})
+    assert resp.status_code == 200
+    assert resp.json()["id"] == keep_id
+
+    detail = (await test_client.get(f"/api/companies/{keep_id}")).json()
+    assert {j["id"] for j in detail["listings"]} == {keep["id"], drop["id"]}
+    assert len(detail["notes"]) == 1
+    assert (await test_client.get(f"/api/companies/{drop_id}")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_merge_company_into_itself_returns_422(test_client: AsyncClient) -> None:
+    await _ingest(test_client, "https://example.com/m/3", "Self Job", "SelfCo")
+    cid = await _company_id(test_client, "SelfCo")
+    resp = await test_client.post(f"/api/companies/{cid}/merge", json={"source_id": cid})
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_merge_company_not_found_returns_404(test_client: AsyncClient) -> None:
+    resp = await test_client.post("/api/companies/99998/merge", json={"source_id": 99999})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_ingest_matches_company_ignoring_legal_suffix(test_client: AsyncClient) -> None:
+    await _ingest(test_client, "https://example.com/s/1", "Job A", "SuffixCo")
+    await _ingest(test_client, "https://example.com/s/2", "Job B", "suffixco, Inc.")
+    companies = (await test_client.get("/api/companies")).json()
+    assert len([c for c in companies if c["name"].lower().startswith("suffixco")]) == 1

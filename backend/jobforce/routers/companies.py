@@ -1,4 +1,4 @@
-"""Companies router — GET /api/companies, GET /api/companies/{id}, PATCH /api/companies/{id}, POST/GET /api/companies/{id}/notes."""
+"""Companies router — GET /api/companies, GET /api/companies/{id}, PATCH /api/companies/{id}, POST /api/companies/{id}/merge, POST/GET /api/companies/{id}/notes."""
 
 from __future__ import annotations
 
@@ -6,12 +6,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from jobforce.db.engine import get_session
-from jobforce.db.models import Company, MeetingNote
+from jobforce.db.models import Company, JobListing, MeetingNote
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -25,6 +25,10 @@ class CompanyListItem(BaseModel):
 
 class CompanyPatch(BaseModel):
     careers_url: str
+
+
+class CompanyMerge(BaseModel):
+    source_id: int
 
 
 class JobListingSummary(BaseModel):
@@ -92,6 +96,43 @@ async def patch_company(
         name=company.name,
         domain=company.domain,
         careers_url=company.careers_url,
+    )
+
+
+@router.post("/{company_id}/merge", response_model=CompanyListItem)
+async def merge_company(
+    company_id: int,
+    body: CompanyMerge,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> CompanyListItem:
+    """Fold ``source_id`` into ``company_id``: move its listings and notes, then delete it."""
+    if body.source_id == company_id:
+        raise HTTPException(status_code=422, detail="Cannot merge a company into itself")
+    target = await session.get(Company, company_id)
+    source = await session.get(Company, body.source_id)
+    if target is None or source is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    await session.execute(
+        update(JobListing).where(JobListing.company_id == source.id).values(company_id=target.id)
+    )
+    await session.execute(
+        update(MeetingNote).where(MeetingNote.company_id == source.id).values(company_id=target.id)
+    )
+    target.domain = target.domain or source.domain
+    target.careers_url = target.careers_url or source.careers_url
+    if source.notes:
+        target.notes = f"{target.notes}\n{source.notes}" if target.notes else source.notes
+
+    session.expire(source)
+    await session.delete(source)
+    await session.commit()
+    await session.refresh(target)
+    return CompanyListItem(
+        id=target.id,
+        name=target.name,
+        domain=target.domain,
+        careers_url=target.careers_url,
     )
 
 
