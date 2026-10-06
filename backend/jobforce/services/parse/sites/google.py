@@ -63,6 +63,10 @@ def _google_careers_description(doc: BeautifulSoup, url: str) -> str | None:
             continue
         if "Privacy Policy" in text or "equal opportunity" in text.lower():
             break
+        # Material Icon ligatures (<i>info_outline</i>) and aria-hidden bits
+        # (the callout's "X" dismiss button) are UI chrome, not content.
+        for chrome in child.select("i.google-material-icons, [aria-hidden='true']"):
+            chrome.decompose()
         if md_part := _to_markdown(child):
             parts.append(md_part)
     return "\n\n".join(parts) if parts else None

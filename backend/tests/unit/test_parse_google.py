@@ -52,3 +52,21 @@ def test_parse_html_google_careers_description_excludes_boilerplate() -> None:
     assert "Generative AI" in result["description"]
     assert "Privacy Policy" not in result["description"]
     assert "equal opportunity" not in result["description"]
+
+
+def test_parse_html_google_careers_description_strips_icon_and_dismiss_chrome() -> None:
+    from jobforce.services.parse import parse_html
+
+    callout = (
+        '<div class="callout"><div role="img" aria-label="Info">'
+        '<i class="google-material-icons notranslate" aria-hidden="true">info_outline</i></div>'
+        '<span aria-hidden="true">X</span>'
+        "<span>In most instances, this position requires in-person interviews.</span></div>"
+    )
+    html = _read("google_careers_job.html").replace(
+        '<div class="KwJkGe">', f'<div class="xbCN0b">{callout}</div><div class="KwJkGe">', 1
+    )
+    description = parse_html(html, _GOOGLE_CAREERS_URL)["description"] or ""
+    assert "info" not in description.lower().replace("information", "")
+    assert not description.lstrip().startswith("X")
+    assert "in-person interviews" in description
