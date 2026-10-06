@@ -210,7 +210,9 @@ If controls are found:
 
 If 4c2 already produced a merged tuple list, skip this step and proceed to 4e with that list.
 
-From the Playwright snapshot, extract `(anchor_text, href)` pairs where the href looks like an individual job posting link. Criteria for the href:
+**Token-saving extraction**: do not read the whole snapshot or return every link into context. Use `browser_evaluate` with a `filename` (under the scratchpad directory) to write the `(anchor_text, location_text, href)` tuples to a JSON file, then filter that file with `jq`/`python3` in Bash so only the survivors and the skip counts are printed. For Ashby, `a[href*="/<slug>/"]` with `innerText` split on newlines gives title (first line) and metadata (remaining lines, including location).
+
+Extract `(anchor_text, href)` pairs where the href looks like an individual job posting link. Criteria for the href:
 - Contains path segments like `/jobs/`, `/roles/`, `/positions/`, `/opening/`, `/job/`, `/careers/`
 - Contains a numeric ID or a job-title-like slug (words separated by hyphens)
 - **Exclude** navigation links, filter links, category pages, "apply" links that just open forms, mailto/tel links, and external social media links
@@ -240,6 +242,8 @@ For each `(anchor_text, location_text, href)` tuple (where `location_text` is an
 
 Count all skipped entries in the off-target total. Only pass URLs that pass both filters to step 4g.
 
+**Do not print one line per skipped entry** — when pre-filtering a large page, print only the counts (e.g. `⏭ 50 off-target (title/location)`), and list individual skips only if there are 10 or fewer. Print the surviving candidates (title + URL) once, for the 4g step.
+
 > **Note**: anchor text on most ATS platforms (Greenhouse, Lever, Workday, Ashby) is the verbatim job title. If a page uses generic link labels like "View role" or "Apply", the anchor text will not match and the URL will be skipped — in that case, disable pre-filtering for that company and fall back to fetching all URLs. If location is not visible in the snapshot near the link, skip the location check for that entry and fetch it anyway.
 
 ### 4e: Write back the discovered careers_url (only if auto-discovered in 4b)
@@ -253,7 +257,7 @@ curl -s -X PATCH http://localhost:8000/api/companies/<id> \
 
 ### 4f: Parse-sanity check on the first URL before batch
 
-Before ingesting the full list, run scout_fetch on the first URL to confirm the adapter works (this ingests that job; it is skipped as a duplicate in 4g):
+Before ingesting the full list, run scout_fetch on the first URL in `new.txt` (the post-dedup list from 4g step 1 — if it is empty, skip this step, there is nothing to ingest) to confirm the adapter works (this ingests that job; it is skipped as a duplicate in 4g):
 
 ```bash
 cd backend && uv run python -m jobforce.cli.scout_fetch --url "<first_url>"
@@ -285,14 +289,18 @@ If the parse check passes (on the first try or after an auto-fix), proceed to in
 
 For each URL that passed the anchor-text filter in 4d:
 
-1. **Dedup check before crawling**:
+1. **Bulk dedup check before crawling** — one request per company, not one per URL. Write the surviving candidate URLs (one per line) to `<scratchpad>/candidates.txt`, then diff against what's already captured:
    ```bash
-   curl -s "http://localhost:8000/api/jobs?source_url=<url>"
+   curl -s "http://localhost:8000/api/jobs?company=<name>&limit=500" | jq -r '.items[].source_url' | sort > <scratchpad>/existing.txt
+   sort <scratchpad>/candidates.txt | comm -13 <scratchpad>/existing.txt - > <scratchpad>/new.txt
    ```
-   If `total >= 1`, the job is already captured — count it as a duplicate and continue to the next URL without running scout_fetch:
-   ```
-     ⏭ duplicate (already captured): <url>
-   ```
+   Count `candidates - new` as duplicates and print only that count (`⏭ <n> duplicate (already captured)`), not one line per URL. Iterate over `new.txt` only.
+
+   Caveat: the `company` filter excludes archived/withdrawn/rejected jobs, so previously archived URLs show up in `new.txt`. `scout_fetch` reports `duplicate: true` for those (step 4), so they are still counted correctly — just not skipped up front.
+
+   When looping in zsh, read lines with `while read -r u; do ...; done < new.txt` — an unquoted `$VAR` holding multiple URLs is not word-split in zsh and produces one junk URL.
+
+   For a single ad-hoc URL, `GET /api/jobs?source_url=<url>` (matches regardless of status) is still fine.
 
 2. Run scout_fetch. It parses the page and writes the job to the database itself (see `_ingest` in `backend/jobforce/cli/scout_fetch.py`):
    ```bash
