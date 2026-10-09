@@ -291,10 +291,12 @@ For each URL that passed the anchor-text filter in 4d:
 
 1. **Bulk dedup check before crawling** — one request per company, not one per URL. Write the surviving candidate URLs (one per line) to `<scratchpad>/candidates.txt`, then diff against what's already captured:
    ```bash
-   curl -s "http://localhost:8000/api/jobs?company=<name>&limit=500" | jq -r '.items[].source_url' | sort > <scratchpad>/existing.txt
+   curl -s "http://localhost:8000/api/jobs?company=<name>&limit=200" | jq -r '.items[].source_url' | sort > <scratchpad>/existing.txt
    sort <scratchpad>/candidates.txt | comm -13 <scratchpad>/existing.txt - > <scratchpad>/new.txt
    ```
    Count `candidates - new` as duplicates and print only that count (`⏭ <n> duplicate (already captured)`), not one line per URL. Iterate over `new.txt` only.
+
+   The API caps `limit` at 200 (422 above that). A company with more than 200 active jobs will have its dedup list truncated; that is fine, since this diff is only a shortcut and `scout_fetch` still reports `duplicate: true` for anything already captured.
 
    Caveat: the `company` filter excludes archived/withdrawn/rejected jobs, so previously archived URLs show up in `new.txt`. `scout_fetch` reports `duplicate: true` for those (step 4), so they are still counted correctly — just not skipped up front.
 
