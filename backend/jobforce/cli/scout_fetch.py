@@ -222,7 +222,7 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
 # body behind a "Job Description" tab that doesn't fetch/render its content
 # until clicked — unlike jobs.twilio.com's single-page layout, waiting for
 # hydration alone leaves #job-description-container empty.
-_TAB_CLICK_HOSTS: tuple[str, ...] = ("eightfold.ai",)
+_TAB_CLICK_HOSTS: tuple[str, ...] = ("eightfold.ai", "careers.qualcomm.com")
 
 
 async def _extract_icims_frame_html(page: Any) -> str | None:
@@ -282,9 +282,16 @@ async def _click_eightfold_description_tab(page: Any, hostname: str) -> None:
         await page.click(".modalClose", timeout=2_000)
     except PlaywrightTimeout:
         pass
+    # Custom-domain tenants (e.g. careers.qualcomm.com) have no tab: the body
+    # is already in the DOM once hydrated, so a missing button is fine — still
+    # wait for the hydrated title/body below.
     try:
         await page.click("button:has-text('Job Description')", timeout=3_000)
+    except PlaywrightTimeout:
+        pass
+    try:
         await page.wait_for_function(
+            "document.querySelector('h2[class*=\"position-title\"]') && "
             "document.querySelector('#job-description-container')?.textContent?.trim()?.length > 0",
             timeout=8_000,
         )

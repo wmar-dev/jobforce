@@ -56,3 +56,20 @@ def test_parse_html_eightfold_posted_at() -> None:
     html = _read("eightfold_job.html")
     result = parse_html(html, _EIGHTFOLD_URL)
     assert result["posted_at"] == "2026-09-20"
+
+
+# careers.qualcomm.com is Eightfold on a custom domain (no *.eightfold.ai
+# hostname), with the same DOM; its job description is visible without
+# clicking the "Job Description" tab.
+_QUALCOMM_URL = "https://careers.qualcomm.com/careers/job/446720351246"
+
+
+def test_parse_html_eightfold_qualcomm_custom_domain() -> None:
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("eightfold_qualcomm_job.html"), _QUALCOMM_URL)
+    assert result["title"] == "Staff Machine Learning Engineer – AI/ML Compiler"
+    assert result["company_name"] == "Qualcomm"
+    assert result["location"] == "Santa Clara, California, United States of America"
+    assert result["description"] is not None
+    assert "ML compiler stack" in result["description"]

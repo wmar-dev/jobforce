@@ -19,7 +19,8 @@ from bs4 import BeautifulSoup
 
 from .._common import _text, _to_markdown, normalize_posted_at
 
-HOSTNAME = "eightfold.ai"
+# careers.qualcomm.com is an Eightfold tenant on its own domain (same DOM).
+HOSTNAMES = ["eightfold.ai", "careers.qualcomm.com"]
 
 
 def _eightfold_title(doc: BeautifulSoup, url: str) -> str | None:
