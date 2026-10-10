@@ -134,3 +134,15 @@ def test_parse_html_greenhouse_posted_at_none_when_absent() -> None:
     html = _read("greenhouse_job.html")
     result = parse_html(html, "https://boards.greenhouse.io/stripe/jobs/12345")
     assert result.get("posted_at") is None
+
+
+def test_parse_html_greenhouse_embed_url_uses_for_param_for_company() -> None:
+    """boards.greenhouse.io/embed/job_app?for=<slug>&token=<id> has no company
+    in its path; use the `for` board slug (trailing digits stripped, e.g.
+    digitalocean98 -> Digitalocean) instead of the literal "Embed"."""
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_job.html")
+    url = "https://boards.greenhouse.io/embed/job_app?for=digitalocean98&token=7790123002"
+    result = parse_html(html, url)
+    assert result["company_name"] == "Digitalocean"

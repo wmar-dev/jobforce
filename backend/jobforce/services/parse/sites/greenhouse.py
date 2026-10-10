@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -19,7 +19,12 @@ HOSTNAMES = ["boards.greenhouse.io", "job-boards.greenhouse.io", "job-boards.eu.
 
 def _greenhouse_company(doc: BeautifulSoup, url: str) -> str | None:
     # boards.greenhouse.io/<company>/jobs/<id> — extract from path
-    parts = urlparse(url).path.strip("/").split("/")
+    parsed = urlparse(url)
+    parts = parsed.path.strip("/").split("/")
+    if parts[0] == "embed":
+        # boards.greenhouse.io/embed/job_app?for=<board>&token=<id>
+        board = (parse_qs(parsed.query).get("for") or [""])[0].rstrip("0123456789")
+        return " ".join(w.capitalize() for w in board.replace("-", " ").split()) or None
     if len(parts) >= 1 and parts[0] not in ("jobs",):
         return " ".join(w.capitalize() for w in parts[0].replace("-", " ").split())
     return None
