@@ -91,8 +91,7 @@ def test_parse_html_workday_location_excludes_count_badge() -> None:
         "Staff-ML-Engineer--LLM-Fine-Tuning---Slack_JR344115",
     )
     assert (
-        result["location"]
-        == "Washington - Seattle; Georgia - Atlanta; California - San Francisco"
+        result["location"] == "Washington - Seattle; Georgia - Atlanta; California - San Francisco"
     )
 
 
