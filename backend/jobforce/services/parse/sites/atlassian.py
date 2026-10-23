@@ -27,7 +27,8 @@ def _atlassian_location(doc: BeautifulSoup, url: str) -> str | None:
     parts = [p.strip() for p in text.split("|") if p.strip()]
     # Format: "Team | City, Country[ or Remote] | Remote, Remote" — location
     # is the middle segment.
-    if len(parts) >= 2:
+    if len(parts) >= 2 and parts[1].lower() != "posting location":
+        # Some postings ship the literal CMS placeholder "Posting Location".
         return parts[1]
     return None
 

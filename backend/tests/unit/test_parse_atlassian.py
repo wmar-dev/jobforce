@@ -33,3 +33,11 @@ def test_parse_html_atlassian_description_non_null() -> None:
     result = parse_html(html, _ATLASSIAN_URL)
     assert result["description"] is not None
     assert "Jira Service Management (JSM)" in result["description"]
+
+
+def test_parse_html_atlassian_placeholder_location_is_none() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("atlassian_placeholder_location_job.html")
+    result = parse_html(html, "https://www.atlassian.com/company/careers/details/26578")
+    assert result["location"] is None
