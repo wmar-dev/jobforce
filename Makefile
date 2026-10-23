@@ -1,4 +1,4 @@
-.PHONY: dev stop check test seed install
+.PHONY: dev stop check test audit seed install
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
@@ -25,6 +25,14 @@ test:
 	@cd frontend && npm test
 	@echo "=== Chrome extension tests ==="
 	@cd chrome-extension && npm test
+
+audit:
+	@echo "=== Frontend audit (prod deps) ==="
+	@cd frontend && npm audit --omit=dev || true
+	@echo "=== Chrome extension audit (prod deps) ==="
+	@cd chrome-extension && npm audit --omit=dev || true
+	@echo "=== Backend audit ==="
+	@cd backend && uvx pip-audit || true
 
 seed:
 	@echo "Seeding database from config.yaml..."
