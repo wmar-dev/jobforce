@@ -95,6 +95,18 @@ export default function CompanyDetailPage() {
           <span className="text-gray-700">/</span>
           <h1 className="text-2xl font-bold text-white">{company.name}</h1>
         </div>
+        {!company.domain && (
+          <p className="text-sm ml-0">
+            <a
+              href={`https://www.google.com/search?q=${encodeURIComponent(`${company.name} company`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-emerald-400 transition-colors"
+            >
+              Search the web for {company.name} ↗
+            </a>
+          </p>
+        )}
         {company.domain && (
           <p className="text-sm ml-0">
             <a
