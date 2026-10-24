@@ -24,7 +24,8 @@ class CompanyListItem(BaseModel):
 
 
 class CompanyPatch(BaseModel):
-    careers_url: str
+    careers_url: str | None = None
+    domain: str | None = None
 
 
 class CompanyMerge(BaseModel):
@@ -88,7 +89,10 @@ async def patch_company(
     company = await session.get(Company, company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    company.careers_url = body.careers_url
+    if body.careers_url is not None:
+        company.careers_url = body.careers_url
+    if body.domain is not None:
+        company.domain = body.domain
     await session.commit()
     await session.refresh(company)
     return CompanyListItem(
