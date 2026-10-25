@@ -175,7 +175,8 @@ def _generic_role_type(doc: BeautifulSoup, url: str) -> str | None:
     # Use word boundary to avoid matching "contractor" / "government contractor"
     if re.search(r"\bcontract\b", t):
         return "contract"
-    if re.search(r"\bintern(ship)?\b", t):
+    # Skip "non-internship experience" requirements (common Amazon boilerplate)
+    if re.search(r"(?<!non-)(?<!non )\bintern(ship)?\b", t):
         return "internship"
     return None
 

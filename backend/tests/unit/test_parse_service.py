@@ -166,6 +166,30 @@ def test_parse_html_generic_detects_full_time() -> None:
     assert result["role_type"] == "full-time"
 
 
+def test_parse_html_generic_non_internship_is_not_internship() -> None:
+    """Amazon-style "3+ years of non-internship experience" must not read as an internship."""
+    from jobforce.services.parse import parse_html
+
+    html = (
+        "<html><body><h1>Software Development Engineer</h1>"
+        "<ul><li>3+ years of non-internship professional software development experience</li>"
+        "<li>2+ years of non internship design or architecture experience</li></ul>"
+        "</body></html>"
+    )
+    result = parse_html(html, "https://unknown-site.com/job/123")
+    assert result["role_type"] is None
+
+
+def test_parse_html_generic_detects_internship() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = (
+        "<html><body><h1>Software Engineer Intern</h1><p>Summer 2027 internship.</p></body></html>"
+    )
+    result = parse_html(html, "https://unknown-site.com/job/123")
+    assert result["role_type"] == "internship"
+
+
 def test_parse_html_missing_field_is_null() -> None:
     from jobforce.services.parse import parse_html
 

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -36,8 +37,18 @@ def _amazon_jobs_description(doc: BeautifulSoup, url: str) -> str | None:
     return "\n\n".join(parts) if parts else None
 
 
+def _amazon_jobs_role_type(doc: BeautifulSoup, url: str) -> str | None:
+    # The generic whole-page scan misfires here: a "Recommended jobs" widget lists
+    # intern postings, and descriptions say "non-internship" / "API contract".
+    # Amazon intern postings always say so in the title; everything else is
+    # full-time (returning None would let the generic scan win).
+    title = _text(doc.select_one("h1.title")) or ""
+    return "internship" if re.search(r"\bintern(ship)?\b", title, re.I) else "full-time"
+
+
 ADAPTER: dict[str, Any] = {
     "company_name": lambda doc, url: "Amazon",
     "location": _amazon_jobs_location,
+    "role_type": _amazon_jobs_role_type,
     "description": _amazon_jobs_description,
 }

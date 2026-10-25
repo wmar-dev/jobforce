@@ -48,3 +48,21 @@ def test_parse_html_amazon_jobs_sidebar_location() -> None:
 
     result = parse_html(_read("amazon_jobs_sidebar_job.html"), _AMAZON_SIDEBAR_URL)
     assert result["location"] == "USA, CA, Santa Clara"
+
+
+def test_parse_html_amazon_jobs_role_type_ignores_recommended_jobs() -> None:
+    """An intern posting in the "Recommended jobs" widget must not mark this job an internship."""
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("amazon_jobs_sidebar_job.html"), _AMAZON_SIDEBAR_URL)
+    assert result["role_type"] == "full-time"
+
+
+def test_parse_html_amazon_jobs_role_type_detects_intern_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("amazon_jobs_sidebar_job.html").replace(
+        "Applied Scientist II, Console Science</h1>", "Applied Scientist Intern - 2027</h1>"
+    )
+    result = parse_html(html, _AMAZON_SIDEBAR_URL)
+    assert result["role_type"] == "internship"

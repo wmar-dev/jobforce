@@ -543,6 +543,27 @@ async def test_reparse_with_valid_snapshot_updates_fields(test_client: AsyncClie
     assert "Updated description text" in data["description"]
 
 
+@pytest.mark.asyncio
+async def test_reparse_clears_role_type_no_longer_detected(test_client: AsyncClient) -> None:
+    """A stale role_type (e.g. from a since-fixed misclassification) is cleared, not kept."""
+    html = (
+        "<html><body><h1>Software Development Engineer</h1>"
+        "<div class='job-description'><p>3+ years of non-internship experience.</p></div>"
+        "</body></html>"
+    )
+    ingest_resp = await _ingest(
+        test_client,
+        source_url="https://example.com/j/reparse-role-type",
+        role_type="internship",
+        html=html,
+    )
+    resp = await test_client.post(f"/api/jobs/{ingest_resp['id']}/reparse")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["role_type"] is None
+    assert data["title"] == "Software Development Engineer"
+
+
 # ---------------------------------------------------------------------------
 # Job note endpoints (US1 + US3)
 # ---------------------------------------------------------------------------

@@ -389,6 +389,10 @@ async def reparse_job(
         v = parsed.get(field)
         if v is not None:
             setattr(job, field, v)
+    # role_type is a classification, not an extraction: None means "no longer
+    # detected", so clear a stale value (e.g. a since-fixed misclassification)
+    if parsed.get("role_type") is None:
+        job.role_type = None
     await session.commit()
     await session.refresh(job)
     return await get_job(job_id, session)
