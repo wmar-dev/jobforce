@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
-# Amazon.jobs (amazon.jobs) — React SPA. Location is a ".location" div holding
-# a bold "Location:" label followed by the text. The body is a set of
+# Amazon.jobs (amazon.jobs) — React SPA. Location is in the "Job details"
+# sidebar association list (older pages: a ".location" div holding a bold
+# "Location:" label followed by the text). The body is a set of
 # ".section" blocks (h2 + content) under "#job-detail-body".
 # ---------------------------------------------------------------------------
 
@@ -16,6 +17,14 @@ HOSTNAME = "amazon.jobs"
 
 
 def _amazon_jobs_location(doc: BeautifulSoup, url: str) -> str | None:
+    # Newer layout: "Job details" sidebar, one <li> per location
+    items = [
+        t
+        for li in doc.select("div.association.location-icon ul.association-content li")
+        if (t := _text(li))
+    ]
+    if items:
+        return "; ".join(items)
     text = _text(doc.select_one("div.location"))
     if not text:
         return None

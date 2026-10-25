@@ -35,3 +35,16 @@ def test_parse_html_amazon_jobs_description_non_null() -> None:
     assert result["description"] is not None
     assert "Annapurna Labs" in result["description"]
     assert "Basic Qualifications" in result["description"]
+
+
+_AMAZON_SIDEBAR_URL = (
+    "https://www.amazon.jobs/en/jobs/10373514/applied-scientist-ii-console-science"
+)
+
+
+def test_parse_html_amazon_jobs_sidebar_location() -> None:
+    """Newer layout: location sits in the "Job details" sidebar association list."""
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("amazon_jobs_sidebar_job.html"), _AMAZON_SIDEBAR_URL)
+    assert result["location"] == "USA, CA, Santa Clara"
