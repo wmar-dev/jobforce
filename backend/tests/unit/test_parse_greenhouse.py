@@ -146,3 +146,66 @@ def test_parse_html_greenhouse_embed_url_uses_for_param_for_company() -> None:
     url = "https://boards.greenhouse.io/embed/job_app?for=digitalocean98&token=7790123002"
     result = parse_html(html, url)
     assert result["company_name"] == "Digitalocean"
+
+
+# ---------------------------------------------------------------------------
+# parse_html — application-only board layout (Patronus AI): the page renders
+# only the apply form (no h1 / .job__title / .job__location / .job__description);
+# the job itself lives in the inline Remix `jobPost` payload.
+# ---------------------------------------------------------------------------
+
+_PATRONUS_URL = "https://job-boards.greenhouse.io/patronusaiinc/jobs/4412230009"
+
+
+def test_parse_html_greenhouse_patronus_title_from_job_post_payload() -> None:
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("greenhouse_patronus_job.html"), _PATRONUS_URL)
+    assert result["title"] == "Member of Technical Staff - Engineering"
+
+
+def test_parse_html_greenhouse_patronus_location_from_job_post_payload() -> None:
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("greenhouse_patronus_job.html"), _PATRONUS_URL)
+    assert result["location"] == "San Francisco"
+
+
+def test_parse_html_greenhouse_patronus_company_from_job_post_payload() -> None:
+    # Slug "patronusaiinc" is a squashed form of the payload's company_name
+    # "Patronus AI, Inc." — prefer the real name, minus the legal suffix.
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("greenhouse_patronus_job.html"), _PATRONUS_URL)
+    assert result["company_name"] == "Patronus AI"
+
+
+def test_parse_html_greenhouse_patronus_description_from_job_post_payload() -> None:
+    from jobforce.services.parse import parse_html
+
+    result = parse_html(_read("greenhouse_patronus_job.html"), _PATRONUS_URL)
+    assert result["description"] is not None
+    assert "agent trajectories" in result["description"]
+    # Must not fall back to an application-form question's helper text.
+    assert "Twitter" not in result["description"]
+
+
+def test_parse_html_greenhouse_patronus_normalizes_nbsp_in_title() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_patronus_job.html").replace(
+        "Member of Technical Staff - Engineering", "Member of Technical Staff - Engineering"
+    )
+    result = parse_html(html, _PATRONUS_URL)
+    assert result["title"] == "Member of Technical Staff - Engineering"
+
+
+def test_parse_html_greenhouse_company_keeps_slug_when_payload_name_unrelated() -> None:
+    # Payload company_name is only trusted when it is a reformatting of the URL
+    # slug — otherwise keep the slug-derived name so existing company records
+    # keep matching.
+    from jobforce.services.parse import parse_html
+
+    html = _read("greenhouse_patronus_job.html")
+    result = parse_html(html, "https://job-boards.greenhouse.io/acme/jobs/1")
+    assert result["company_name"] == "Acme"

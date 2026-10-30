@@ -149,6 +149,82 @@ async def _fetch_coreweave_greenhouse_html(url: str) -> str | None:
     )
 
 
+_GREENHOUSE_BOARD_HOSTS = {"boards.greenhouse.io", "job-boards.greenhouse.io"}
+
+
+def _greenhouse_board_job_ref(url: str) -> tuple[str, str] | None:
+    """(board slug, job id) for a (job-)boards.greenhouse.io/<slug>/jobs/<id> URL."""
+    parsed = urlparse(url)
+    if (parsed.hostname or "") not in _GREENHOUSE_BOARD_HOSTS:
+        return None
+    parts = parsed.path.strip("/").split("/")
+    if len(parts) >= 3 and parts[0] != "embed" and parts[1] == "jobs" and parts[2].isdigit():
+        return parts[0], parts[2]
+    return None
+
+
+def _greenhouse_api_job_html(data: dict[str, Any]) -> str:
+    """Synthesize a Greenhouse-board-shaped page from a boards-API job payload.
+
+    Uses the same markup as a real job-boards.greenhouse.io page (h1 /
+    .job__location / .job__description) plus an inline `jobPost` payload
+    (company_name, published_at), so sites/greenhouse.py parses it exactly
+    like a live board page — including on a later /reparse of this snapshot.
+    """
+    title = html_module.escape((data.get("title") or "").strip())
+    location = html_module.escape((data.get("location") or {}).get("name") or "")
+    description_html = html_module.unescape(data.get("content") or "")
+    job_post = {
+        "title": data.get("title"),
+        "company_name": data.get("company_name"),
+        "job_post_location": (data.get("location") or {}).get("name"),
+        "published_at": data.get("first_published") or data.get("updated_at"),
+    }
+    payload = json.dumps({"jobPost": job_post}).replace("<", "\\u003c")
+    return (
+        f"<!doctype html><html><head><title>{title}</title></head><body>"
+        f'<div class="job__title"><h1>{title}</h1></div>'
+        f'<div class="job__location">{location}</div>'
+        f'<div class="job__description">{description_html}</div>'
+        f"<script>window.__remixContext = {payload};</script>"
+        "</body></html>"
+    )
+
+
+async def _fetch_greenhouse_offsite_redirect_html(url: str) -> str | None:
+    """Some Greenhouse boards (e.g. Unconventional AI) 302 every
+    job-boards.greenhouse.io/<slug>/jobs/<id> URL to the company's own careers
+    page (unconv.ai/careers/?gh_jid=<id>), which renders the job through a
+    Greenhouse JS embed / cross-origin iframe the captured outerHTML never
+    contains — scout_fetch then parsed the wrapper ("Careers", no location).
+    Generalizes the Nebius/CoreWeave/SentinelOne fix above: detect the
+    off-Greenhouse redirect up front and pull the job from the public,
+    unauthenticated boards API instead. Boards that serve their own page
+    (no redirect) return None and go through the normal Playwright path.
+    """
+    import httpx
+
+    ref = _greenhouse_board_job_ref(url)
+    if ref is None:
+        return None
+    slug, job_id = ref
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
+        try:
+            probe = await client.get(url)
+        except httpx.HTTPError:
+            return None
+        if not probe.is_redirect:
+            return None
+        target_host = urlparse(probe.headers.get("location", "")).hostname or ""
+        if not target_host or target_host.endswith("greenhouse.io"):
+            return None
+        api_url = f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job_id}?content=true"
+        resp = await client.get(api_url)
+    if resp.status_code != 200:
+        return None
+    return _greenhouse_api_job_html(resp.json())
+
+
 # Hosts whose job content hydrates in client-side after the initial DOM
 # marker (h1/h2) is already attached, so a bare "h1, main h2" wait resolves
 # before the real title/location/description are present. Maps a hostname
@@ -171,6 +247,13 @@ _HYDRATION_WAIT_CONDITIONS: dict[str, str] = {
     # index list immediately; the actual job's h2.js-title only fills in once
     # the Webflow CMS list finishes hydrating and matches the ?id= param.
     "surgehq.ai": "document.querySelector('h2.js-title')?.textContent.trim().length > 0",
+    # owner.com/careers/role?=<uuid> (Webflow) ships an empty data-role-*
+    # template (<title> "Careers at Owner", blank h1) that a client-side
+    # script fills from the job API after domcontentloaded.
+    "owner.com": (
+        "document.querySelector('[data-role-title]')?.textContent.trim().length > 0"
+        " && document.querySelector('[data-role-opening]')?.textContent.trim().length > 0"
+    ),
     # careers.chime.com's <h1>/title render immediately, but the ".jobCopy"
     # description div is present-but-empty until the SPA hydrates and fills
     # in the job body client-side.
@@ -328,6 +411,9 @@ async def _fetch_html(url: str) -> str:
     sentinelone_html = await _fetch_sentinelone_greenhouse_html(url)
     if sentinelone_html is not None:
         return sentinelone_html
+    greenhouse_redirect_html = await _fetch_greenhouse_offsite_redirect_html(url)
+    if greenhouse_redirect_html is not None:
+        return greenhouse_redirect_html
 
     from playwright.async_api import TimeoutError as PlaywrightTimeout
     from playwright.async_api import async_playwright

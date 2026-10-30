@@ -125,3 +125,68 @@ def test_normalize_ashby_embed_url_leaves_careers_without_jid_unchanged() -> Non
 
     url = "https://www.ashbyhq.com/careers"
     assert _normalize_ashby_embed_url(url) == url
+
+
+# ---------------------------------------------------------------------------
+# Greenhouse boards whose job URLs 302 to the company's own careers page
+# (e.g. job-boards.greenhouse.io/unconventionalinc/jobs/<id> ->
+# unconv.ai/careers/?gh_jid=<id>, a JS embed scout_fetch can't see into)
+# ---------------------------------------------------------------------------
+
+
+def test_greenhouse_board_job_ref_parses_job_boards_url() -> None:
+    from jobforce.cli.scout_fetch import _greenhouse_board_job_ref
+
+    url = "https://job-boards.greenhouse.io/unconventionalinc/jobs/4393750009"
+    assert _greenhouse_board_job_ref(url) == ("unconventionalinc", "4393750009")
+
+
+def test_greenhouse_board_job_ref_parses_legacy_boards_url() -> None:
+    from jobforce.cli.scout_fetch import _greenhouse_board_job_ref
+
+    url = "https://boards.greenhouse.io/acme/jobs/123?gh_src=x"
+    assert _greenhouse_board_job_ref(url) == ("acme", "123")
+
+
+def test_greenhouse_board_job_ref_ignores_other_urls() -> None:
+    from jobforce.cli.scout_fetch import _greenhouse_board_job_ref
+
+    assert _greenhouse_board_job_ref("https://unconv.ai/careers/?gh_jid=4393750009") is None
+    assert (
+        _greenhouse_board_job_ref("https://boards.greenhouse.io/embed/job_app?for=x&token=1")
+        is None
+    )
+    assert _greenhouse_board_job_ref("https://job-boards.greenhouse.io/acme") is None
+
+
+_UNCONV_API_JOB = {
+    "title": "Member of Technical Staff - AI Training Platform",
+    "company_name": "Unconventional, Inc.",
+    "location": {"name": "Mountain View, CA or Greater Seattle Area"},
+    "first_published": "2026-09-02T19:00:41-04:00",
+    # The boards API returns `content` HTML-entity-escaped.
+    "content": "&lt;p&gt;Build the platform that trains our models &amp; more.&lt;/p&gt;",
+}
+
+
+def test_greenhouse_api_job_html_parses_via_greenhouse_adapter() -> None:
+    from jobforce.cli.scout_fetch import _greenhouse_api_job_html
+    from jobforce.services.parse import parse_html
+
+    html = _greenhouse_api_job_html(_UNCONV_API_JOB)
+    result = parse_html(html, "https://job-boards.greenhouse.io/unconventionalinc/jobs/4393750009")
+    assert result["title"] == "Member of Technical Staff - AI Training Platform"
+    assert result["location"] == "Mountain View, CA or Greater Seattle Area"
+    assert result["company_name"] == "Unconventional"
+    assert result["posted_at"] == "2026-09-02"
+    assert result["description"] is not None
+    assert "Build the platform that trains our models & more." in result["description"]
+
+
+def test_greenhouse_api_job_html_escapes_title() -> None:
+    from jobforce.cli.scout_fetch import _greenhouse_api_job_html
+    from jobforce.services.parse import parse_html
+
+    html = _greenhouse_api_job_html({**_UNCONV_API_JOB, "title": "R&D <Lead>"})
+    result = parse_html(html, "https://job-boards.greenhouse.io/unconventionalinc/jobs/1")
+    assert result["title"] == "R&D <Lead>"
