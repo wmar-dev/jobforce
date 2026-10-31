@@ -25,6 +25,9 @@ def _get_pref(prefs: Any, key: str) -> Any:
 
 def _load_company_file(path: str) -> list[dict[str, Any]]:
     raw = yaml.safe_load(Path(path).read_text()) or []
+    # Also accept the list nested under a single top-level key (e.g. sf_tech_week_companies:)
+    if isinstance(raw, dict) and len(raw) == 1:
+        raw = next(iter(raw.values())) or []
     return [
         {
             "name": c["name"],

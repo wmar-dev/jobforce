@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import yaml
 
 from jobforce.cli.sync_target_companies import merge
@@ -51,7 +53,25 @@ def test_skips_aggregator_urls() -> None:
     )
 
     assert added == []
-    assert skipped == ["Ask HN: Who Is Hiring?", "Sequoia Companies"]
+    assert skipped == {"Ask HN: Who Is Hiring?": "aggregator", "Sequoia Companies": "aggregator"}
+
+
+def test_skips_company_whose_careers_url_is_already_listed() -> None:
+    _, added, skipped = merge(
+        _TARGET + '    - name: "The Bot Company"\n      domain: ""\n'
+        '      careers_url: "https://jobs.ashbyhq.com/thebotcompany"\n',
+        [
+            _c("Bot Co", careers_url="https://jobs.ashbyhq.com/thebotcompany/"),
+            _c("Portola", careers_url="https://www.tolans.com/careers"),
+            _c("Tolan (Portola)", careers_url="https://www.tolans.com/careers"),
+        ],
+    )
+
+    assert added == ["Portola"]
+    assert skipped == {
+        "Bot Co": "same careers_url as The Bot Company",
+        "Tolan (Portola)": "same careers_url as Portola",
+    }
 
 
 def test_duplicate_config_entries_prefer_one_with_careers_url() -> None:
@@ -67,3 +87,34 @@ def test_domain_url_is_normalized_and_quotes_escaped() -> None:
 
     entry = [e for e in yaml.safe_load(text) if e["name"] == 'Say "Hi"'][0]
     assert entry["domain"] == "sayhi.ai"
+
+
+def test_skip_name_only_drops_entries_without_url_or_domain() -> None:
+    companies = [
+        _c("Bare"),
+        _c("Domained", "domained.ai"),
+        _c("Urled", careers_url="https://u.io/jobs"),
+    ]
+
+    _, added, skipped = merge(_TARGET, companies, skip_name_only=True)
+    assert added == ["Domained", "Urled"]
+    assert skipped == {"Bare": "no careers_url or domain"}
+
+    _, added, _ = merge(_TARGET, companies)
+    assert added == ["Bare", "Domained", "Urled"]
+
+
+def test_load_company_file_accepts_list_nested_under_one_key(tmp_path: Path) -> None:
+    from jobforce.cli.config_lookup import _load_company_file
+
+    f = tmp_path / "events.yaml"
+    f.write_text('event_companies:\n  - name: "Acme"\n    domain: "acme.com"\n    events: 3\n')
+
+    assert _load_company_file(str(f)) == [{"name": "Acme", "domain": "acme.com", "careers_url": ""}]
+
+
+def test_name_skipped_then_added_is_not_reported_as_skipped() -> None:
+    _, added, skipped = merge(_TARGET, [_c("Mango"), _c("Mango", "mango.ai")], skip_name_only=True)
+
+    assert added == ["Mango"]
+    assert skipped == {}
