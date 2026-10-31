@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
-# Phenom People boards — Yelp (www.yelp.careers), Adobe (careers.adobe.com) and
-# Cisco (careers.cisco.com)
+# Phenom People boards — Yelp (www.yelp.careers), Adobe (careers.adobe.com),
+# Cisco (careers.cisco.com) and Circle (careers.circle.com)
 # share this ATS template. title and company_name already extract fine via
 # the generic adapter (h1 + og:site_name); location and description do not.
 # The page renders a duplicate, unfilled "job-description"/".jd-info"
@@ -23,7 +23,7 @@ from markdownify import markdownify as md
 
 from .._common import _text
 
-HOSTNAMES = ["yelp.careers", "careers.adobe.com", "careers.cisco.com"]
+HOSTNAMES = ["yelp.careers", "careers.adobe.com", "careers.cisco.com", "careers.circle.com"]
 
 
 def _phenom_people_jsonld(doc: BeautifulSoup) -> dict[str, Any]:

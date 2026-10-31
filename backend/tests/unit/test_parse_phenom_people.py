@@ -119,3 +119,23 @@ def test_parse_html_cisco_role_type() -> None:
     html = _read("cisco_job.html")
     result = parse_html(html, _CISCO_URL)
     assert result["role_type"] == "full-time"
+
+
+_CIRCLE_URL = "https://careers.circle.com/us/en/job/JR100849/Distinguished-Software-Engineer"
+
+
+def test_parse_html_circle_location() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("phenom_people_circle_job.html")
+    result = parse_html(html, _CIRCLE_URL)
+    assert result["location"] == "San Francisco, California, United States of America"
+
+
+def test_parse_html_circle_description_non_null() -> None:
+    from jobforce.services.parse import parse_html
+
+    html = _read("phenom_people_circle_job.html")
+    result = parse_html(html, _CIRCLE_URL)
+    assert result["description"] is not None
+    assert "stablecoin infrastructure" in result["description"]
