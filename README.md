@@ -127,7 +127,7 @@ Copy from `config/scouting-notes.example.md`. Optional — both skills run fine 
 
 ### `target_companies.yaml`
 
-Checked-in (not gitignored). A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled in where verified. It isn't read by any code — it's a shared starting point for `search.target_companies` above. Copy the entries you want into your own `config.yaml`.
+Checked-in (not gitignored). A tracked, curated list of ~1,000 companies with `domain`/`careers_url` filled in where verified. It isn't read by any code — it's a shared starting point for `search.target_companies` above. Copy the entries you want into your own `config.yaml`. To go the other way and add companies from your `config.yaml` that aren't in the list yet, run `cd backend && uv run python -m jobforce.cli.sync_target_companies` (dry run) and then add `--write`.
 
 ## Chrome Extension
 
