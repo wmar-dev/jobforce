@@ -13,6 +13,24 @@ const CATEGORIES: Array<{ key: QuestionItem["category"]; label: string; icon: st
   { key: "role_specific", label: "Role-Specific", icon: "🎯" },
 ];
 
+function sessionToMarkdown(questions: QuestionItem[], job: JobListing | undefined): string {
+  const lines: string[] = [
+    job ? `# Interview Prep: ${job.title} @ ${job.company.name}` : "# Interview Prep",
+  ];
+  for (const cat of CATEGORIES) {
+    const catQuestions = questions.filter((q) => q.category === cat.key);
+    if (catQuestions.length === 0) continue;
+    lines.push("", `## ${cat.label}`);
+    catQuestions.forEach((q, i) => {
+      lines.push("", `${i + 1}. **${q.text}**`);
+      if (q.guidance) lines.push(`   - Guidance: ${q.guidance}`);
+      if (q.leetcode_url) lines.push(`   - LeetCode: ${q.leetcode_url}`);
+      if (q.source_url) lines.push(`   - Source: ${q.source_url}`);
+    });
+  }
+  return lines.join("\n") + "\n";
+}
+
 function CoachPageInner() {
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<JobListing[]>([]);
@@ -24,6 +42,7 @@ function CoachPageInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<QuestionItem["category"] | "all">("all");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -65,6 +84,13 @@ function CoachPageInner() {
   const filteredQuestions = session?.questions.filter(
     (q) => activeCategory === "all" || q.category === activeCategory
   ) ?? [];
+
+  const handleCopyMarkdown = async () => {
+    const job = jobs.find((j) => j.id === selectedJobId);
+    await navigator.clipboard.writeText(sessionToMarkdown(filteredQuestions, job));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div>
@@ -144,6 +170,14 @@ function CoachPageInner() {
                 </button>
               );
             })}
+            <button
+              onClick={handleCopyMarkdown}
+              disabled={filteredQuestions.length === 0}
+              title="Copy the questions shown below to the clipboard as Markdown"
+              className="ml-auto px-3 py-1.5 text-xs rounded text-gray-500 hover:text-amber-400 transition-colors disabled:opacity-40 disabled:hover:text-gray-500"
+            >
+              {copied ? "✓ copied" : "📋 Copy as Markdown"}
+            </button>
           </div>
 
           <div className="space-y-3">
