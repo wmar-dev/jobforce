@@ -1,7 +1,7 @@
 ---
 name: coach-prep
-description: Generate a Claude Code–powered interview prep pack for a specific job listing (no API key required). Searches the web for company- and role-specific interview questions, then reasons in-context to build a tailored prep pack saved to the backend.
-argument-hint: "<job_id>"
+description: Generate a Claude Code–powered interview prep pack for a specific job listing, or — with no argument — for every job in "interviewing" status that doesn't have a prep session yet (no API key required). Searches the web for company- and role-specific interview questions, then reasons in-context to build a tailored prep pack saved to the backend.
+argument-hint: "[job_id]"
 user-invocable: true
 ---
 
@@ -12,10 +12,41 @@ Generate a tailored interview prep pack by searching the web for real interview 
 ## Usage
 
 ```
-/coach-prep <job_id>
+/coach-prep <job_id>   # prep one specific job
+/coach-prep            # prep every interviewing job that has no prep session yet
 ```
 
-## Steps
+## Step 0. Pick the jobs to prep
+
+**If a `job_id` argument was given**, prep just that job — skip to step 1.
+
+**If no argument was given**, build the batch:
+
+1. List all jobs in `interviewing` status:
+
+   ```bash
+   curl -s "http://localhost:8000/api/jobs?status=interviewing&limit=200" \
+     | jq -r '.items[] | "\(.id)\t\(.company.name // "?")\t\(.title)"'
+   ```
+
+2. For each job, check whether a prep session already exists — `GET /api/coach/jobs/<id>/latest-session` returns 404 when there's none:
+
+   ```bash
+   for id in <ids>; do
+     code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8000/api/coach/jobs/$id/latest-session")
+     echo "$id $code"
+   done
+   ```
+
+   Keep only the jobs that returned `404`. Skip jobs that returned `200` (already prepped).
+
+3. Print the batch as a short list (`#<id> <company> — <title>`), noting how many were skipped as already prepped. If the batch is empty, output `✅ All interviewing jobs already have prep sessions.` and stop.
+
+4. Run steps 1–6 below **once per job in the batch, sequentially**. If one job fails (e.g. sparse search results, POST error), report it and continue with the next. Reuse search results across jobs at the same company instead of re-searching company-level queries.
+
+5. After the last job, print a summary with one `✅ Session #…` line per job (from step 6) plus any `❌ #<job_id> <reason>` lines for failures.
+
+## Steps (per job)
 
 ### 1. Fetch job details
 
