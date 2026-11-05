@@ -129,11 +129,13 @@ For each company, work through the following sub-steps:
 
 **If the company's `careers_url` contains `news.ycombinator.com`**, treat it as an HN "Who's Hiring" thread — do NOT use Playwright or the normal careers-page flow:
 
-1. Run the `hn_thread` CLI to extract all top-level comment URLs:
+Every comment is parsed from the thread page itself (following "More" pagination), so do **not** run scout_fetch per comment.
+
+1. Extract parsed records for all top-level comments into a scratchpad file:
    ```bash
-   cd backend && uv run python -m jobforce.cli.hn_thread "<careers_url>"
+   cd backend && uv run python -m jobforce.cli.hn_thread "<careers_url>" --details > <scratchpad>/details.json
    ```
-   Parse the JSON array printed to stdout. If the array is empty or the command fails (non-zero exit), report:
+   Each record has `source_url`, `company_name`, `title`, `location`, `role_type`, `description`, `first_line`, and `html` (a single-comment snapshot, so `reparse` works later). If the command fails or the array is empty, report:
    ```
    🏢 <name> (<careers_url>) — hn_thread failed or returned 0 comments
    ```
@@ -144,9 +146,18 @@ For each company, work through the following sub-steps:
    🏢 <name> (HN thread) — found <N> comments
    ```
 
-3. For each comment URL in the array, run scout_fetch and ingest it exactly as step 4g does for normal job URLs (re-use the same logic: run scout_fetch, parse JSON, apply title/location filters, POST to `/api/ingest`, track 201/409/error).
+3. **Filter in context, from the header lines only.** Print `first_line` per record (`jq -r 'to_entries[] | "\(.key)\t\(.value.first_line)"' details.json | cut -c1-230`) — never the full array, the `html`/`description` fields are large. Posters don't follow a fixed `Company | Title | Location` order, so the parsed `title`/`location` are often swapped or missing; judge each header against `target_roles`/`target_locations` (and `## Avoid`) yourself. For headers that don't name a role or location, read the first ~450 chars of `description` for just those indexes.
 
-4. Skip steps 4a through 4h entirely for this company — jump straight to the per-company summary in Step 5.
+4. **Write the picks** as a TSV (`index<TAB>company<TAB>title<TAB>location`) with cleaned values (strip YC batch suffixes so names match existing companies), then build `<scratchpad>/picks.json` by overlaying those fields onto the matching `details.json` records.
+
+5. Ingest them in one run:
+   ```bash
+   cd backend && uv run python -m jobforce.cli.hn_thread --ingest <scratchpad>/picks.json > <scratchpad>/ingest.jsonl
+   jq -s '{ingested: map(select(.duplicate==false))|length, duplicate: map(select(.duplicate==true))|length, skipped: map(select(.skipped))|length}' <scratchpad>/ingest.jsonl
+   ```
+   Off-target comments are never ingested, so count them as off-target without archiving. A duplicate keeps its old `title`/`location`; PATCH `/api/jobs/<id>` with the cleaned values if they differ.
+
+6. Skip steps 4a through 4h entirely for this company — run 4i, then jump to the per-company summary in Step 5.
 
 ---
 
