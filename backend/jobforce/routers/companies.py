@@ -4,16 +4,22 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Path
+from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from jobforce.db.engine import get_session
 from jobforce.db.models import Company, JobListing, MeetingNote
+from jobforce.routers.errors import ApiError, ErrorCode, error_responses
+from jobforce.routers.resume_schema import OptionalRoleTypeStr, PipelineStatusStr
 
 router = APIRouter(prefix="/companies", tags=["companies"])
+
+CompanyId = Annotated[int, Path(description="Company id")]
+_COMPANY_404 = error_responses(ErrorCode.COMPANY_NOT_FOUND)
+_NOT_FOUND = "Company not found"
 
 
 class CompanyListItem(BaseModel):
@@ -29,14 +35,14 @@ class CompanyPatch(BaseModel):
 
 
 class CompanyMerge(BaseModel):
-    source_id: int
+    source_id: int = Field(description="Company to fold into the path company, then delete")
 
 
 class JobListingSummary(BaseModel):
     id: int
     title: str
-    status: str
-    role_type: str | None
+    status: PipelineStatusStr
+    role_type: OptionalRoleTypeStr
     location: str | None
     created_at: str
     fit_score: float | None
@@ -63,10 +69,11 @@ class NoteCreate(BaseModel):
     content: str
 
 
-@router.get("", response_model=list[CompanyListItem])
+@router.get("", response_model=list[CompanyListItem], summary="List all companies")
 async def list_companies(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> list[CompanyListItem]:
+    """Return every company, sorted by name."""
     result = await session.execute(select(Company).order_by(Company.name))
     companies = result.scalars().all()
     return [
@@ -80,15 +87,21 @@ async def list_companies(
     ]
 
 
-@router.patch("/{company_id}", response_model=CompanyListItem)
+@router.patch(
+    "/{company_id}",
+    response_model=CompanyListItem,
+    summary="Set a company's careers URL or domain",
+    responses=_COMPANY_404,
+)
 async def patch_company(
-    company_id: int,
+    company_id: CompanyId,
     body: CompanyPatch,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CompanyListItem:
+    """Update only the fields provided; null or omitted fields are left unchanged."""
     company = await session.get(Company, company_id)
     if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise ApiError(ErrorCode.COMPANY_NOT_FOUND, _NOT_FOUND)
     if body.careers_url is not None:
         company.careers_url = body.careers_url
     if body.domain is not None:
@@ -103,19 +116,26 @@ async def patch_company(
     )
 
 
-@router.post("/{company_id}/merge", response_model=CompanyListItem)
+@router.post(
+    "/{company_id}/merge",
+    response_model=CompanyListItem,
+    summary="Merge a duplicate company into this one",
+    responses=error_responses(ErrorCode.COMPANY_NOT_FOUND, ErrorCode.SELF_MERGE),
+)
 async def merge_company(
-    company_id: int,
+    company_id: CompanyId,
     body: CompanyMerge,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CompanyListItem:
-    """Fold ``source_id`` into ``company_id``: move its listings and notes, then delete it."""
+    """Fold `source_id` into `company_id`: move its job listings and meeting notes,
+    fill the target's empty `domain`/`careers_url`, then delete the source. Use to
+    dedupe variants like "Snap" / "Snap Inc.". COMPANY_NOT_FOUND if either is missing."""
     if body.source_id == company_id:
-        raise HTTPException(status_code=422, detail="Cannot merge a company into itself")
+        raise ApiError(ErrorCode.SELF_MERGE, "Cannot merge a company into itself")
     target = await session.get(Company, company_id)
     source = await session.get(Company, body.source_id)
     if target is None or source is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise ApiError(ErrorCode.COMPANY_NOT_FOUND, _NOT_FOUND)
 
     await session.execute(
         update(JobListing).where(JobListing.company_id == source.id).values(company_id=target.id)
@@ -140,11 +160,17 @@ async def merge_company(
     )
 
 
-@router.get("/{company_id}", response_model=CompanyDetail)
+@router.get(
+    "/{company_id}",
+    response_model=CompanyDetail,
+    summary="Get a company with its listings and notes",
+    responses=_COMPANY_404,
+)
 async def get_company(
-    company_id: int,
+    company_id: CompanyId,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CompanyDetail:
+    """Listings are sorted by fit score (unscored last); notes newest first."""
     result = await session.execute(
         select(Company)
         .options(
@@ -155,7 +181,7 @@ async def get_company(
     )
     company = result.scalar_one_or_none()
     if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise ApiError(ErrorCode.COMPANY_NOT_FOUND, _NOT_FOUND)
 
     listings = [
         JobListingSummary(
@@ -194,15 +220,22 @@ async def get_company(
     )
 
 
-@router.post("/{company_id}/notes", response_model=NoteOut, status_code=201)
+@router.post(
+    "/{company_id}/notes",
+    response_model=NoteOut,
+    status_code=201,
+    summary="Add a recruiter/meeting note to a company",
+    responses=_COMPANY_404,
+)
 async def create_note(
-    company_id: int,
+    company_id: CompanyId,
     body: NoteCreate,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> NoteOut:
+    """Append a free-text note (e.g. from a recruiter call)."""
     company = await session.get(Company, company_id)
     if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise ApiError(ErrorCode.COMPANY_NOT_FOUND, _NOT_FOUND)
 
     note = MeetingNote(
         company_id=company_id,
@@ -220,14 +253,20 @@ async def create_note(
     )
 
 
-@router.get("/{company_id}/notes", response_model=list[NoteOut])
+@router.get(
+    "/{company_id}/notes",
+    response_model=list[NoteOut],
+    summary="List a company's notes",
+    responses=_COMPANY_404,
+)
 async def get_notes(
-    company_id: int,
+    company_id: CompanyId,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> list[NoteOut]:
+    """Return all notes for the company, newest first."""
     company = await session.get(Company, company_id)
     if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise ApiError(ErrorCode.COMPANY_NOT_FOUND, _NOT_FOUND)
 
     result = await session.execute(
         select(MeetingNote)

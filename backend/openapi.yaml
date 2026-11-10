@@ -1,0 +1,2703 @@
+openapi: 3.1.0
+info:
+  title: Jobforce API
+  description: Local API behind the Jobforce dashboard, Chrome extension, and Claude Code skills. Business
+    errors return `{detail, code}`; branch on `code`.
+  version: 0.1.0
+paths:
+  /api/ingest:
+    post:
+      tags:
+      - scout
+      summary: Capture a job listing
+      description: 'Store a listing posted by the Chrome extension or a crawler skill, creating
+
+        the company if needed. Deduplicates on `source_url`: a repeat returns 409 with
+
+        the existing job instead of creating a new one.'
+      operationId: post_ingest_api_ingest_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestPayload'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '409':
+          description: 'Duplicate: source_url already captured; body is the existing job'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/jobs:
+    get:
+      tags:
+      - jobs
+      summary: List and filter job listings
+      description: 'Return one page of job listings plus the total match count.
+
+
+        All text filters are case-insensitive substring matches unless noted. Nulls sort
+
+        last in either direction.'
+      operationId: get_jobs_api_jobs_get
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only jobs in this status (saved, archived, shortlisted, applied, interviewing,
+            offer, rejected, withdrawn). When omitted, archived/withdrawn/rejected jobs are excluded (unless
+            source_url is given).
+          title: Status
+        description: Only jobs in this status (saved, archived, shortlisted, applied, interviewing, offer,
+          rejected, withdrawn). When omitted, archived/withdrawn/rejected jobs are excluded (unless source_url
+          is given).
+      - name: company_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Exact company id
+          title: Company Id
+        description: Exact company id
+      - name: company
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Case-insensitive substring match on company name
+          title: Company
+        description: Case-insensitive substring match on company name
+      - name: fit_scored
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Filter on whether Oracle has scored it
+          title: Fit Scored
+        description: Filter on whether Oracle has scored it
+      - name: min_score
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: number
+          - type: 'null'
+          description: Minimum fit_score (0.0–1.0)
+          title: Min Score
+        description: Minimum fit_score (0.0–1.0)
+      - name: location
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Case-insensitive substring match on location
+          title: Location
+        description: Case-insensitive substring match on location
+      - name: role_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Exact role type (full-time, part-time, contract, internship, other)
+          title: Role Type
+        description: Exact role type (full-time, part-time, contract, internship, other)
+      - name: source_url
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Exact-match lookup by posting URL, to check whether a job is already captured.
+            Matches regardless of pipeline status.
+          title: Source Url
+        description: Exact-match lookup by posting URL, to check whether a job is already captured. Matches
+          regardless of pipeline status.
+      - name: title
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Case-insensitive substring match on title
+          title: Title
+        description: Case-insensitive substring match on title
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Case-insensitive substring match on description
+          title: Q
+        description: Case-insensitive substring match on description
+      - name: posted_after
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only jobs posted on/after this ISO date (YYYY-MM-DD)
+          title: Posted After
+        description: Only jobs posted on/after this ISO date (YYYY-MM-DD)
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(fit_score|created_at|posted_at|title|status|company)$
+          description: Sort column; ties break on created_at desc for stable paging
+          default: fit_score
+          title: Sort By
+        description: Sort column; ties break on created_at desc for stable paging
+      - name: sort_dir
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(asc|desc)$
+          description: asc or desc
+          default: desc
+          title: Sort Dir
+        description: asc or desc
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Page size (1–200)
+          default: 50
+          title: Limit
+        description: Page size (1–200)
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Rows to skip
+          default: 0
+          title: Offset
+        description: Rows to skip
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListPage'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/jobs/bulk-archive:
+    post:
+      tags:
+      - jobs
+      summary: Archive many jobs at once
+      description: "Archive jobs in one of three modes.\n\n- Default: `saved` jobs with `fit_score < 0.50`\
+        \ (optionally for one company);\n  shortlisted, unscored and in-pipeline jobs are skipped.\n-\
+        \ `all_active=true`: every `saved`/`shortlisted` job for `company_id`.\n- `saved_only=true`: every\
+        \ `saved` job for `company_id`, any score.\n\n`all_active` and `saved_only` require `company_id`\
+        \ and are mutually exclusive."
+      operationId: bulk_archive_jobs_api_jobs_bulk_archive_post
+      parameters:
+      - name: company_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Limit to one company; required with all_active or saved_only
+          title: Company Id
+        description: Limit to one company; required with all_active or saved_only
+      - name: all_active
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: Archive every saved/shortlisted job for company_id regardless of fit score, instead
+            of only low-score (<0.50) saved jobs. Requires company_id.
+          default: false
+          title: All Active
+        description: Archive every saved/shortlisted job for company_id regardless of fit score, instead
+          of only low-score (<0.50) saved jobs. Requires company_id.
+      - name: saved_only
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: Archive every saved job for company_id regardless of fit score, leaving shortlisted
+            jobs untouched. Requires company_id.
+          default: false
+          title: Saved Only
+        description: Archive every saved job for company_id regardless of fit score, leaving shortlisted
+          jobs untouched. Requires company_id.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkArchiveResult'
+        '422':
+          description: 'Business error. code: MISSING_COMPANY_ID | CONFLICTING_OPTIONS. Input-validation
+            errors use HTTPValidationError (no code).'
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/BusinessError'
+                - $ref: '#/components/schemas/HTTPValidationError'
+  /api/jobs/{job_id}:
+    get:
+      tags:
+      - jobs
+      summary: Get one job with description and status history
+      description: 'Return the full listing, including description, Oracle rationale, and the
+
+        status history in chronological order.'
+      operationId: get_job_api_jobs__job_id__get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListingDetail'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    patch:
+      tags:
+      - jobs
+      summary: Update job fields (not status)
+      description: 'Set any of the given fields; omitted or null fields are left unchanged.
+
+
+        Used by /oracle-rank to write fit scores. A `status` field is rejected (422):
+
+        use `PATCH /jobs/{job_id}/status` so the move is validated and audited.'
+      operationId: patch_job_api_jobs__job_id__patch
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobPatchRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListingDetail'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - jobs
+      summary: Delete a job listing
+      description: Permanently delete the listing and its dependent rows. Prefer archiving.
+      operationId: delete_job_api_jobs__job_id__delete
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/jobs/{job_id}/reparse:
+    post:
+      tags:
+      - jobs
+      summary: Re-extract fields from the stored HTML snapshot
+      description: 'Re-extract fields from the stored HTML snapshot using the current site adapter.
+
+
+        Use this after improving a site adapter in `services/parse/sites/` to update
+
+        title, location, role_type, and description without re-crawling the page.
+
+        Returns 404 if the job or its snapshot does not exist.'
+      operationId: reparse_job_api_jobs__job_id__reparse_post
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListingDetail'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND | SNAPSHOT_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/jobs/{job_id}/status:
+    patch:
+      tags:
+      - jobs
+      summary: Move a job to a new pipeline status
+      description: 'The only way to change `status`. Validates the move against the pipeline
+
+        state machine and records a status_transitions row. Disallowed moves (e.g.
+
+        saved → offer, or anything out of a terminal status) return INVALID_TRANSITION.'
+      operationId: patch_job_status_api_jobs__job_id__status_patch
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusPatchRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusPatchResponse'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: 'Business error. code: INVALID_TRANSITION. Input-validation errors use HTTPValidationError
+            (no code).'
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/BusinessError'
+                - $ref: '#/components/schemas/HTTPValidationError'
+  /api/jobs/{job_id}/note:
+    get:
+      tags:
+      - jobs
+      summary: Get the job's note
+      description: Return the single free-text note attached to this job.
+      operationId: get_job_note_api_jobs__job_id__note_get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobNoteOut'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND | NOTE_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - jobs
+      summary: Create or replace the job's note
+      description: Create the note if missing, otherwise replace its body.
+      operationId: upsert_job_note_api_jobs__job_id__note_put
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobNoteUpsert'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobNoteOut'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - jobs
+      summary: Delete the job's note
+      description: Remove the note attached to this job.
+      operationId: delete_job_note_api_jobs__job_id__note_delete
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND | NOTE_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/oracle/rank:
+    post:
+      tags:
+      - oracle
+      summary: 'Removed: run the /oracle-rank skill instead'
+      description: 'Always returns RANKING_MOVED_TO_SKILL (501). Ranking runs in Claude Code via
+
+        /oracle-rank, which writes scores with `PATCH /jobs/{job_id}`.'
+      operationId: post_rank_api_oracle_rank_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RankRequest'
+        required: true
+      responses:
+        '501':
+          description: 'Business error. code: RANKING_MOVED_TO_SKILL'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      deprecated: true
+  /api/oracle/rank/{job_id}:
+    get:
+      tags:
+      - oracle
+      summary: Get a job's Oracle fit score
+      description: 'Return the score and rationale; RANK_RESULT_NOT_FOUND if the job is missing or
+
+        has not been scored yet.'
+      operationId: get_rank_api_oracle_rank__job_id__get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankResult'
+        '404':
+          description: 'Business error. code: RANK_RESULT_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/resume/tailored:
+    get:
+      tags:
+      - forge
+      summary: Get the latest tailored resume for a job
+      description: Return the most recent tailored resume for a job, or null if none exists.
+      operationId: get_tailored_resume_for_job_api_resume_tailored_get
+      parameters:
+      - name: job_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/TailoredResumeOut'
+                - type: 'null'
+                title: Response Get Tailored Resume For Job Api Resume Tailored Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/resume/base:
+    get:
+      tags:
+      - forge
+      summary: Get the base resume
+      description: Return config/resume.json as the canonical profile (id 0).
+      operationId: get_base_resume_api_resume_base_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeOut'
+        '404':
+          description: 'Business error. code: BASE_RESUME_MISSING'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+    put:
+      tags:
+      - forge
+      summary: Replace the base resume
+      description: Overwrite config/resume.json with the request body (used by /forge-import).
+      operationId: put_base_resume_api_resume_base_put
+      requestBody:
+        description: Resume structured data. Not validated; stored as sent.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeStructuredData'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeOut'
+  /api/resume/tailor:
+    post:
+      tags:
+      - forge
+      summary: Store a tailored resume from /forge-tailor
+      description: 'Save a tailored resume produced by the /forge-tailor skill.
+
+
+        The skill performs AI tailoring and sends the result here.
+
+        This endpoint stores it and returns the diff vs the base resume.'
+      operationId: post_tailor_api_resume_tailor_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TailorRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TailoredResumeOut'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND | BASE_RESUME_MISSING'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/resume/{resume_id}/export:
+    post:
+      tags:
+      - forge
+      summary: Export a resume to .tex and PDF
+      description: 'Write .tex and PDF to output/ and return their paths.
+
+
+        pdf_path is null when LaTeX is unavailable — this is not an error.
+
+        resume_id=0 refers to the current base resume (config/resume.json).'
+      operationId: export_resume_endpoint_api_resume__resume_id__export_post
+      parameters:
+      - name: resume_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Resume id; 0 means the base resume
+          title: Resume Id
+        description: Resume id; 0 means the base resume
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportOut'
+        '404':
+          description: 'Business error. code: BASE_RESUME_MISSING | RESUME_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/coach/prep:
+    post:
+      tags:
+      - coach
+      summary: Store a prep pack generated by /coach-prep
+      description: 'Save the skill''s questions as a new interview session for the job. No AI runs
+
+        on the backend; the skill generates the questions.'
+      operationId: post_prep_api_coach_prep_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepSessionOut'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/coach/jobs/{job_id}/latest-session:
+    get:
+      tags:
+      - coach
+      summary: Get the most recent prep session for a job
+      description: Return the newest session; PREP_SESSION_NOT_FOUND if the job has none yet.
+      operationId: get_latest_session_api_coach_jobs__job_id__latest_session_get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Job listing id
+          title: Job Id
+        description: Job listing id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepSessionOut'
+        '404':
+          description: 'Business error. code: JOB_NOT_FOUND | PREP_SESSION_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/coach/sessions/{session_id}/answer:
+    post:
+      tags:
+      - coach
+      summary: Submit an answer to a prep question
+      description: 'Stub: validates the session and question, then returns placeholder feedback.
+
+        AI evaluation is out of scope since the coach skill migration.'
+      operationId: post_answer_api_coach_sessions__session_id__answer_post
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Interview session id
+          title: Session Id
+        description: Interview session id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerFeedbackOut'
+        '404':
+          description: 'Business error. code: SESSION_NOT_FOUND | QUESTION_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/coach/sessions/{session_id}/summary:
+    get:
+      tags:
+      - coach
+      summary: Get a session's overall summary
+      description: Return the stored summary, or an empty placeholder if none was recorded.
+      operationId: get_summary_api_coach_sessions__session_id__summary_get
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Interview session id
+          title: Session Id
+        description: Interview session id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionSummaryOut'
+        '404':
+          description: 'Business error. code: SESSION_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/dashboard:
+    get:
+      tags:
+      - dashboard
+      summary: Pipeline counts and recent activity
+      description: Counts per status, the last 10 status transitions, and the last 5 notes.
+      operationId: get_dashboard_api_dashboard_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardOut'
+  /api/companies:
+    get:
+      tags:
+      - companies
+      summary: List all companies
+      description: Return every company, sorted by name.
+      operationId: list_companies_api_companies_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CompanyListItem'
+                type: array
+                title: Response List Companies Api Companies Get
+  /api/companies/{company_id}:
+    patch:
+      tags:
+      - companies
+      summary: Set a company's careers URL or domain
+      description: Update only the fields provided; null or omitted fields are left unchanged.
+      operationId: patch_company_api_companies__company_id__patch
+      parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Company id
+          title: Company Id
+        description: Company id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyPatch'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyListItem'
+        '404':
+          description: 'Business error. code: COMPANY_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - companies
+      summary: Get a company with its listings and notes
+      description: Listings are sorted by fit score (unscored last); notes newest first.
+      operationId: get_company_api_companies__company_id__get
+      parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Company id
+          title: Company Id
+        description: Company id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyDetail'
+        '404':
+          description: 'Business error. code: COMPANY_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/companies/{company_id}/merge:
+    post:
+      tags:
+      - companies
+      summary: Merge a duplicate company into this one
+      description: 'Fold `source_id` into `company_id`: move its job listings and meeting notes,
+
+        fill the target''s empty `domain`/`careers_url`, then delete the source. Use to
+
+        dedupe variants like "Snap" / "Snap Inc.". COMPANY_NOT_FOUND if either is missing.'
+      operationId: merge_company_api_companies__company_id__merge_post
+      parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Company id
+          title: Company Id
+        description: Company id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyMerge'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyListItem'
+        '404':
+          description: 'Business error. code: COMPANY_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: 'Business error. code: SELF_MERGE. Input-validation errors use HTTPValidationError
+            (no code).'
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/BusinessError'
+                - $ref: '#/components/schemas/HTTPValidationError'
+  /api/companies/{company_id}/notes:
+    post:
+      tags:
+      - companies
+      summary: Add a recruiter/meeting note to a company
+      description: Append a free-text note (e.g. from a recruiter call).
+      operationId: create_note_api_companies__company_id__notes_post
+      parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Company id
+          title: Company Id
+        description: Company id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteOut'
+        '404':
+          description: 'Business error. code: COMPANY_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - companies
+      summary: List a company's notes
+      description: Return all notes for the company, newest first.
+      operationId: get_notes_api_companies__company_id__notes_get
+      parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          description: Company id
+          title: Company Id
+        description: Company id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NoteOut'
+                title: Response Get Notes Api Companies  Company Id  Notes Get
+        '404':
+          description: 'Business error. code: COMPANY_NOT_FOUND'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AnswerFeedbackOut:
+      properties:
+        question_id:
+          type: string
+          title: Question Id
+        feedback:
+          type: string
+          title: Feedback
+        score:
+          type: number
+          title: Score
+      type: object
+      required:
+      - question_id
+      - feedback
+      - score
+      title: AnswerFeedbackOut
+    AnswerRequest:
+      properties:
+        question_id:
+          type: string
+          title: Question Id
+        answer:
+          type: string
+          title: Answer
+      type: object
+      required:
+      - question_id
+      - answer
+      title: AnswerRequest
+    BulkArchiveResult:
+      properties:
+        archived_count:
+          type: integer
+          title: Archived Count
+          description: Number of jobs moved to archived
+      type: object
+      required:
+      - archived_count
+      title: BulkArchiveResult
+    BusinessError:
+      properties:
+        detail:
+          type: string
+          title: Detail
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+      type: object
+      required:
+      - detail
+      - code
+      title: BusinessError
+      description: 'A business-rule failure. Branch on `code`; `detail` is for humans and may change.
+
+
+        Input-validation failures use the separate HTTPValidationError shape (list-valued
+
+        `detail`, no `code`); a 422 with a `code` key is always a business error.'
+    CompanyDetail:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        domain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Domain
+        careers_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Careers Url
+        listings:
+          items:
+            $ref: '#/components/schemas/JobListingSummary'
+          type: array
+          title: Listings
+        notes:
+          items:
+            $ref: '#/components/schemas/NoteOut'
+          type: array
+          title: Notes
+      type: object
+      required:
+      - id
+      - name
+      - domain
+      - careers_url
+      - listings
+      - notes
+      title: CompanyDetail
+    CompanyListItem:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        domain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Domain
+        careers_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Careers Url
+      type: object
+      required:
+      - id
+      - name
+      - domain
+      - careers_url
+      title: CompanyListItem
+    CompanyMerge:
+      properties:
+        source_id:
+          type: integer
+          title: Source Id
+          description: Company to fold into the path company, then delete
+      type: object
+      required:
+      - source_id
+      title: CompanyMerge
+    CompanyPatch:
+      properties:
+        careers_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Careers Url
+        domain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Domain
+      type: object
+      title: CompanyPatch
+    CompanyRef:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+      type: object
+      required:
+      - id
+      - name
+      title: CompanyRef
+    DashboardOut:
+      properties:
+        counts:
+          $ref: '#/components/schemas/PipelineCounts'
+        recent_transitions:
+          items:
+            $ref: '#/components/schemas/RecentTransitionOut'
+          type: array
+          title: Recent Transitions
+        recent_notes:
+          items:
+            $ref: '#/components/schemas/RecentNoteOut'
+          type: array
+          title: Recent Notes
+      type: object
+      required:
+      - counts
+      - recent_transitions
+      - recent_notes
+      title: DashboardOut
+    ErrorCode:
+      type: string
+      enum:
+      - JOB_NOT_FOUND
+      - NOTE_NOT_FOUND
+      - SNAPSHOT_NOT_FOUND
+      - INVALID_TRANSITION
+      - MISSING_COMPANY_ID
+      - CONFLICTING_OPTIONS
+      - COMPANY_NOT_FOUND
+      - SELF_MERGE
+      - BASE_RESUME_MISSING
+      - RESUME_NOT_FOUND
+      - RANK_RESULT_NOT_FOUND
+      - RANKING_MOVED_TO_SKILL
+      - PREP_SESSION_NOT_FOUND
+      - SESSION_NOT_FOUND
+      - QUESTION_NOT_FOUND
+      title: ErrorCode
+    ExportOut:
+      properties:
+        tex_path:
+          type: string
+          title: Tex Path
+        pdf_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pdf Path
+          description: Null when LaTeX is unavailable (not an error)
+      type: object
+      required:
+      - tex_path
+      - pdf_path
+      title: ExportOut
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IngestPayload:
+      properties:
+        source_url:
+          type: string
+          title: Source Url
+        html:
+          type: string
+          title: Html
+        title:
+          type: string
+          title: Title
+        company_name:
+          type: string
+          title: Company Name
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+        role_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Role Type
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        posted_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Posted At
+      type: object
+      required:
+      - source_url
+      - html
+      - title
+      - company_name
+      title: IngestPayload
+    IngestResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: Status
+        company_id:
+          type: integer
+          title: Company Id
+        duplicate:
+          type: boolean
+          title: Duplicate
+      type: object
+      required:
+      - id
+      - status
+      - company_id
+      - duplicate
+      title: IngestResponse
+      description: The created listing, or the existing one when the URL was already captured.
+    JobListPage:
+      properties:
+        total:
+          type: integer
+          title: Total
+        items:
+          items:
+            $ref: '#/components/schemas/JobListingOut'
+          type: array
+          title: Items
+      type: object
+      required:
+      - total
+      - items
+      title: JobListPage
+    JobListingDetail:
+      properties:
+        id:
+          type: integer
+          title: Id
+        title:
+          type: string
+          title: Title
+        company:
+          $ref: '#/components/schemas/CompanyRef'
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+        role_type:
+          anyOf:
+          - type: string
+            enum:
+            - full-time
+            - part-time
+            - contract
+            - internship
+            - other
+          - type: 'null'
+          title: Role Type
+        posted_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Posted At
+        source_url:
+          type: string
+          title: Source Url
+        status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: Status
+        fit_scored:
+          type: boolean
+          title: Fit Scored
+          description: True once /oracle-rank has scored this job
+        fit_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fit Score
+          description: 0.0–1.0 fit score written by /oracle-rank
+        fit_confidence:
+          anyOf:
+          - type: string
+            enum:
+            - high
+            - medium
+            - low
+          - type: 'null'
+          title: Fit Confidence
+        crawled_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Crawled At
+        created_at:
+          type: string
+          title: Created At
+        has_note:
+          type: boolean
+          title: Has Note
+          description: True if a per-job note exists
+          default: false
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        fit_rationale:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fit Rationale
+        status_history:
+          items:
+            $ref: '#/components/schemas/StatusTransitionOut'
+          type: array
+          title: Status History
+      type: object
+      required:
+      - id
+      - title
+      - company
+      - location
+      - role_type
+      - posted_at
+      - source_url
+      - status
+      - fit_scored
+      - fit_score
+      - fit_confidence
+      - crawled_at
+      - created_at
+      - description
+      - fit_rationale
+      - status_history
+      title: JobListingDetail
+    JobListingOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        title:
+          type: string
+          title: Title
+        company:
+          $ref: '#/components/schemas/CompanyRef'
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+        role_type:
+          anyOf:
+          - type: string
+            enum:
+            - full-time
+            - part-time
+            - contract
+            - internship
+            - other
+          - type: 'null'
+          title: Role Type
+        posted_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Posted At
+        source_url:
+          type: string
+          title: Source Url
+        status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: Status
+        fit_scored:
+          type: boolean
+          title: Fit Scored
+          description: True once /oracle-rank has scored this job
+        fit_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fit Score
+          description: 0.0–1.0 fit score written by /oracle-rank
+        fit_confidence:
+          anyOf:
+          - type: string
+            enum:
+            - high
+            - medium
+            - low
+          - type: 'null'
+          title: Fit Confidence
+        crawled_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Crawled At
+        created_at:
+          type: string
+          title: Created At
+        has_note:
+          type: boolean
+          title: Has Note
+          description: True if a per-job note exists
+          default: false
+      type: object
+      required:
+      - id
+      - title
+      - company
+      - location
+      - role_type
+      - posted_at
+      - source_url
+      - status
+      - fit_scored
+      - fit_score
+      - fit_confidence
+      - crawled_at
+      - created_at
+      title: JobListingOut
+      description: A captured job listing as shown in lists.
+    JobListingSummary:
+      properties:
+        id:
+          type: integer
+          title: Id
+        title:
+          type: string
+          title: Title
+        status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: Status
+        role_type:
+          anyOf:
+          - type: string
+            enum:
+            - full-time
+            - part-time
+            - contract
+            - internship
+            - other
+          - type: 'null'
+          title: Role Type
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+        created_at:
+          type: string
+          title: Created At
+        fit_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fit Score
+        fit_scored:
+          type: boolean
+          title: Fit Scored
+      type: object
+      required:
+      - id
+      - title
+      - status
+      - role_type
+      - location
+      - created_at
+      - fit_score
+      - fit_scored
+      title: JobListingSummary
+    JobNoteOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        job_listing_id:
+          type: integer
+          title: Job Listing Id
+        body:
+          type: string
+          title: Body
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - id
+      - job_listing_id
+      - body
+      - created_at
+      - updated_at
+      title: JobNoteOut
+    JobNoteUpsert:
+      properties:
+        body:
+          type: string
+          title: Body
+      type: object
+      required:
+      - body
+      title: JobNoteUpsert
+    JobPatchRequest:
+      properties:
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+        role_type:
+          anyOf:
+          - type: string
+            enum:
+            - full-time
+            - part-time
+            - contract
+            - internship
+            - other
+          - type: 'null'
+          title: Role Type
+        posted_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Posted At
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        fit_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fit Score
+        fit_scored:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Fit Scored
+        fit_confidence:
+          anyOf:
+          - type: string
+            enum:
+            - high
+            - medium
+            - low
+          - type: 'null'
+          title: Fit Confidence
+        fit_rationale:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fit Rationale
+      additionalProperties: false
+      type: object
+      title: JobPatchRequest
+    NoteCreate:
+      properties:
+        content:
+          type: string
+          title: Content
+      type: object
+      required:
+      - content
+      title: NoteCreate
+    NoteOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        company_id:
+          type: integer
+          title: Company Id
+        content:
+          type: string
+          title: Content
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - id
+      - company_id
+      - content
+      - created_at
+      title: NoteOut
+    PipelineCounts:
+      properties:
+        saved:
+          type: integer
+          title: Saved
+        shortlisted:
+          type: integer
+          title: Shortlisted
+        applied:
+          type: integer
+          title: Applied
+        interviewing:
+          type: integer
+          title: Interviewing
+        offer:
+          type: integer
+          title: Offer
+        rejected:
+          type: integer
+          title: Rejected
+        withdrawn:
+          type: integer
+          title: Withdrawn
+      type: object
+      required:
+      - saved
+      - shortlisted
+      - applied
+      - interviewing
+      - offer
+      - rejected
+      - withdrawn
+      title: PipelineCounts
+      description: Number of jobs currently in each active or terminal status (archived excluded).
+    PrepRequest:
+      properties:
+        job_id:
+          type: integer
+          title: Job Id
+        questions:
+          items:
+            $ref: '#/components/schemas/QuestionIn'
+          type: array
+          title: Questions
+      type: object
+      required:
+      - job_id
+      - questions
+      title: PrepRequest
+    PrepSessionOut:
+      properties:
+        session_id:
+          type: integer
+          title: Session Id
+        job_id:
+          type: integer
+          title: Job Id
+        questions:
+          items:
+            $ref: '#/components/schemas/QuestionOut'
+          type: array
+          title: Questions
+      type: object
+      required:
+      - session_id
+      - job_id
+      - questions
+      title: PrepSessionOut
+    QuestionIn:
+      properties:
+        id:
+          type: string
+          title: Id
+        category:
+          type: string
+          enum:
+          - behavioral
+          - coding
+          - system_design
+          - role_specific
+          title: Category
+        text:
+          type: string
+          title: Text
+        source_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Url
+        leetcode_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Leetcode Url
+        guidance:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Guidance
+      type: object
+      required:
+      - id
+      - category
+      - text
+      title: QuestionIn
+      description: A prep question generated by the /coach-prep skill.
+    QuestionOut:
+      properties:
+        id:
+          type: string
+          title: Id
+        category:
+          type: string
+          enum:
+          - behavioral
+          - coding
+          - system_design
+          - role_specific
+          title: Category
+        text:
+          type: string
+          title: Text
+        source_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Url
+        leetcode_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Leetcode Url
+        guidance:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Guidance
+      type: object
+      required:
+      - id
+      - category
+      - text
+      title: QuestionOut
+    RankRequest:
+      properties:
+        job_ids:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Job Ids
+      type: object
+      title: RankRequest
+    RankResult:
+      properties:
+        job_id:
+          type: integer
+          title: Job Id
+        score:
+          type: number
+          title: Score
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          title: Confidence
+        rationale:
+          type: string
+          title: Rationale
+        warning:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Warning
+      type: object
+      required:
+      - job_id
+      - score
+      - confidence
+      - rationale
+      title: RankResult
+    RecentNoteOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        company_id:
+          type: integer
+          title: Company Id
+        content:
+          type: string
+          title: Content
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - id
+      - company_id
+      - content
+      - created_at
+      title: RecentNoteOut
+    RecentTransitionOut:
+      properties:
+        job_id:
+          type: integer
+          title: Job Id
+        job_title:
+          type: string
+          title: Job Title
+        from_status:
+          anyOf:
+          - type: string
+            enum:
+            - saved
+            - archived
+            - shortlisted
+            - applied
+            - interviewing
+            - offer
+            - rejected
+            - withdrawn
+          - type: 'null'
+          title: From Status
+        to_status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: To Status
+        transitioned_at:
+          type: string
+          title: Transitioned At
+      type: object
+      required:
+      - job_id
+      - job_title
+      - from_status
+      - to_status
+      - transitioned_at
+      title: RecentTransitionOut
+    ResumeDiffItem:
+      properties:
+        field:
+          type: string
+          title: Field
+        original:
+          type: string
+          title: Original
+        tailored:
+          type: string
+          title: Tailored
+      type: object
+      required:
+      - field
+      - original
+      - tailored
+      title: ResumeDiffItem
+      description: One changed field between the base and tailored resume.
+    ResumeOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        label:
+          type: string
+          title: Label
+        is_base:
+          type: boolean
+          title: Is Base
+        job_listing_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Job Listing Id
+        structured_data:
+          allOf:
+          - $ref: '#/components/schemas/ResumeStructuredData'
+          title: Structured Data
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - id
+      - label
+      - is_base
+      - job_listing_id
+      - structured_data
+      - created_at
+      - updated_at
+      title: ResumeOut
+      description: A resume. The base resume always has id 0 and empty timestamps.
+    SessionSummaryOut:
+      properties:
+        session_id:
+          type: integer
+          title: Session Id
+        overall_score:
+          type: number
+          title: Overall Score
+        summary:
+          type: string
+          title: Summary
+        areas_to_improve:
+          items:
+            type: string
+          type: array
+          title: Areas To Improve
+      type: object
+      required:
+      - session_id
+      - overall_score
+      - summary
+      - areas_to_improve
+      title: SessionSummaryOut
+    StatusPatchRequest:
+      properties:
+        status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: Status
+          description: Target status; must be a valid transition
+      type: object
+      required:
+      - status
+      title: StatusPatchRequest
+    StatusPatchResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: Status
+        transitioned_at:
+          type: string
+          title: Transitioned At
+      type: object
+      required:
+      - id
+      - status
+      - transitioned_at
+      title: StatusPatchResponse
+    StatusTransitionOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        from_status:
+          anyOf:
+          - type: string
+            enum:
+            - saved
+            - archived
+            - shortlisted
+            - applied
+            - interviewing
+            - offer
+            - rejected
+            - withdrawn
+          - type: 'null'
+          title: From Status
+          description: Null for the initial capture
+        to_status:
+          type: string
+          enum:
+          - saved
+          - archived
+          - shortlisted
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - withdrawn
+          title: To Status
+        transitioned_at:
+          type: string
+          title: Transitioned At
+      type: object
+      required:
+      - id
+      - from_status
+      - to_status
+      - transitioned_at
+      title: StatusTransitionOut
+      description: One audited pipeline move.
+    TailorRequest:
+      properties:
+        job_id:
+          type: integer
+          title: Job Id
+        structured_data:
+          allOf:
+          - $ref: '#/components/schemas/ResumeStructuredData'
+          title: Structured Data
+        base_resume_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Base Resume Id
+          description: Unused; the base is config/resume.json
+      type: object
+      required:
+      - job_id
+      - structured_data
+      title: TailorRequest
+    TailoredResumeOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        label:
+          type: string
+          title: Label
+        is_base:
+          type: boolean
+          title: Is Base
+        job_listing_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Job Listing Id
+        structured_data:
+          allOf:
+          - $ref: '#/components/schemas/ResumeStructuredData'
+          title: Structured Data
+        created_at:
+          type: string
+          title: Created At
+        updated_at:
+          type: string
+          title: Updated At
+        diff:
+          items:
+            $ref: '#/components/schemas/ResumeDiffItem'
+          type: array
+          title: Diff
+      type: object
+      required:
+      - id
+      - label
+      - is_base
+      - job_listing_id
+      - structured_data
+      - created_at
+      - updated_at
+      - diff
+      title: TailoredResumeOut
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    CertificationItem:
+      additionalProperties: true
+      description: A professional certification.
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Name
+        issuer:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Issuer
+        year:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Year
+      title: CertificationItem
+      type: object
+    Coursework:
+      additionalProperties: true
+      description: Courses completed with a single provider.
+      properties:
+        provider:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Provider
+        courses:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          default: null
+          title: Courses
+      title: Coursework
+      type: object
+    EducationItem:
+      additionalProperties: true
+      description: One degree or program.
+      properties:
+        degree:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Degree
+        institution:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Institution
+        start_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Start Date
+        end_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: End Date
+        gpa:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Gpa
+        notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Notes
+      title: EducationItem
+      type: object
+    PatentItem:
+      additionalProperties: true
+      description: A granted or filed patent.
+      properties:
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Title
+        number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Number
+      title: PatentItem
+      type: object
+    PersonalInfo:
+      additionalProperties: true
+      description: Contact details shown in the resume header.
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Name
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Email
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Phone
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Location
+        linkedin:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Linkedin
+        github:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Github
+        website:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Website
+      title: PersonalInfo
+      type: object
+    ProjectItem:
+      additionalProperties: true
+      description: A side or portfolio project.
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Description
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Url
+        bullets:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          default: null
+          title: Bullets
+      title: ProjectItem
+      type: object
+    WorkHistoryItem:
+      additionalProperties: true
+      description: One role; dates are free-form strings such as "2021-03".
+      properties:
+        company:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Company
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Title
+        start_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Start Date
+        end_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: End Date
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Location
+        bullets:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          default: null
+          title: Bullets
+      title: WorkHistoryItem
+      type: object
+    ResumeStructuredData:
+      additionalProperties: true
+      description: Resume content. Every key is optional and extra keys are kept; not validated.
+      properties:
+        personal_info:
+          anyOf:
+          - $ref: '#/components/schemas/PersonalInfo'
+          - type: 'null'
+          default: null
+        summary:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Summary
+        skills:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          default: null
+          title: Skills
+        work_history:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/WorkHistoryItem'
+            type: array
+          - type: 'null'
+          default: null
+          title: Work History
+        education:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/EducationItem'
+            type: array
+          - type: 'null'
+          default: null
+          title: Education
+        projects:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ProjectItem'
+            type: array
+          - type: 'null'
+          default: null
+          title: Projects
+        certifications:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/CertificationItem'
+            type: array
+          - type: 'null'
+          default: null
+          title: Certifications
+        coursework:
+          anyOf:
+          - $ref: '#/components/schemas/Coursework'
+          - type: 'null'
+          default: null
+        patents:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PatentItem'
+            type: array
+          - type: 'null'
+          default: null
+          title: Patents
+      title: ResumeStructuredData
+      type: object
+tags:
+- name: scout
+  description: Capture job listings from the extension and crawlers.
+- name: jobs
+  description: Browse, edit, and move job listings through the pipeline.
+- name: oracle
+  description: Read fit scores written by the /oracle-rank skill.
+- name: forge
+  description: Base and tailored resumes, diff, and PDF export.
+- name: coach
+  description: Interview prep sessions written by the /coach-prep skill.
+- name: dashboard
+  description: Pipeline summary counts and recent activity.
+- name: companies
+  description: Target companies, merge, and recruiter notes.

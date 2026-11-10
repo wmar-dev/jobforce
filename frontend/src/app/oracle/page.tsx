@@ -103,9 +103,6 @@ export default function OraclePage() {
                     </span>
                   </div>
                 </div>
-                {job.fit_rationale && (
-                  <p className="text-gray-400 text-sm mt-2 ml-9">{job.fit_rationale}</p>
-                )}
               </div>
             ))}
           </div>

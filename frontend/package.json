@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "jest --passWithNoTests",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "gen:api": "node scripts/check-api-types.mjs --write",
+    "check:api": "node scripts/check-api-types.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
@@ -39,6 +42,12 @@
     "jest-environment-jsdom": "^30.5.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^4.3.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "openapi-typescript": "7.13.0"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }

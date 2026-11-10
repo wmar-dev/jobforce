@@ -234,3 +234,34 @@ async def test_export_pdf_performance_within_30s(test_client: AsyncClient) -> No
     elapsed = time.monotonic() - start
     assert resp.status_code == 200
     assert elapsed <= 30.0, f"PDF export took {elapsed:.1f}s, exceeding 30s limit"
+
+
+_NONCONFORMING_RESUME = {
+    "hobbies": ["climbing"],
+    "skills": {"lang": ["Python"]},
+    "coursework": {"provider": "X", "courses": ["Y"]},
+    "work_history": [{"company": "Acme", "extra_field": 1}],
+}
+
+
+@pytest.mark.filterwarnings("error")
+async def test_put_base_resume_is_permissive(test_client: AsyncClient) -> None:
+    """The documented resume shape is not enforced: odd payloads round-trip unchanged."""
+    resp = await test_client.put("/api/resume/base", json=_NONCONFORMING_RESUME)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["structured_data"] == _NONCONFORMING_RESUME
+    resp = await test_client.get("/api/resume/base")
+    assert resp.status_code == 200
+    assert resp.json()["structured_data"] == _NONCONFORMING_RESUME
+
+
+@pytest.mark.filterwarnings("error")
+async def test_tailor_accepts_nonconforming_structured_data(test_client: AsyncClient) -> None:
+    await _put_base_resume(test_client)
+    job = await _ingest_job(test_client)
+    resp = await test_client.post(
+        "/api/resume/tailor",
+        json={"job_id": job["id"], "structured_data": _NONCONFORMING_RESUME},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["structured_data"] == _NONCONFORMING_RESUME

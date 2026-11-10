@@ -57,8 +57,10 @@ Content-Type: application/json
 ```
 
 - **200**: success.
-- **422 / `INVALID_TRANSITION`**: the job is already in a terminal status (e.g. already `rejected`, `withdrawn`, or `offer`). Report the current status and that no change was made.
-- **404**: report "Job #{id} not found".
+- **422 with `code: "INVALID_TRANSITION"`**: the job is already in a terminal status (e.g. already `rejected`, `withdrawn`, or `offer`). Report the current status and that no change was made.
+- **404 with `code: "JOB_NOT_FOUND"`**: report "Job #{id} not found".
+
+Error bodies are `{"detail": "...", "code": "..."}`; branch on `code`, not `detail` text. A 422 *without* `code` is an input-validation error (malformed request). The full code list is in `backend/openapi.yaml` (`BusinessError`).
 
 ## Step 4: Confirm
 

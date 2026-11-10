@@ -12,11 +12,14 @@ from sqlalchemy.orm import selectinload
 
 from jobforce.db.engine import get_session
 from jobforce.db.models import JobListing, MeetingNote, StatusTransition
+from jobforce.routers.resume_schema import OptionalPipelineStatusStr, PipelineStatusStr
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 class PipelineCounts(BaseModel):
+    """Number of jobs currently in each active or terminal status (archived excluded)."""
+
     saved: int
     shortlisted: int
     applied: int
@@ -29,8 +32,8 @@ class PipelineCounts(BaseModel):
 class RecentTransitionOut(BaseModel):
     job_id: int
     job_title: str
-    from_status: str | None
-    to_status: str
+    from_status: OptionalPipelineStatusStr
+    to_status: PipelineStatusStr
     transitioned_at: str
 
 
@@ -47,10 +50,11 @@ class DashboardOut(BaseModel):
     recent_notes: list[RecentNoteOut]
 
 
-@router.get("", response_model=DashboardOut)
+@router.get("", response_model=DashboardOut, summary="Pipeline counts and recent activity")
 async def get_dashboard(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> DashboardOut:
+    """Counts per status, the last 10 status transitions, and the last 5 notes."""
     # Pipeline counts per status
     counts: dict[str, int] = {}
     for status in (

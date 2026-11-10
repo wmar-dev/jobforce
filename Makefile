@@ -1,4 +1,4 @@
-.PHONY: dev stop check test audit seed install
+.PHONY: dev stop check test audit seed install openapi
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
@@ -14,7 +14,7 @@ check:
 	@echo "=== Backend quality gates ==="
 	@cd backend && $(MAKE) check
 	@echo "=== Frontend quality gates ==="
-	@cd frontend && npm run lint && npm test
+	@cd frontend && npm run check:api && npm run typecheck && npm run lint && npm test
 	@echo "=== Chrome extension quality gates ==="
 	@cd chrome-extension && npm test
 
@@ -33,6 +33,11 @@ audit:
 	@cd chrome-extension && npm audit --omit=dev || true
 	@echo "=== Backend audit ==="
 	@cd backend && uvx pip-audit || true
+
+openapi:
+	@echo "Regenerating backend/openapi.yaml and frontend API types..."
+	@cd backend && $(MAKE) openapi
+	@cd frontend && npm run gen:api
 
 seed:
 	@echo "Seeding database from config.yaml..."

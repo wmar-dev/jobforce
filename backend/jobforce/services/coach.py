@@ -13,6 +13,14 @@ from jobforce.db.models import InterviewSession
 logger = logging.getLogger(__name__)
 
 
+class SessionNotFoundError(LookupError):
+    """No interview session with the given id."""
+
+
+class QuestionNotFoundError(LookupError):
+    """The session exists but has no question with the given id."""
+
+
 async def store_prep_pack(
     session: AsyncSession,
     job_id: int,
@@ -43,11 +51,11 @@ async def evaluate_answer(
     """Stub — answer evaluation via AI is out of scope post-migration."""
     interview = await session.get(InterviewSession, session_id)
     if interview is None:
-        raise ValueError(f"Interview session {session_id} not found")
+        raise SessionNotFoundError(f"Interview session {session_id} not found")
 
     questions: list[dict[str, Any]] = json.loads(interview.questions)
     if not any(q.get("id") == question_id for q in questions):
-        raise ValueError(f"Question {question_id} not found in session {session_id}")
+        raise QuestionNotFoundError(f"Question {question_id} not found in session {session_id}")
 
     return {
         "question_id": question_id,
@@ -63,7 +71,7 @@ async def get_session_summary_data(
     """Return overall session summary."""
     interview = await session.get(InterviewSession, session_id)
     if interview is None:
-        raise ValueError(f"Interview session {session_id} not found")
+        raise SessionNotFoundError(f"Interview session {session_id} not found")
 
     summary_text = interview.overall_summary or ""
 

@@ -4,6 +4,8 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError, version
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,12 +14,32 @@ from jobforce.config import get_config
 from jobforce.db.engine import get_session_factory, init_engine
 from jobforce.db.init import create_all
 from jobforce.db.seed import seed_from_config
+from jobforce.routers.errors import ApiError, api_error_handler
+from jobforce.routers.resume_schema import add_resume_components
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Order matches router registration below; descriptions render as group headers in /docs.
+OPENAPI_TAGS: list[dict[str, str]] = [
+    {"name": "scout", "description": "Capture job listings from the extension and crawlers."},
+    {"name": "jobs", "description": "Browse, edit, and move job listings through the pipeline."},
+    {"name": "oracle", "description": "Read fit scores written by the /oracle-rank skill."},
+    {"name": "forge", "description": "Base and tailored resumes, diff, and PDF export."},
+    {"name": "coach", "description": "Interview prep sessions written by the /coach-prep skill."},
+    {"name": "dashboard", "description": "Pipeline summary counts and recent activity."},
+    {"name": "companies", "description": "Target companies, merge, and recruiter notes."},
+]
+
+
+def _api_version() -> str:
+    try:
+        return version("jobforce")
+    except PackageNotFoundError:
+        return "0.1.0"
 
 
 @asynccontextmanager
@@ -43,8 +65,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Jobforce backend shutting down.")
 
 
+def _register_extra_schemas(app: FastAPI) -> None:
+    """Add components FastAPI can't discover because their fields are typed Any."""
+    generate = app.openapi
+
+    def openapi() -> dict[str, Any]:
+        return add_resume_components(generate())
+
+    app.openapi = openapi  # type: ignore[method-assign]
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Jobforce API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="Jobforce API",
+        version=_api_version(),
+        description=(
+            "Local API behind the Jobforce dashboard, Chrome extension, and Claude Code "
+            "skills. Business errors return `{detail, code}`; branch on `code`."
+        ),
+        openapi_tags=OPENAPI_TAGS,
+        lifespan=lifespan,
+    )
+    app.add_exception_handler(ApiError, api_error_handler)
+    _register_extra_schemas(app)
 
     app.add_middleware(
         CORSMiddleware,

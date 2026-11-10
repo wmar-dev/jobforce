@@ -3,7 +3,6 @@ import type {
   JobListingDetail,
   JobListPage,
   JobNote,
-  OracleRankResponse,
   OracleRankResult,
   Resume,
   TailoredResumeResponse,
@@ -12,7 +11,6 @@ import type {
   Company,
   CompanyDetail,
   MeetingNote,
-  UserProfile,
   PipelineStatus,
   RoleType,
   ExportResponse,
@@ -131,15 +129,6 @@ export function ingestJob(
 
 export function getJobRank(jobId: number): Promise<OracleRankResult> {
   return apiFetch<OracleRankResult>(`/api/oracle/rank/${jobId}`);
-}
-
-// Profile
-export function getProfile(): Promise<UserProfile> {
-  return apiFetch<UserProfile>("/api/profile");
-}
-
-export function putProfile(profile: UserProfile): Promise<UserProfile> {
-  return apiFetch("/api/profile", { method: "PUT", body: JSON.stringify(profile) });
 }
 
 // Forge

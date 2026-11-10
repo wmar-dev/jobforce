@@ -1,4 +1,4 @@
-.PHONY: check lint typecheck test dev sync
+.PHONY: check lint typecheck test dev sync openapi
 
 PYTHON := .venv/bin/python
 RUFF := .venv/bin/ruff
@@ -19,6 +19,9 @@ test:
 
 sync:
 	uv sync --extra dev
+
+openapi:
+	$(PYTHON) -m jobforce.cli.export_openapi
 
 dev:
 	uv run uvicorn jobforce.main:app --reload --port 8000

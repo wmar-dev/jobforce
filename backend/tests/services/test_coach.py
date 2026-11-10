@@ -13,14 +13,14 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobforce.db.models import InterviewSession, JobListing
-from jobforce.services.coach import get_session_summary_data
+from jobforce.services.coach import SessionNotFoundError, get_session_summary_data
 
 
 @pytest.mark.asyncio
 async def test_get_session_summary_data_session_not_found_raises(
     db_session: AsyncSession,
 ) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(SessionNotFoundError):
         await get_session_summary_data(db_session, 99999)
 
 

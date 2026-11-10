@@ -25,6 +25,7 @@ make install   # Install backend + frontend deps
 make dev       # Start backend (:8000) + frontend (:3000) concurrently
 make check     # All quality gates (lint + typecheck + test)
 make seed      # Seed DB from config.yaml + config/resume.json
+make openapi   # Regenerate backend/openapi.yaml + frontend/src/lib/api-schema.d.ts
 ```
 
 ### Backend (`cd backend`)
@@ -36,6 +37,7 @@ make lint      # ruff check + ruff format --check
 make typecheck # mypy strict
 make test      # pytest with coverage
 make sync      # uv sync (lock/sync pyproject.toml)
+make openapi   # Regenerate openapi.yaml from the route declarations
 
 # Single test
 uv run pytest tests/unit/test_forge.py::test_compute_diff -xvs
@@ -46,7 +48,10 @@ uv run pytest tests/unit/test_forge.py::test_compute_diff -xvs
 ```bash
 npm run dev    # Next.js dev server on :3000
 npm run build  # Production build
-npm run lint   # ESLint + TS check
+npm run lint   # ESLint only
+npm run typecheck  # tsc --noEmit
+npm run gen:api    # Regenerate src/lib/api-schema.d.ts from ../backend/openapi.yaml
+npm run check:api  # Fail if api-schema.d.ts is stale
 npm test       # Jest
 npm test -- --watch  # Jest watch
 ```
@@ -109,13 +114,22 @@ Resume `structured_data` is a JSON string with keys: `personal_info`, `summary`,
 frontend/src/
 ├── app/             # Next.js App Router pages (page.tsx per route)
 ├── components/      # UI grouped by domain (jobs/, forge/, dashboard/, etc.)
-├── hooks/           # SWR data hooks (useJobs, useJob, useDashboard, useProfile)
-└── lib/             # api.ts (fetch wrappers), types.ts
+├── hooks/           # SWR data hooks (useJobs, useJob, useDashboard, ...)
+└── lib/             # api.ts (fetch wrappers), types.ts (aliases of generated api-schema.d.ts)
 ```
 
 SWR polls every 30s. Backend CORS allows `localhost:3000` only.
 
+### API Contract
+
+- `backend/openapi.yaml` is the authoritative API contract. It is **generated** from the FastAPI route declarations (`make openapi`), never hand-edited. `make check` fails if it is stale or if any endpoint lacks a summary, description, parameter descriptions, typed response, or documented errors.
+- `frontend/src/lib/api-schema.d.ts` is generated from it (`npm run gen:api`); `frontend/src/lib/types.ts` only aliases those types. Don't hand-write API shapes.
+- Business errors return `{"detail": "...", "code": "<ErrorCode>"}`. Branch on `code`, never on `detail` text. The catalog lives in `backend/jobforce/routers/errors.py` (`ErrorCode`); raise `ApiError(ErrorCode.X, "...")` in routers and list the codes in the route's `responses=error_responses(...)`. Input-validation 422s keep FastAPI's list-shaped `detail` with no `code`.
+- After changing a route or model: `make openapi`, commit both generated files.
+
 ### Notable API Endpoints
+
+Summary only — `backend/openapi.yaml` is authoritative.
 
 | Endpoint | Purpose |
 | -------- | ------- |
@@ -156,5 +170,5 @@ Key changes:
 **Verify invariant**: `grep -r "import anthropic" backend/` → zero results
 
 <!-- SPECKIT START -->
-Active feature plan: specs/014-improve-test-coverage/plan.md
+Active feature plan: specs/015-openapi-api-spec/plan.md
 <!-- SPECKIT END -->
