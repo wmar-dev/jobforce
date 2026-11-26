@@ -54,27 +54,30 @@ function CoachPageInner() {
       .catch(() => setError("Failed to load jobs. Is the backend running?"));
   }, []);
 
-  const handleLoadSession = useCallback(async (jobId?: number) => {
-    const id = jobId ?? selectedJobId;
-    if (!id) return;
-    setIsLoading(true);
-    setError(null);
-    setSession(null);
-    try {
-      const result = await getLatestCoachSession(id);
-      setSession(result);
-      setActiveCategory("all");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      setError(
-        msg.toLowerCase().includes("no prep session")
-          ? `No prep session found — run /coach-prep ${id} in Claude Code first, then reload.`
-          : msg || "Failed to load session"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedJobId]);
+  const handleLoadSession = useCallback(
+    async (jobId?: number) => {
+      const id = jobId ?? selectedJobId;
+      if (!id) return;
+      setIsLoading(true);
+      setError(null);
+      setSession(null);
+      try {
+        const result = await getLatestCoachSession(id);
+        setSession(result);
+        setActiveCategory("all");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "";
+        setError(
+          msg.toLowerCase().includes("no prep session")
+            ? `No prep session found — run /coach-prep ${id} in Claude Code first, then reload.`
+            : msg || "Failed to load session",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [selectedJobId],
+  );
 
   useEffect(() => {
     if (selectedJobId != null) {
@@ -83,9 +86,9 @@ function CoachPageInner() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredQuestions = session?.questions.filter(
-    (q) => activeCategory === "all" || q.category === activeCategory
-  ) ?? [];
+  const filteredQuestions =
+    session?.questions.filter((q) => activeCategory === "all" || q.category === activeCategory) ??
+    [];
 
   const handleCopyMarkdown = async () => {
     const job = jobs.find((j) => j.id === selectedJobId);
@@ -108,7 +111,8 @@ function CoachPageInner() {
           <span className="text-gray-500">Interview Prep</span>
         </div>
         <p className="text-gray-400 text-sm ml-9">
-          Interview prep powered by Claude Code. Run /coach-prep &lt;job_id&gt; to generate a session, then load it here.
+          Interview prep powered by Claude Code. Run /coach-prep &lt;job_id&gt; to generate a
+          session, then load it here.
         </p>
       </div>
 
@@ -130,9 +134,7 @@ function CoachPageInner() {
             </option>
           ))}
         </select>
-        {isLoading && (
-          <span className="text-sm text-gray-500">Loading...</span>
-        )}
+        {isLoading && <span className="text-sm text-gray-500">Loading...</span>}
         {selectedJobId && (
           <a
             href={`/jobs/${selectedJobId}`}

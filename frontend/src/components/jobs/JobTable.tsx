@@ -36,7 +36,8 @@ function Th({
       className={`pb-3 ${last ? "" : "pr-4"} font-medium ${sortable && col ? "cursor-pointer select-none hover:text-white transition-colors" : ""}`}
       onClick={() => sortable && col && onSort(col)}
     >
-      {label}{sortable && col && <SortIcon active={sortBy === col} dir={sortDir} />}
+      {label}
+      {sortable && col && <SortIcon active={sortBy === col} dir={sortDir} />}
     </th>
   );
 }
@@ -60,7 +61,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
         const items = cached.items.filter((j) => j.id !== jobId);
         return { ...cached, items, total: cached.total - 1 };
       },
-      { revalidate: false }
+      { revalidate: false },
     );
     try {
       await patchJobStatus(jobId, action);
@@ -89,14 +90,56 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-800 text-gray-400 text-left">
-            <Th col="title"      label="Title"     sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col="company"    label="Company"   sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col={null}       label="Location"  sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col="status"     label="Status"    sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col="fit_score"  label="Fit Score" sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col="posted_at"  label="Posted"    sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col="created_at" label="Captured"  sortable sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <Th col={null}       label=""          last sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th
+              col="title"
+              label="Title"
+              sortable
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <Th
+              col="company"
+              label="Company"
+              sortable
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <Th col={null} label="Location" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+            <Th
+              col="status"
+              label="Status"
+              sortable
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <Th
+              col="fit_score"
+              label="Fit Score"
+              sortable
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <Th
+              col="posted_at"
+              label="Posted"
+              sortable
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <Th
+              col="created_at"
+              label="Captured"
+              sortable
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            <Th col={null} label="" last sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           </tr>
         </thead>
         <tbody>
@@ -111,9 +154,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   className="text-emerald-400 hover:text-emerald-300 font-medium inline-flex items-center gap-1.5"
                 >
                   {job.title}
-                  {job.has_note && (
-                    <StickyNote size={12} className="text-yellow-500 shrink-0" />
-                  )}
+                  {job.has_note && <StickyNote size={12} className="text-yellow-500 shrink-0" />}
                 </Link>
               </td>
               <td className="py-3 pr-4 text-gray-300">
@@ -133,9 +174,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   <span className="text-violet-300 font-mono">
                     {Math.round(job.fit_score * 100)}%
                     {job.fit_confidence && (
-                      <span className="ml-1 text-xs text-gray-500">
-                        ({job.fit_confidence})
-                      </span>
+                      <span className="ml-1 text-xs text-gray-500">({job.fit_confidence})</span>
                     )}
                   </span>
                 ) : (
@@ -152,15 +191,20 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
               </td>
               <td className="py-3 text-right">
                 <span className="inline-flex gap-1">
-                  {job.status !== "shortlisted" && job.status !== "applied" && job.status !== "interviewing" && job.status !== "offer" && job.status !== "rejected" && job.status !== "withdrawn" && (
-                    <button
-                      onClick={() => void handleAction(job.id, "shortlisted")}
-                      className="px-1.5 py-0.5 text-xs rounded bg-amber-900/50 text-amber-300 hover:bg-amber-800/60 transition-colors"
-                      title="Shortlist this job"
-                    >
-                      ★
-                    </button>
-                  )}
+                  {job.status !== "shortlisted" &&
+                    job.status !== "applied" &&
+                    job.status !== "interviewing" &&
+                    job.status !== "offer" &&
+                    job.status !== "rejected" &&
+                    job.status !== "withdrawn" && (
+                      <button
+                        onClick={() => void handleAction(job.id, "shortlisted")}
+                        className="px-1.5 py-0.5 text-xs rounded bg-amber-900/50 text-amber-300 hover:bg-amber-800/60 transition-colors"
+                        title="Shortlist this job"
+                      >
+                        ★
+                      </button>
+                    )}
                   {job.status === "shortlisted" && (
                     <button
                       onClick={() => void handleAction(job.id, "saved")}
@@ -170,15 +214,20 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                       ★
                     </button>
                   )}
-                  {job.status !== "archived" && job.status !== "applied" && job.status !== "interviewing" && job.status !== "offer" && job.status !== "rejected" && job.status !== "withdrawn" && (
-                    <button
-                      onClick={() => void handleAction(job.id, "archived")}
-                      className="px-1.5 py-0.5 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
-                      title="Archive this job"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  {job.status !== "archived" &&
+                    job.status !== "applied" &&
+                    job.status !== "interviewing" &&
+                    job.status !== "offer" &&
+                    job.status !== "rejected" &&
+                    job.status !== "withdrawn" && (
+                      <button
+                        onClick={() => void handleAction(job.id, "archived")}
+                        className="px-1.5 py-0.5 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
+                        title="Archive this job"
+                      >
+                        ✕
+                      </button>
+                    )}
                   {job.status === "archived" && (
                     <button
                       onClick={() => void handleAction(job.id, "saved")}

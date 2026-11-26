@@ -69,8 +69,7 @@ export function StatusTransitionModal({
         </div>
 
         <div className="text-xs text-gray-500 mb-3">
-          Current:{" "}
-          <span className="text-gray-300 font-medium">{currentStatus}</span>
+          Current: <span className="text-gray-300 font-medium">{currentStatus}</span>
         </div>
 
         {isTerminal ? (

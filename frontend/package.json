@@ -11,7 +11,9 @@
     "test:watch": "jest --watch",
     "gen:api": "node scripts/check-api-types.mjs --write",
     "check:api": "node scripts/check-api-types.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
@@ -42,6 +44,7 @@
     "jest-environment-jsdom": "^30.5.1",
     "openapi-typescript": "7.13.0",
     "postcss": "^8.4.38",
+    "prettier": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "~8.70.0"

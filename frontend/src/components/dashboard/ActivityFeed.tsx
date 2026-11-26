@@ -40,15 +40,16 @@ export function ActivityFeed({ transitions, notes }: ActivityFeedProps) {
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   if (items.length === 0) {
-    return (
-      <div className="text-gray-600 text-sm py-6 text-center">No recent activity</div>
-    );
+    return <div className="text-gray-600 text-sm py-6 text-center">No recent activity</div>;
   }
 
   return (
     <div className="space-y-2">
       {items.map((entry, idx) => (
-        <div key={idx} className="flex items-start gap-3 py-2 border-b border-gray-800/50 last:border-0">
+        <div
+          key={idx}
+          className="flex items-start gap-3 py-2 border-b border-gray-800/50 last:border-0"
+        >
           <span className="text-lg shrink-0 mt-0.5">
             {entry.kind === "transition" ? "🔄" : "📝"}
           </span>

@@ -40,13 +40,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // Jobs
-export type JobSortKey =
-  | "fit_score"
-  | "created_at"
-  | "posted_at"
-  | "title"
-  | "status"
-  | "company";
+export type JobSortKey = "fit_score" | "created_at" | "posted_at" | "title" | "status" | "company";
 export type SortDir = "asc" | "desc";
 
 export interface JobFilters {
@@ -77,7 +71,7 @@ export function getJob(id: number): Promise<JobListingDetail> {
 
 export function patchJobStatus(
   id: number,
-  status: PipelineStatus
+  status: PipelineStatus,
 ): Promise<{ id: number; status: PipelineStatus; transitioned_at: string }> {
   return apiFetch(`/api/jobs/${id}/status`, {
     method: "PATCH",
@@ -87,7 +81,7 @@ export function patchJobStatus(
 
 export function bulkArchive(
   companyId?: number,
-  opts?: { allActive?: boolean; savedOnly?: boolean }
+  opts?: { allActive?: boolean; savedOnly?: boolean },
 ): Promise<{ archived_count: number }> {
   const params = new URLSearchParams();
   if (companyId !== undefined) params.set("company_id", String(companyId));
@@ -125,7 +119,7 @@ export interface IngestPayload {
 }
 
 export function ingestJob(
-  payload: IngestPayload
+  payload: IngestPayload,
 ): Promise<{ id: number; status: string; company_id: number; duplicate: boolean }> {
   return apiFetch("/api/ingest", { method: "POST", body: JSON.stringify(payload) });
 }
@@ -181,20 +175,14 @@ export function getCompanyNotes(companyId: number): Promise<MeetingNote[]> {
   return apiFetch<MeetingNote[]>(`/api/companies/${companyId}/notes`);
 }
 
-export function createMeetingNote(
-  companyId: number,
-  content: string
-): Promise<MeetingNote> {
+export function createMeetingNote(companyId: number, content: string): Promise<MeetingNote> {
   return apiFetch(`/api/companies/${companyId}/notes`, {
     method: "POST",
     body: JSON.stringify({ content }),
   });
 }
 
-export function patchCompany(
-  companyId: number,
-  careersUrl: string
-): Promise<Company> {
+export function patchCompany(companyId: number, careersUrl: string): Promise<Company> {
   return apiFetch(`/api/companies/${companyId}`, {
     method: "PATCH",
     body: JSON.stringify({ careers_url: careersUrl }),

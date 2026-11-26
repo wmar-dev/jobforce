@@ -42,11 +42,13 @@ function computeLineDiff(a: string, b: string): DiffLine[] {
 
   // Backtrack
   const raw: Array<{ kind: "context" | "removed" | "added"; text: string }> = [];
-  let i = m, j = n;
+  let i = m,
+    j = n;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && linesA[i - 1] === linesB[j - 1]) {
       raw.unshift({ kind: "context", text: linesA[i - 1] });
-      i--; j--;
+      i--;
+      j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
       raw.unshift({ kind: "added", text: linesB[j - 1] });
       j--;
@@ -58,11 +60,13 @@ function computeLineDiff(a: string, b: string): DiffLine[] {
 
   // Assign line numbers
   const lines: DiffLine[] = [];
-  let lineA = 1, lineB = 1;
+  let lineA = 1,
+    lineB = 1;
   for (const entry of raw) {
     if (entry.kind === "context") {
       lines.push({ type: "context", text: entry.text, lineA, lineB });
-      lineA++; lineB++;
+      lineA++;
+      lineB++;
     } else if (entry.kind === "removed") {
       lines.push({ type: "removed", text: entry.text, lineA });
       lineA++;
@@ -120,13 +124,9 @@ function HunkHeader({ hunk }: { hunk: DiffLine[] }) {
   const startA = firstA && "lineA" in firstA ? firstA.lineA : "?";
   const startB = firstB && "lineB" in firstB ? firstB.lineB : "?";
   const countA =
-    lastA && "lineA" in lastA && firstA && "lineA" in firstA
-      ? lastA.lineA - firstA.lineA + 1
-      : 0;
+    lastA && "lineA" in lastA && firstA && "lineA" in firstA ? lastA.lineA - firstA.lineA + 1 : 0;
   const countB =
-    lastB && "lineB" in lastB && firstB && "lineB" in firstB
-      ? lastB.lineB - firstB.lineB + 1
-      : 0;
+    lastB && "lineB" in lastB && firstB && "lineB" in firstB ? lastB.lineB - firstB.lineB + 1 : 0;
 
   return (
     <div className="bg-blue-950/40 border-y border-blue-900/50 px-4 py-0.5 text-xs font-mono text-blue-400 select-none">
@@ -204,12 +204,8 @@ function FieldDiff({ item }: { item: ResumeDiffItem }) {
       {/* File header */}
       <div className="flex items-center gap-3 bg-gray-800/80 px-3 py-2 border-b border-gray-700">
         <span className="font-mono text-gray-200 flex-1">{item.field}</span>
-        {removedCount > 0 && (
-          <span className="text-red-400 font-mono">−{removedCount}</span>
-        )}
-        {addedCount > 0 && (
-          <span className="text-green-400 font-mono">+{addedCount}</span>
-        )}
+        {removedCount > 0 && <span className="text-red-400 font-mono">−{removedCount}</span>}
+        {addedCount > 0 && <span className="text-green-400 font-mono">+{addedCount}</span>}
       </div>
 
       {hunks.length === 0 ? (
@@ -246,7 +242,9 @@ export function ResumeDiff({ diff }: ResumeDiffProps) {
     <div className="space-y-3">
       {/* Summary bar */}
       <div className="flex items-center gap-4 text-xs font-mono px-1">
-        <span className="text-gray-500">{diff.length} file{diff.length !== 1 ? "s" : ""} changed</span>
+        <span className="text-gray-500">
+          {diff.length} file{diff.length !== 1 ? "s" : ""} changed
+        </span>
         {totalAdded > 0 && <span className="text-green-400">+{totalAdded} insertions</span>}
         {totalRemoved > 0 && <span className="text-red-400">−{totalRemoved} deletions</span>}
       </div>

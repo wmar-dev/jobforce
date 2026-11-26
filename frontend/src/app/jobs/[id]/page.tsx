@@ -19,14 +19,34 @@ function JobDescription({ text }: { text: string }) {
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-5">
         <ReactMarkdown
           components={{
-            h1: ({ children }) => <h3 className="text-base font-semibold text-emerald-400 mt-4 mb-2 first:mt-0">{children}</h3>,
-            h2: ({ children }) => <h3 className="text-sm font-semibold text-emerald-400 mt-4 mb-2 first:mt-0">{children}</h3>,
-            h3: ({ children }) => <h4 className="text-sm font-semibold text-gray-300 mt-3 mb-1">{children}</h4>,
-            p: ({ children }) => <p className="text-sm text-gray-300 leading-relaxed mb-3">{children}</p>,
-            ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>,
-            ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>,
-            li: ({ children }) => <li className="text-sm text-gray-300 leading-relaxed">{children}</li>,
-            strong: ({ children }) => <strong className="text-gray-100 font-semibold">{children}</strong>,
+            h1: ({ children }) => (
+              <h3 className="text-base font-semibold text-emerald-400 mt-4 mb-2 first:mt-0">
+                {children}
+              </h3>
+            ),
+            h2: ({ children }) => (
+              <h3 className="text-sm font-semibold text-emerald-400 mt-4 mb-2 first:mt-0">
+                {children}
+              </h3>
+            ),
+            h3: ({ children }) => (
+              <h4 className="text-sm font-semibold text-gray-300 mt-3 mb-1">{children}</h4>
+            ),
+            p: ({ children }) => (
+              <p className="text-sm text-gray-300 leading-relaxed mb-3">{children}</p>
+            ),
+            ul: ({ children }) => (
+              <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>
+            ),
+            li: ({ children }) => (
+              <li className="text-sm text-gray-300 leading-relaxed">{children}</li>
+            ),
+            strong: ({ children }) => (
+              <strong className="text-gray-100 font-semibold">{children}</strong>
+            ),
           }}
         >
           {text}
@@ -55,11 +75,7 @@ function formatDate(iso: string) {
   });
 }
 
-export default function JobDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const jobId = parseInt(id, 10);
   const router = useRouter();
@@ -106,19 +122,13 @@ export default function JobDetailPage({
   }
 
   if (isLoading) {
-    return (
-      <div className="text-gray-500 text-sm py-16 text-center">
-        Loading job...
-      </div>
-    );
+    return <div className="text-gray-500 text-sm py-16 text-center">Loading job...</div>;
   }
 
   if (error || !job) {
     return (
       <div className="py-16 text-center">
-        <p className="text-red-400 text-sm mb-4">
-          Failed to load job. Is the backend running?
-        </p>
+        <p className="text-red-400 text-sm mb-4">Failed to load job. Is the backend running?</p>
         <Link href="/jobs" className="text-emerald-400 text-sm hover:underline">
           ← Back to jobs
         </Link>
@@ -231,14 +241,10 @@ export default function JobDetailPage({
               <span className="text-xs font-normal text-gray-500 ml-1">/ 100</span>
             </span>
             {job.fit_confidence && (
-              <span className="text-xs text-gray-500 capitalize">
-                ({job.fit_confidence})
-              </span>
+              <span className="text-xs text-gray-500 capitalize">({job.fit_confidence})</span>
             )}
           </div>
-          {job.fit_rationale && (
-            <p className="text-sm text-gray-400">{job.fit_rationale}</p>
-          )}
+          {job.fit_rationale && <p className="text-sm text-gray-400">{job.fit_rationale}</p>}
         </div>
       )}
 
@@ -282,9 +288,7 @@ export default function JobDetailPage({
 
       {/* Notes */}
       <div className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-          Notes
-        </h2>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Notes</h2>
         <textarea
           value={noteBody}
           onChange={(e) => setNoteBody(e.target.value)}

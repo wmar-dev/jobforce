@@ -52,15 +52,11 @@ export function ExportButton({ resumeId }: ExportButtonProps) {
               PDF: <span className="text-gray-300 font-mono">{paths.pdf_path}</span>
             </p>
           ) : (
-            <p className="text-amber-400">
-              PDF not generated — install texlive to compile PDFs
-            </p>
+            <p className="text-amber-400">PDF not generated — install texlive to compile PDFs</p>
           )}
         </div>
       )}
-      {state === "error" && (
-        <p className="text-red-400 text-xs mt-2">{errorMessage}</p>
-      )}
+      {state === "error" && <p className="text-red-400 text-xs mt-2">{errorMessage}</p>}
     </div>
   );
 }

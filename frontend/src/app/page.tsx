@@ -88,18 +88,14 @@ export default function HQPage() {
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Pipeline
         </h2>
-        {isLoading && (
-          <div className="text-gray-600 text-sm">Loading pipeline...</div>
-        )}
+        {isLoading && <div className="text-gray-600 text-sm">Loading pipeline...</div>}
         {error && (
           <div className="text-red-400 text-sm">
             Failed to load dashboard. Is the backend running?
           </div>
         )}
         {data && <PipelineSummary counts={data.counts} />}
-        {!data && !isLoading && !error && (
-          <PipelineSummary counts={EMPTY_COUNTS} />
-        )}
+        {!data && !isLoading && !error && <PipelineSummary counts={EMPTY_COUNTS} />}
       </section>
 
       {/* Activity Feed */}
@@ -108,10 +104,7 @@ export default function HQPage() {
           Recent Activity
         </h2>
         {data ? (
-          <ActivityFeed
-            transitions={data.recent_transitions}
-            notes={data.recent_notes}
-          />
+          <ActivityFeed transitions={data.recent_transitions} notes={data.recent_notes} />
         ) : (
           !isLoading && <div className="text-gray-600 text-sm py-4">No activity yet.</div>
         )}

@@ -10,8 +10,14 @@ import type { PipelineStatus, RoleType, Company } from "@/lib/types";
 import type { JobSortKey, SortDir } from "@/lib/api";
 
 const VALID_STATUSES = new Set<PipelineStatus>([
-  "saved", "applied", "interviewing", "offer", "rejected", "withdrawn",
-  "archived", "shortlisted",
+  "saved",
+  "applied",
+  "interviewing",
+  "offer",
+  "rejected",
+  "withdrawn",
+  "archived",
+  "shortlisted",
 ]);
 
 const STATUS_TABS: Array<{ value: PipelineStatus | "all"; label: string }> = [
@@ -64,7 +70,12 @@ function JobsPageInner() {
 
   const { data: companies } = useSWR<Company[], Error>("companies", getCompanies);
 
-  const { data, isLoading, error, mutate: mutateJobs } = useJobs({
+  const {
+    data,
+    isLoading,
+    error,
+    mutate: mutateJobs,
+  } = useJobs({
     status: status === "all" ? undefined : status,
     company_id: companyId || undefined,
     location: location || undefined,
@@ -83,7 +94,8 @@ function JobsPageInner() {
     } else {
       updateSearch({
         sort_by: key,
-        sort_dir: key === "fit_score" || key === "created_at" || key === "posted_at" ? "desc" : "asc",
+        sort_dir:
+          key === "fit_score" || key === "created_at" || key === "posted_at" ? "desc" : "asc",
         page: undefined,
       });
     }
@@ -94,7 +106,9 @@ function JobsPageInner() {
     setBulkArchiveMsg(null);
     try {
       const result = await bulkArchive(companyId || undefined);
-      setBulkArchiveMsg(`Archived ${result.archived_count} low-score job${result.archived_count !== 1 ? "s" : ""}.`);
+      setBulkArchiveMsg(
+        `Archived ${result.archived_count} low-score job${result.archived_count !== 1 ? "s" : ""}.`,
+      );
       await mutateJobs();
     } catch {
       setBulkArchiveMsg("Bulk archive failed. Is the backend running?");
@@ -121,7 +135,13 @@ function JobsPageInner() {
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => { updateSearch({ status: tab.value === "all" ? undefined : tab.value, page: undefined }); setBulkArchiveMsg(null); }}
+            onClick={() => {
+              updateSearch({
+                status: tab.value === "all" ? undefined : tab.value,
+                page: undefined,
+              });
+              setBulkArchiveMsg(null);
+            }}
             className={`px-3 py-2 text-sm rounded-t transition-colors ${
               status === tab.value
                 ? "bg-gray-800 text-emerald-400 border-b-2 border-emerald-400"
@@ -137,12 +157,16 @@ function JobsPageInner() {
       <div className="flex gap-3 mb-4 flex-wrap">
         <select
           value={companyId}
-          onChange={(e) => updateSearch({ company_id: e.target.value || undefined, page: undefined })}
+          onChange={(e) =>
+            updateSearch({ company_id: e.target.value || undefined, page: undefined })
+          }
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-emerald-500 w-44"
         >
           <option value="">All companies</option>
           {companies?.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
         </select>
         <input
@@ -154,7 +178,9 @@ function JobsPageInner() {
         />
         <select
           value={roleType}
-          onChange={(e) => updateSearch({ role_type: e.target.value || undefined, page: undefined })}
+          onChange={(e) =>
+            updateSearch({ role_type: e.target.value || undefined, page: undefined })
+          }
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-emerald-500"
         >
           <option value="">All role types</option>
@@ -168,7 +194,11 @@ function JobsPageInner() {
           onClick={() => void handleBulkArchive()}
           disabled={isBulkArchiving}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          title={companyId ? "Archive low-score saved jobs for selected company" : "Archive all saved jobs with fit score below 50"}
+          title={
+            companyId
+              ? "Archive low-score saved jobs for selected company"
+              : "Archive all saved jobs with fit score below 50"
+          }
         >
           {isBulkArchiving ? "Archiving..." : "Bulk Archive Low Scores"}
         </button>
@@ -194,12 +224,7 @@ function JobsPageInner() {
               {totalPages > 1 && ` · page ${page + 1} of ${totalPages}`}
             </span>
           </div>
-          <JobTable
-            jobs={data.items}
-            sortBy={sortBy}
-            sortDir={sortDir}
-            onSort={handleSort}
-          />
+          <JobTable jobs={data.items} sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6">
               <button
@@ -213,7 +238,9 @@ function JobsPageInner() {
                 {page + 1} / {totalPages}
               </span>
               <button
-                onClick={() => updateSearch({ page: Math.min(totalPages - 1, page + 1) || undefined })}
+                onClick={() =>
+                  updateSearch({ page: Math.min(totalPages - 1, page + 1) || undefined })
+                }
                 disabled={page >= totalPages - 1}
                 className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >

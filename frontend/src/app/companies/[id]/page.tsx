@@ -13,16 +13,19 @@ export default function CompanyDetailPage() {
   const params = useParams();
   const companyId = Number(params.id);
 
-  const { data: company, isLoading, error, mutate } = useSWR<CompanyDetail, Error>(
-    `/api/companies/${companyId}`,
-    () => getCompany(companyId)
-  );
+  const {
+    data: company,
+    isLoading,
+    error,
+    mutate,
+  } = useSWR<CompanyDetail, Error>(`/api/companies/${companyId}`, () => getCompany(companyId));
 
   const [noteContent, setNoteContent] = useState("");
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [transitionJobId, setTransitionJobId] = useState<number | null>(null);
-  const [transitionCurrentStatus, setTransitionCurrentStatus] =
-    useState<PipelineStatus | null>(null);
+  const [transitionCurrentStatus, setTransitionCurrentStatus] = useState<PipelineStatus | null>(
+    null,
+  );
   const [isBulkArchiving, setIsBulkArchiving] = useState(false);
   const [bulkArchiveMsg, setBulkArchiveMsg] = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState(false);
@@ -49,7 +52,7 @@ export default function CompanyDetailPage() {
     try {
       const result = await bulkArchive(companyId, { savedOnly: true });
       setBulkArchiveMsg(
-        `Archived ${result.archived_count} saved job${result.archived_count !== 1 ? "s" : ""}.`
+        `Archived ${result.archived_count} saved job${result.archived_count !== 1 ? "s" : ""}.`,
       );
       await mutate();
     } catch {
@@ -111,9 +114,7 @@ export default function CompanyDetailPage() {
           <p className="text-sm ml-0">
             <a
               href={
-                /^https?:\/\//.test(company.domain)
-                  ? company.domain
-                  : `https://${company.domain}`
+                /^https?:\/\//.test(company.domain) ? company.domain : `https://${company.domain}`
               }
               target="_blank"
               rel="noopener noreferrer"
@@ -201,9 +202,7 @@ export default function CompanyDetailPage() {
               >
                 {isBulkArchiving ? "Archiving..." : "Bulk Archive Saved"}
               </button>
-              {bulkArchiveMsg && (
-                <span className="text-xs text-gray-500">{bulkArchiveMsg}</span>
-              )}
+              {bulkArchiveMsg && <span className="text-xs text-gray-500">{bulkArchiveMsg}</span>}
             </div>
           </div>
           {company.listings.length === 0 ? (
@@ -222,9 +221,7 @@ export default function CompanyDetailPage() {
                     >
                       {job.title}
                     </Link>
-                    {job.location && (
-                      <div className="text-xs text-gray-500">{job.location}</div>
-                    )}
+                    {job.location && <div className="text-xs text-gray-500">{job.location}</div>}
                   </div>
                   <div className="flex items-center gap-2">
                     {job.fit_scored && job.fit_score != null ? (
@@ -278,10 +275,7 @@ export default function CompanyDetailPage() {
           ) : (
             <div className="space-y-3">
               {company.notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="bg-gray-900 border border-gray-800 rounded-lg p-3"
-                >
+                <div key={note.id} className="bg-gray-900 border border-gray-800 rounded-lg p-3">
                   <p className="text-gray-300 text-sm">{note.content}</p>
                   <div className="text-xs text-gray-600 mt-2">
                     {new Date(note.created_at).toLocaleString()}

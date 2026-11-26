@@ -20,7 +20,7 @@ export default function OraclePage() {
     .sort((a, b) => (b.fit_score ?? 0) - (a.fit_score ?? 0));
 
   const unrankedJobs = (data?.items ?? []).filter(
-    (j) => ACTIVE_STATUSES.includes(j.status) && !j.fit_scored
+    (j) => ACTIVE_STATUSES.includes(j.status) && !j.fit_scored,
   );
 
   return (
@@ -38,9 +38,7 @@ export default function OraclePage() {
 
       {/* Claude Code instruction panel */}
       <div className="mb-6 p-4 bg-gray-900 border border-violet-800 rounded-lg">
-        <p className="text-sm text-gray-300 font-medium mb-1">
-          Run ranking via Claude Code
-        </p>
+        <p className="text-sm text-gray-300 font-medium mb-1">Run ranking via Claude Code</p>
         <code className="text-violet-300 text-sm">/oracle-rank</code>
         <p className="text-xs text-gray-500 mt-2">
           Optionally pass specific job IDs:{" "}
@@ -48,9 +46,7 @@ export default function OraclePage() {
         </p>
       </div>
 
-      {isLoading && (
-        <div className="text-gray-500 text-sm py-8 text-center">Loading jobs...</div>
-      )}
+      {isLoading && <div className="text-gray-500 text-sm py-8 text-center">Loading jobs...</div>}
 
       {error && (
         <div className="text-red-400 text-sm py-4 px-4 bg-red-950 rounded mb-4">
@@ -66,15 +62,10 @@ export default function OraclePage() {
           </h2>
           <div className="space-y-3">
             {rankedJobs.map((job, idx) => (
-              <div
-                key={job.id}
-                className="bg-gray-900 border border-gray-800 rounded-lg p-4"
-              >
+              <div key={job.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-gray-500 text-sm font-mono w-6 shrink-0">
-                      #{idx + 1}
-                    </span>
+                    <span className="text-gray-500 text-sm font-mono w-6 shrink-0">#{idx + 1}</span>
                     <div className="min-w-0">
                       <Link
                         href={`/jobs/${job.id}`}

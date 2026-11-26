@@ -8,8 +8,18 @@ const STATUS_CONFIG: Record<
   { label: string; bg: string; text: string; border: string }
 > = {
   saved: { label: "Saved", bg: "bg-gray-900", text: "text-gray-200", border: "border-gray-700" },
-  shortlisted: { label: "Shortlisted", bg: "bg-amber-950", text: "text-amber-300", border: "border-amber-800" },
-  applied: { label: "Applied", bg: "bg-blue-950", text: "text-blue-300", border: "border-blue-800" },
+  shortlisted: {
+    label: "Shortlisted",
+    bg: "bg-amber-950",
+    text: "text-amber-300",
+    border: "border-amber-800",
+  },
+  applied: {
+    label: "Applied",
+    bg: "bg-blue-950",
+    text: "text-blue-300",
+    border: "border-blue-800",
+  },
   interviewing: {
     label: "Interviewing",
     bg: "bg-yellow-950",

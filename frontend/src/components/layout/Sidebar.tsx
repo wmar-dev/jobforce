@@ -5,10 +5,34 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "HQ", icon: "🏛️", color: "text-red-400", description: "Command Center" },
-  { href: "/jobs", label: "Scout", icon: "🔭", color: "text-emerald-400", description: "Job Discovery" },
-  { href: "/oracle", label: "Oracle", icon: "🔮", color: "text-violet-400", description: "Job Ranking" },
-  { href: "/forge", label: "Forge", icon: "⚒️", color: "text-amber-400", description: "Resume Tailoring" },
-  { href: "/coach", label: "Coach", icon: "🎯", color: "text-blue-400", description: "Interview Prep" },
+  {
+    href: "/jobs",
+    label: "Scout",
+    icon: "🔭",
+    color: "text-emerald-400",
+    description: "Job Discovery",
+  },
+  {
+    href: "/oracle",
+    label: "Oracle",
+    icon: "🔮",
+    color: "text-violet-400",
+    description: "Job Ranking",
+  },
+  {
+    href: "/forge",
+    label: "Forge",
+    icon: "⚒️",
+    color: "text-amber-400",
+    description: "Resume Tailoring",
+  },
+  {
+    href: "/coach",
+    label: "Coach",
+    icon: "🎯",
+    color: "text-blue-400",
+    description: "Interview Prep",
+  },
 ];
 
 export function Sidebar() {
