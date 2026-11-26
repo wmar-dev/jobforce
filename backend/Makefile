@@ -15,7 +15,7 @@ typecheck:
 	$(MYPY) jobforce/
 
 test:
-	$(PYTEST) tests/ -v
+	$(PYTEST) tests/ -n auto
 
 sync:
 	uv sync --extra dev

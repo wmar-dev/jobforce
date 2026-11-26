@@ -1,4 +1,4 @@
-.PHONY: dev stop check test audit seed install openapi
+.PHONY: dev stop check check-backend check-frontend check-extension test audit seed install openapi
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
@@ -10,13 +10,24 @@ stop:
 	@pkill -f "uvicorn" 2>/dev/null || true
 	@pkill -f "next dev" 2>/dev/null || true
 
+# The three components run concurrently. Each buffers its output and prints it
+# as one block when done (macOS make 3.81 has no --output-sync).
 check:
-	@echo "=== Backend quality gates ==="
-	@cd backend && $(MAKE) check
-	@echo "=== Frontend quality gates ==="
-	@cd frontend && npm run check:api && npm run typecheck && npm run lint && npm test
-	@echo "=== Chrome extension quality gates ==="
-	@cd chrome-extension && npm run lint && npm test
+	@$(MAKE) -j3 --no-print-directory check-backend check-frontend check-extension
+
+check-backend:
+	@$(call gated,Backend,cd backend && $(MAKE) --no-print-directory check)
+
+check-frontend:
+	@$(call gated,Frontend,cd frontend && npm run check:api && npm run typecheck && npm run lint && npm test)
+
+check-extension:
+	@$(call gated,Chrome extension,cd chrome-extension && npm run lint && npm test)
+
+# $(call gated,<label>,<command>): run command, then print its output under a header.
+gated = out=$$( ( $(2) ) 2>&1 ); rc=$$?; \
+	echo "=== $(1) quality gates ==="; echo "$$out"; \
+	if [ $$rc -ne 0 ]; then echo "=== $(1): FAILED ==="; fi; exit $$rc
 
 test:
 	@echo "=== Backend tests ==="

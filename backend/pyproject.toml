@@ -31,6 +31,7 @@ dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
+    "pytest-xdist>=3.6",
 ]
 
 [tool.setuptools]
@@ -67,4 +68,8 @@ addopts = "--cov=jobforce --cov-report=term-missing"
 
 [tool.coverage.run]
 omit = ["tests/*"]
-concurrency = ["greenlet", "thread"]
+# sysmon (Python 3.12+ sys.monitoring) is ~3x faster than the default tracer.
+# It is incompatible with concurrency="greenlet", which isn't needed: sysmon
+# still sees code run inside SQLAlchemy's greenlets (coverage is unchanged).
+core = "sysmon"
+concurrency = ["thread"]
