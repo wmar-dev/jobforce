@@ -16,7 +16,7 @@ check:
 	@echo "=== Frontend quality gates ==="
 	@cd frontend && npm run check:api && npm run typecheck && npm run lint && npm test
 	@echo "=== Chrome extension quality gates ==="
-	@cd chrome-extension && npm test
+	@cd chrome-extension && npm run lint && npm test
 
 test:
 	@echo "=== Backend tests ==="

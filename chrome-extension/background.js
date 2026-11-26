@@ -32,7 +32,7 @@ async function handleCapture() {
       target: { tabId: tab.id },
       files: ["content.js"],
     });
-  } catch (_) {
+  } catch {
     // Already injected — ignore
   }
 
@@ -61,7 +61,7 @@ async function handleCapture() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(jobData),
     });
-  } catch (_) {
+  } catch {
     // Backend not reachable
     await setBadge("✗", "#ef4444");
     await chrome.storage.local.set({ last_error: "backend_offline" });
@@ -92,7 +92,7 @@ async function checkBackendStatus() {
   try {
     const resp = await fetch(`${API_BASE}/docs`, { method: "HEAD" });
     return { running: resp.ok };
-  } catch (_) {
+  } catch {
     return { running: false };
   }
 }
