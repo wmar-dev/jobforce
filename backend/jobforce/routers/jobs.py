@@ -137,8 +137,8 @@ def _to_out(job: JobListing, *, has_note: bool = False) -> JobListingOut:
 
 
 def _apply_default_status_filter(
-    stmt: Select[tuple[JobListing]], status: str | None, source_url: str | None
-) -> Select[tuple[JobListing]]:
+    stmt: Select[JobListing], status: str | None, source_url: str | None
+) -> Select[JobListing]:
     """Apply the status filter, or the default archived/withdrawn/rejected exclusion.
 
     Skipped entirely when filtering by source_url, since duplicate lookups must
@@ -152,8 +152,8 @@ def _apply_default_status_filter(
 
 
 def _apply_company_filter(
-    stmt: Select[tuple[JobListing]], company: str | None, sort_by: str
-) -> Select[tuple[JobListing]]:
+    stmt: Select[JobListing], company: str | None, sort_by: str
+) -> Select[JobListing]:
     """Join Company when filtering or sorting by it; filter by name substring."""
     if company:
         return stmt.join(Company, JobListing.company_id == Company.id).where(
@@ -165,7 +165,7 @@ def _apply_company_filter(
 
 
 def _apply_field_filters(
-    stmt: Select[tuple[JobListing]],
+    stmt: Select[JobListing],
     *,
     fit_scored: bool | None,
     min_score: float | None,
@@ -174,7 +174,7 @@ def _apply_field_filters(
     title: str | None,
     q: str | None,
     posted_after: str | None,
-) -> Select[tuple[JobListing]]:
+) -> Select[JobListing]:
     if fit_scored is not None:
         stmt = stmt.where(JobListing.fit_scored == (1 if fit_scored else 0))
     if min_score is not None:
@@ -282,7 +282,8 @@ async def get_jobs(
             MeetingNote.job_listing_id.in_(job_ids)
         )
         note_result = await session.execute(note_stmt)
-        jobs_with_note: set[int] = {row[0] for row in note_result.all()}
+        # job_listing_id is nullable (company-level notes); the IN filter excludes NULLs.
+        jobs_with_note = {jid for jid in note_result.scalars() if jid is not None}
     else:
         jobs_with_note = set()
 
