@@ -18,5 +18,8 @@
     "testMatch": [
       "**/tests/**/*.test.js"
     ]
+  },
+  "overrides": {
+    "minimatch": "^11.0.9"
   }
 }
