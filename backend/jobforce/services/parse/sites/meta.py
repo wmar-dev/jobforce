@@ -20,20 +20,13 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
+from .._common import find_jobposting_jsonld
+
 HOSTNAME = "metacareers.com"
 
 
 def _meta_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
-    import json as _json
-
-    for s in doc.find_all("script", type="application/ld+json"):
-        try:
-            d = _json.loads(s.string or "")
-        except Exception:
-            continue
-        if d.get("@type") == "JobPosting":
-            return d  # type: ignore[no-any-return]
-    return {}
+    return find_jobposting_jsonld(doc) or {}
 
 
 def _meta_company(doc: BeautifulSoup, url: str) -> str | None:

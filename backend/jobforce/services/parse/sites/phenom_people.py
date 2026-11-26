@@ -34,7 +34,7 @@ def _phenom_people_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
             continue
         try:
             d = _json.loads(script.string or "")
-        except Exception:
+        except ValueError:
             continue
         if isinstance(d, dict) and "hiringOrganization" in d:
             return d

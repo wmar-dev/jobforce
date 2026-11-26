@@ -101,9 +101,11 @@ def _next_page_url(html: str, url: str) -> str | None:
 
 
 def _fetch_thread_html(url: str) -> str:
-    """Fetch thread HTML via plain HTTP. Raises on non-200."""
-    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    """Fetch thread HTML via plain HTTP. Raises on non-200 or a non-http(s) URL."""
+    if urlparse(url).scheme not in ("http", "https"):
+        raise ValueError(f"Refusing to fetch non-http(s) URL: {url}")
+    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})  # noqa: S310
+    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 - scheme checked above
         if resp.status != 200:
             raise RuntimeError(f"HTTP {resp.status} for {url}")
         return resp.read().decode("utf-8", errors="replace")  # type: ignore[no-any-return]

@@ -30,8 +30,8 @@
   \BLOCK{if data.personal_info.phone} $\cdot$ \VAR{data.personal_info.phone|latex_escape}\BLOCK{endif}%
   \BLOCK{if data.personal_info.location} $\cdot$ \VAR{data.personal_info.location|latex_escape}\BLOCK{endif}%
   \BLOCK{if data.personal_info.linkedin}\\
-  \href{https://\VAR{data.personal_info.linkedin}}{\VAR{data.personal_info.linkedin}}\BLOCK{endif}%
-  \BLOCK{if data.personal_info.github} $\cdot$ \href{https://github.com/\VAR{data.personal_info.github}}{github.com/\VAR{data.personal_info.github}}\BLOCK{endif}
+  \href{https://\VAR{data.personal_info.linkedin|latex_url}}{\VAR{data.personal_info.linkedin|latex_escape}}\BLOCK{endif}%
+  \BLOCK{if data.personal_info.github} $\cdot$ \href{https://github.com/\VAR{data.personal_info.github|latex_url}}{github.com/\VAR{data.personal_info.github|latex_escape}}\BLOCK{endif}
 \end{center}
 
 \BLOCK{if data.summary}
@@ -42,7 +42,7 @@
 \BLOCK{if data.work_history}
 \resumesection{Experience}
 \BLOCK{for job in data.work_history}
-\textbf{\VAR{job.title|latex_escape}} \hfill \VAR{job.start_date} -- \VAR{job.end_date if job.end_date else 'Present'}\\
+\textbf{\VAR{job.title|latex_escape}} \hfill \VAR{job.start_date|latex_escape} -- \VAR{(job.end_date or 'Present')|latex_escape}\\
 \textit{\VAR{job.company|latex_escape}}\BLOCK{if job.location} $\cdot$ \VAR{job.location|latex_escape}\BLOCK{endif}\\[-6pt]
 \BLOCK{if job.bullets}
 \begin{itemize}
@@ -58,7 +58,7 @@
 \BLOCK{if data.education}
 \resumesection{Education}
 \BLOCK{for edu in data.education}
-\textbf{\VAR{edu.degree|latex_escape}} \hfill \BLOCK{if edu.start_date}\VAR{edu.start_date} -- \BLOCK{endif}\BLOCK{if edu.end_date}\VAR{edu.end_date}\BLOCK{endif}\\
+\textbf{\VAR{edu.degree|latex_escape}} \hfill \BLOCK{if edu.start_date}\VAR{edu.start_date|latex_escape} -- \BLOCK{endif}\BLOCK{if edu.end_date}\VAR{edu.end_date|latex_escape}\BLOCK{endif}\\
 \textit{\VAR{edu.institution|latex_escape}}\BLOCK{if edu.gpa}\\
 GPA: \VAR{edu.gpa|latex_escape}\BLOCK{endif}\\[2pt]
 \BLOCK{endfor}
@@ -77,14 +77,14 @@ GPA: \VAR{edu.gpa|latex_escape}\BLOCK{endif}\\[2pt]
 \BLOCK{if data.certifications}
 \resumesection{Certifications}
 \BLOCK{for cert in data.certifications}
-\textbf{\VAR{cert.name|latex_escape}}\BLOCK{if cert.issuer} -- \VAR{cert.issuer|latex_escape}\BLOCK{endif}\BLOCK{if cert.year} (\VAR{cert.year})\BLOCK{endif}\\
+\textbf{\VAR{cert.name|latex_escape}}\BLOCK{if cert.issuer} -- \VAR{cert.issuer|latex_escape}\BLOCK{endif}\BLOCK{if cert.year} (\VAR{cert.year|latex_escape})\BLOCK{endif}\\
 \BLOCK{endfor}
 \BLOCK{endif}
 
 \BLOCK{if data.projects}
 \resumesection{Projects}
 \BLOCK{for proj in data.projects}
-\textbf{\VAR{proj.name|latex_escape}}\BLOCK{if proj.url} (\href{\VAR{proj.url}}{\VAR{proj.url}})\BLOCK{endif}%
+\textbf{\VAR{proj.name|latex_escape}}\BLOCK{if proj.url} (\href{\VAR{proj.url|latex_url}}{\VAR{proj.url|latex_escape}})\BLOCK{endif}%
 \BLOCK{if proj.description}\\ \VAR{proj.description|latex_escape}\BLOCK{endif}
 \BLOCK{if proj.bullets}
 \begin{itemize}

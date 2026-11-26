@@ -41,7 +41,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "C90", "SIM", "RUF", "PT", "PTH", "ASYNC"]
+select = ["E", "F", "W", "I", "UP", "B", "C90", "SIM", "RUF", "PT", "PTH", "ASYNC", "S"]
 ignore = [
     "E501",
     # En dashes / NBSPs in strings mirror real job-posting text.
@@ -50,7 +50,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Blocking file I/O in async tests is harmless.
-"tests/**" = ["ASYNC240"]
+"tests/**" = ["ASYNC240", "S"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

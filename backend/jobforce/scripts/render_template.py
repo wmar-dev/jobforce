@@ -11,32 +11,40 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
-_LATEX_SPECIAL = [
-    ("\\", r"\textbackslash{}"),  # must be first to avoid double-escaping
-    ("&", r"\&"),
-    ("%", r"\%"),
-    ("$", r"\$"),
-    ("#", r"\#"),
-    ("_", r"\_"),
-    ("{", r"\{"),
-    ("}", r"\}"),
-    ("~", r"\textasciitilde{}"),
-    ("^", r"\textasciicircum{}"),
-]
+_LATEX_SPECIAL = str.maketrans(
+    {
+        "\\": r"\textbackslash{}",
+        "&": r"\&",
+        "%": r"\%",
+        "$": r"\$",
+        "#": r"\#",
+        "_": r"\_",
+        "{": r"\{",
+        "}": r"\}",
+        "~": r"\textasciitilde{}",
+        "^": r"\textasciicircum{}",
+    }
+)
 
 
-def latex_escape(value: str) -> str:
-    """Escape the 10 LaTeX special characters in a string value."""
-    # Escape backslash first, then the rest
-    result = value.replace("\\", r"\textbackslash{}")
-    for char, escaped in _LATEX_SPECIAL[1:]:
-        result = result.replace(char, escaped)
-    return result
+def latex_escape(value: Any) -> str:
+    """Escape the 10 LaTeX special characters in a value (non-strings are str()-ed).
+
+    Single-pass translation, so the braces emitted for \\textbackslash{} etc.
+    are not themselves re-escaped.
+    """
+    return str(value).translate(_LATEX_SPECIAL)
+
+
+def latex_url(value: Any) -> str:
+    """Escape the characters that break a URL inside \\href{...}."""
+    return str(value).replace("%", r"\%").replace("#", r"\#")
 
 
 def _build_env() -> Environment:
@@ -49,9 +57,12 @@ def _build_env() -> Environment:
         comment_start_string=r"\#{",
         comment_end_string="}",
         trim_blocks=True,
-        autoescape=False,
+        # Output is LaTeX, not HTML: values are escaped per-field with the
+        # latex_escape / latex_url filters instead.
+        autoescape=False,  # noqa: S701
     )
     env.filters["latex_escape"] = latex_escape
+    env.filters["latex_url"] = latex_url
     return env
 
 

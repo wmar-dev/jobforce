@@ -78,7 +78,8 @@ class ApiError(Exception):
 
 
 async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, ApiError)
+    if not isinstance(exc, ApiError):  # registered for ApiError only
+        raise exc
     return JSONResponse(
         status_code=exc.code.status,
         content={"detail": exc.detail, "code": exc.code.value},

@@ -18,25 +18,17 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .._common import _to_markdown
+from .._common import _to_markdown, find_jobposting_jsonld
 
 HOSTNAME = "careers.box.com"
 
 
 def _box_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
-    for s in doc.find_all("script", type="application/ld+json"):
-        try:
-            d = json.loads(s.string or "")
-        except Exception:
-            continue
-        if d.get("@type") == "JobPosting":
-            return d  # type: ignore[no-any-return]
-    return {}
+    return find_jobposting_jsonld(doc) or {}
 
 
 def _box_location(doc: BeautifulSoup, url: str) -> str | None:

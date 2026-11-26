@@ -14,22 +14,13 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .._common import _to_markdown
+from .._common import _to_markdown, find_jobposting_jsonld
 
 HOSTNAMES = ["jobs.workable.com", "apply.workable.com"]
 
 
 def _workable_jsonld(doc: BeautifulSoup) -> dict[str, Any]:
-    import json as _json
-
-    for s in doc.find_all("script", type="application/ld+json"):
-        try:
-            d = _json.loads(s.string or "")
-            if d.get("@type") == "JobPosting":
-                return d  # type: ignore[no-any-return]
-        except Exception:
-            pass
-    return {}
+    return find_jobposting_jsonld(doc) or {}
 
 
 def _workable_title(doc: BeautifulSoup, url: str) -> str | None:
