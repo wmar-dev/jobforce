@@ -49,7 +49,9 @@ function CoachPageInner() {
       getJobs({ status: "interviewing", limit: 50 }),
       getJobs({ status: "applied", limit: 50 }),
       getJobs({ status: "shortlisted", limit: 50 }),
-    ]).then(([a, b, c]) => setJobs([...a.items, ...b.items, ...c.items]));
+    ])
+      .then(([a, b, c]) => setJobs([...a.items, ...b.items, ...c.items]))
+      .catch(() => setError("Failed to load jobs. Is the backend running?"));
   }, []);
 
   const handleLoadSession = useCallback(async (jobId?: number) => {
@@ -77,7 +79,7 @@ function CoachPageInner() {
   useEffect(() => {
     if (selectedJobId != null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount, not a state sync
-      handleLoadSession(selectedJobId);
+      void handleLoadSession(selectedJobId);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -87,7 +89,12 @@ function CoachPageInner() {
 
   const handleCopyMarkdown = async () => {
     const job = jobs.find((j) => j.id === selectedJobId);
-    await navigator.clipboard.writeText(sessionToMarkdown(filteredQuestions, job));
+    try {
+      await navigator.clipboard.writeText(sessionToMarkdown(filteredQuestions, job));
+    } catch {
+      setError("Couldn't copy to the clipboard");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -112,7 +119,7 @@ function CoachPageInner() {
           onChange={(e) => {
             const id = e.target.value ? Number(e.target.value) : null;
             setSelectedJobId(id);
-            if (id) handleLoadSession(id);
+            if (id) void handleLoadSession(id);
           }}
           className="flex-1 max-w-xs px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-blue-500"
         >
@@ -171,7 +178,7 @@ function CoachPageInner() {
               );
             })}
             <button
-              onClick={handleCopyMarkdown}
+              onClick={() => void handleCopyMarkdown()}
               disabled={filteredQuestions.length === 0}
               title="Copy the questions shown below to the clipboard as Markdown"
               className="ml-auto px-3 py-1.5 text-xs rounded text-gray-500 hover:text-amber-400 transition-colors disabled:opacity-40 disabled:hover:text-gray-500"

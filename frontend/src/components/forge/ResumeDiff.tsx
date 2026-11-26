@@ -8,7 +8,7 @@ interface ResumeDiffProps {
 
 function tryParseJson(str: string): string {
   try {
-    const parsed = JSON.parse(str);
+    const parsed: unknown = JSON.parse(str);
     if (typeof parsed === "string") return parsed;
     return JSON.stringify(parsed, null, 2);
   } catch {
@@ -30,7 +30,7 @@ function computeLineDiff(a: string, b: string): DiffLine[] {
   const n = linesB.length;
 
   // dp[i][j] = LCS length of linesA[0..i-1] and linesB[0..j-1]
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       dp[i][j] =
@@ -121,11 +121,11 @@ function HunkHeader({ hunk }: { hunk: DiffLine[] }) {
   const startB = firstB && "lineB" in firstB ? firstB.lineB : "?";
   const countA =
     lastA && "lineA" in lastA && firstA && "lineA" in firstA
-      ? (lastA.lineA as number) - (firstA.lineA as number) + 1
+      ? lastA.lineA - firstA.lineA + 1
       : 0;
   const countB =
     lastB && "lineB" in lastB && firstB && "lineB" in firstB
-      ? (lastB.lineB as number) - (firstB.lineB as number) + 1
+      ? lastB.lineB - firstB.lineB + 1
       : 0;
 
   return (

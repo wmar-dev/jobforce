@@ -118,7 +118,7 @@ export function StatusTransitionModal({
               Cancel
             </button>
             <button
-              onClick={handleConfirm}
+              onClick={() => void handleConfirm()}
               disabled={!selected || isPending}
               className="flex-1 px-3 py-2 text-sm bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
             >

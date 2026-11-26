@@ -4,7 +4,7 @@ import type { JobListPage } from "@/lib/types";
 
 export function useJobs(filters: JobFilters = {}) {
   const key = ["/api/jobs", filters] as const;
-  return useSWR<JobListPage>(key, () => getJobs(filters), {
+  return useSWR<JobListPage, Error>(key, () => getJobs(filters), {
     refreshInterval: 30_000,
     keepPreviousData: true,
   });

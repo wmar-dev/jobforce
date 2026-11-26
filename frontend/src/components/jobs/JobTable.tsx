@@ -53,7 +53,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
 
   async function handleAction(jobId: number, action: "archived" | "shortlisted" | "saved") {
     // Optimistically remove/update the row so the list doesn't jump to the top on revalidation
-    mutate(
+    void mutate(
       ([key]: [string]) => key === "/api/jobs",
       (cached: { items: JobListing[]; total: number } | undefined) => {
         if (!cached) return cached;
@@ -62,8 +62,14 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
       },
       { revalidate: false }
     );
-    await patchJobStatus(jobId, action);
-    mutate(([key]: [string]) => key === "/api/jobs", undefined, { revalidate: true });
+    try {
+      await patchJobStatus(jobId, action);
+    } catch (err) {
+      console.error("Failed to update job status", err);
+    } finally {
+      // Revalidate either way: on failure this restores the optimistically removed row.
+      void mutate(([key]: [string]) => key === "/api/jobs", undefined, { revalidate: true });
+    }
   }
 
   if (jobs.length === 0) {
@@ -148,7 +154,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                 <span className="inline-flex gap-1">
                   {job.status !== "shortlisted" && job.status !== "applied" && job.status !== "interviewing" && job.status !== "offer" && job.status !== "rejected" && job.status !== "withdrawn" && (
                     <button
-                      onClick={() => handleAction(job.id, "shortlisted")}
+                      onClick={() => void handleAction(job.id, "shortlisted")}
                       className="px-1.5 py-0.5 text-xs rounded bg-amber-900/50 text-amber-300 hover:bg-amber-800/60 transition-colors"
                       title="Shortlist this job"
                     >
@@ -157,7 +163,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   )}
                   {job.status === "shortlisted" && (
                     <button
-                      onClick={() => handleAction(job.id, "saved")}
+                      onClick={() => void handleAction(job.id, "saved")}
                       className="px-1.5 py-0.5 text-xs rounded bg-amber-800 text-amber-200 hover:bg-amber-700 transition-colors"
                       title="Remove from shortlist"
                     >
@@ -166,7 +172,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   )}
                   {job.status !== "archived" && job.status !== "applied" && job.status !== "interviewing" && job.status !== "offer" && job.status !== "rejected" && job.status !== "withdrawn" && (
                     <button
-                      onClick={() => handleAction(job.id, "archived")}
+                      onClick={() => void handleAction(job.id, "archived")}
                       className="px-1.5 py-0.5 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
                       title="Archive this job"
                     >
@@ -175,7 +181,7 @@ export function JobTable({ jobs, sortBy, sortDir, onSort }: JobTableProps) {
                   )}
                   {job.status === "archived" && (
                     <button
-                      onClick={() => handleAction(job.id, "saved")}
+                      onClick={() => void handleAction(job.id, "saved")}
                       className="px-1.5 py-0.5 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
                       title="Restore from archive"
                     >

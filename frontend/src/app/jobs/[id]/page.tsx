@@ -68,6 +68,7 @@ export default function JobDetailPage({
   const [showModal, setShowModal] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [prevNote, setPrevNote] = useState(note);
 
   if (note !== prevNote) {
@@ -78,9 +79,12 @@ export default function JobDetailPage({
   async function handleSaveNote() {
     if (noteSaving) return;
     setNoteSaving(true);
+    setNoteError(null);
     try {
       await upsertJobNote(jobId, noteBody);
       await mutateNote();
+    } catch (err) {
+      setNoteError(err instanceof Error ? err.message : "Failed to save note");
     } finally {
       setNoteSaving(false);
     }
@@ -89,10 +93,13 @@ export default function JobDetailPage({
   async function handleClearNote() {
     if (noteSaving) return;
     setNoteSaving(true);
+    setNoteError(null);
     try {
       await deleteJobNote(jobId);
       setNoteBody("");
       await mutateNote();
+    } catch (err) {
+      setNoteError(err instanceof Error ? err.message : "Failed to clear note");
     } finally {
       setNoteSaving(false);
     }
@@ -120,7 +127,7 @@ export default function JobDetailPage({
   }
 
   const handleTransitioned = (newStatus: PipelineStatus) => {
-    mutate({ ...job, status: newStatus });
+    void mutate({ ...job, status: newStatus });
   };
 
   return (
@@ -286,14 +293,18 @@ export default function JobDetailPage({
         />
         <div className="flex items-center justify-between mt-2">
           <div className="text-xs text-gray-600">
-            {note?.updated_at && (
-              <span>Last edited {new Date(note.updated_at).toLocaleString()}</span>
+            {noteError ? (
+              <span className="text-red-400">{noteError}</span>
+            ) : (
+              note?.updated_at && (
+                <span>Last edited {new Date(note.updated_at).toLocaleString()}</span>
+              )
             )}
           </div>
           <div className="flex gap-2">
             {note && (
               <button
-                onClick={handleClearNote}
+                onClick={() => void handleClearNote()}
                 disabled={noteSaving}
                 className="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 rounded transition-colors disabled:opacity-50"
               >
@@ -301,7 +312,7 @@ export default function JobDetailPage({
               </button>
             )}
             <button
-              onClick={handleSaveNote}
+              onClick={() => void handleSaveNote()}
               disabled={noteSaving || noteBody === (note?.body ?? "")}
               className="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded transition-colors disabled:opacity-50"
             >

@@ -52,11 +52,11 @@ function ForgePageInner() {
         }
       }
       setJobs(combined);
-    });
+    }).catch(() => setError("Failed to load jobs. Is the backend running?"));
 
     if (linkedJobId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount, not a state sync
-      handleJobSelect(linkedJobId);
+      void handleJobSelect(linkedJobId);
     }
 
     getBaseResume()
@@ -71,7 +71,7 @@ function ForgePageInner() {
 
   const handleSaveBase = async () => {
     try {
-      const parsed = JSON.parse(rawJson);
+      const parsed = JSON.parse(rawJson) as Resume;
       const saved = await putBaseResume(parsed);
       setBaseResume(saved);
       setIsEditingBase(false);
@@ -82,7 +82,12 @@ function ForgePageInner() {
 
   const handleCopyCommand = async () => {
     if (!selectedJobId) return;
-    await navigator.clipboard.writeText(`/forge-tailor ${selectedJobId}`);
+    try {
+      await navigator.clipboard.writeText(`/forge-tailor ${selectedJobId}`);
+    } catch {
+      setError("Couldn't copy to the clipboard");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -122,7 +127,7 @@ function ForgePageInner() {
                 className="w-full px-3 py-2 text-xs font-mono bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-amber-500 resize-none"
               />
               <button
-                onClick={handleSaveBase}
+                onClick={() => void handleSaveBase()}
                 className="mt-2 px-3 py-2 text-sm bg-amber-700 hover:bg-amber-600 text-white rounded transition-colors"
               >
                 Save Base Resume
@@ -172,7 +177,7 @@ function ForgePageInner() {
           ) : (
             <select
               value={selectedJobId ?? ""}
-              onChange={(e) => handleJobSelect(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => void handleJobSelect(e.target.value ? Number(e.target.value) : null)}
               className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-hidden focus:border-amber-500"
             >
               <option value="">Select a job...</option>
@@ -230,7 +235,7 @@ function ForgePageInner() {
                   </Link>
                 </span>
                 <button
-                  onClick={handleCopyCommand}
+                  onClick={() => void handleCopyCommand()}
                   title="Copy /forge-tailor command to clipboard"
                   className="text-gray-500 hover:text-amber-400 transition-colors font-mono"
                 >

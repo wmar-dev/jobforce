@@ -36,7 +36,7 @@ export function ExportButton({ resumeId }: ExportButtonProps) {
   return (
     <div>
       <button
-        onClick={handleExport}
+        onClick={() => void handleExport()}
         disabled={state === "loading"}
         className="px-4 py-2 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded transition-colors"
       >

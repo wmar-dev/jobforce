@@ -1,5 +1,4 @@
 import type {
-  JobListing,
   JobListingDetail,
   JobListPage,
   JobNote,
@@ -19,18 +18,24 @@ import type {
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? (typeof window !== "undefined" ? "" : "http://localhost:8000");
 
+/** Business error body (`{detail, code}`); 422 validation errors carry a list `detail`. */
+interface ErrorBody {
+  detail?: unknown;
+  code?: string;
+}
+
+async function toApiError(res: Response): Promise<Error> {
+  const body = (await res.json().catch(() => ({}))) as ErrorBody;
+  const message = typeof body.detail === "string" ? body.detail : res.statusText;
+  return Object.assign(new Error(message), { status: res.status, code: body.code });
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json", ...init?.headers },
     ...init,
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({ detail: res.statusText }));
-    throw Object.assign(new Error(detail.detail ?? res.statusText), {
-      status: res.status,
-      code: detail.code,
-    });
-  }
+  if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<T>;
 }
 
@@ -149,10 +154,7 @@ export function getTailoredResume(jobId: number): Promise<TailoredResumeResponse
 
 export async function exportResume(resumeId: number): Promise<ExportResponse> {
   const res = await fetch(`${BASE_URL}/api/resume/${resumeId}/export`, { method: "POST" });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({ detail: res.statusText }));
-    throw Object.assign(new Error(detail.detail ?? res.statusText), { status: res.status });
-  }
+  if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<ExportResponse>;
 }
 

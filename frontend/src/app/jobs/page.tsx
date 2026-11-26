@@ -62,7 +62,7 @@ function JobsPageInner() {
     [searchParams, router, pathname],
   );
 
-  const { data: companies } = useSWR<Company[]>("companies", getCompanies);
+  const { data: companies } = useSWR<Company[], Error>("companies", getCompanies);
 
   const { data, isLoading, error, mutate: mutateJobs } = useJobs({
     status: status === "all" ? undefined : status,
@@ -165,7 +165,7 @@ function JobsPageInner() {
           <option value="other">Other</option>
         </select>
         <button
-          onClick={handleBulkArchive}
+          onClick={() => void handleBulkArchive()}
           disabled={isBulkArchiving}
           className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title={companyId ? "Archive low-score saved jobs for selected company" : "Archive all saved jobs with fit score below 50"}

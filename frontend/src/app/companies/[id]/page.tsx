@@ -13,7 +13,7 @@ export default function CompanyDetailPage() {
   const params = useParams();
   const companyId = Number(params.id);
 
-  const { data: company, isLoading, error, mutate } = useSWR<CompanyDetail>(
+  const { data: company, isLoading, error, mutate } = useSWR<CompanyDetail, Error>(
     `/api/companies/${companyId}`,
     () => getCompany(companyId)
   );
@@ -134,7 +134,7 @@ export default function CompanyDetailPage() {
                 className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-600 focus:outline-hidden focus:border-emerald-500"
               />
               <button
-                onClick={handleSaveLink}
+                onClick={() => void handleSaveLink()}
                 disabled={isSavingLink || !careersUrlInput.trim()}
                 className="px-3 py-2 text-sm bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
@@ -194,7 +194,7 @@ export default function CompanyDetailPage() {
             </h2>
             <div className="flex items-center gap-2">
               <button
-                onClick={handleBulkArchive}
+                onClick={() => void handleBulkArchive()}
                 disabled={isBulkArchiving}
                 className="px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 title="Archive every saved job for this company, regardless of fit score"
@@ -234,11 +234,11 @@ export default function CompanyDetailPage() {
                     ) : (
                       <span className="text-gray-600 text-xs">Not scored</span>
                     )}
-                    <StatusBadge status={job.status as PipelineStatus} />
+                    <StatusBadge status={job.status} />
                     <button
                       onClick={() => {
                         setTransitionJobId(job.id);
-                        setTransitionCurrentStatus(job.status as PipelineStatus);
+                        setTransitionCurrentStatus(job.status);
                       }}
                       className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded border border-gray-700 hover:border-gray-600 transition-colors"
                     >
@@ -265,7 +265,7 @@ export default function CompanyDetailPage() {
               className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-600 focus:outline-hidden focus:border-emerald-500 resize-none"
             />
             <button
-              onClick={handleAddNote}
+              onClick={() => void handleAddNote()}
               disabled={isSubmittingNote || !noteContent.trim()}
               className="mt-2 w-full px-3 py-2 text-sm bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
             >
@@ -297,7 +297,7 @@ export default function CompanyDetailPage() {
         <StatusTransitionModal
           jobId={transitionJobId}
           currentStatus={transitionCurrentStatus}
-          onTransitioned={() => mutate()}
+          onTransitioned={() => void mutate()}
           onClose={() => {
             setTransitionJobId(null);
             setTransitionCurrentStatus(null);
