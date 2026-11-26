@@ -3612,7 +3612,7 @@
       careers_url: "https://jobs.a16z.com/jobs/mirage"
     - name: "Mirendil"
       domain: "mirendil.com"
-      careers_url: "https://mirendil.com/careers.html"
+      careers_url: "https://jobs.ashbyhq.com/mirendil"
     - name: "Miro"
       domain: "miro.com"
       careers_url: "https://miro.com/careers/"
@@ -3982,6 +3982,9 @@
     - name: "Nylas"
       domain: "nylas.com"
       careers_url: "https://jobs.ashbyhq.com/nylas"
+    - name: "NYSE"
+      domain: "nyse.com"  # New York Stock Exchange; owned by Intercontinental Exchange (ICE), which hires for it
+      careers_url: "https://careers.ice.com/jobs"
     - name: "Oasis"
       domain: ""
       careers_url: "https://job-boards.greenhouse.io/oasis"
