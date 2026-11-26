@@ -1,0 +1,40 @@
+# Fast, staged-files-only checks. `make check` / CI remain the full gate
+# (mypy, type-aware ESLint, tests are too slow for a commit hook).
+#
+# Install once:  make hooks
+# Run on all:    uvx pre-commit run --all-files
+#
+# All hooks are `local` so they use the project's own pinned tool versions
+# (backend/uv.lock, frontend + chrome-extension package-lock.json) instead of
+# separately pinned copies that can drift from `make check`.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check --fix (backend)
+        entry: uv run --project backend ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format (backend)
+        entry: uv run --project backend ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+        require_serial: true
+
+      - id: prettier
+        name: prettier (frontend)
+        entry: frontend/node_modules/.bin/prettier --write --ignore-unknown --ignore-path frontend/.prettierignore
+        language: system
+        types: [text]
+        files: ^frontend/
+
+      - id: eslint-extension
+        name: eslint (chrome-extension)
+        entry: bash -c 'cd chrome-extension && node_modules/.bin/eslint "${@#chrome-extension/}"' --
+        language: system
+        files: ^chrome-extension/.*\.(js|mjs)$

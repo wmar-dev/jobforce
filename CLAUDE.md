@@ -23,7 +23,8 @@ AI reasoning runs in Claude Code skills (`.claude/skills/`), not in the backend.
 ```bash
 make install   # Install backend + frontend deps
 make dev       # Start backend (:8000) + frontend (:3000) concurrently
-make check     # All quality gates (lint + typecheck + test)
+make check     # All quality gates (lint + format + typecheck + test)
+make hooks     # Install pre-commit hooks (ruff, prettier, extension eslint on staged files)
 make seed      # Seed DB from config.yaml + config/resume.json
 make openapi   # Regenerate backend/openapi.yaml + frontend/src/lib/api-schema.d.ts
 ```
@@ -33,7 +34,7 @@ make openapi   # Regenerate backend/openapi.yaml + frontend/src/lib/api-schema.d
 ```bash
 make dev       # uvicorn --reload on :8000
 make check     # lint + typecheck + test (must all pass)
-make lint      # ruff check + ruff format --check
+make lint      # ruff check + ruff format --check (rules in pyproject.toml [tool.ruff.lint])
 make typecheck # mypy strict
 make test      # pytest with coverage
 make sync      # uv sync (lock/sync pyproject.toml)
@@ -48,7 +49,8 @@ uv run pytest tests/unit/test_forge.py::test_compute_diff -xvs
 ```bash
 npm run dev    # Next.js dev server on :3000
 npm run build  # Production build
-npm run lint   # ESLint only
+npm run lint   # ESLint (next core-web-vitals + typescript-eslint type-checked)
+npm run format # Prettier --write (format:check verifies)
 npm run typecheck  # tsc --noEmit
 npm run gen:api    # Regenerate src/lib/api-schema.d.ts from ../backend/openapi.yaml
 npm run check:api  # Fail if api-schema.d.ts is stale

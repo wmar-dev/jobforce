@@ -1,4 +1,4 @@
-.PHONY: dev stop check check-backend check-frontend check-extension test audit seed install openapi
+.PHONY: dev stop check check-backend check-frontend check-extension test audit seed install openapi hooks
 
 dev:
 	@echo "Starting Jobforce (backend + frontend)..."
@@ -53,6 +53,10 @@ openapi:
 seed:
 	@echo "Seeding database from config.yaml..."
 	@cd backend && uv run python -m jobforce.db.seed
+
+hooks:
+	@echo "Installing git pre-commit hooks..."
+	@uvx pre-commit install
 
 install:
 	@echo "Installing backend dependencies..."
