@@ -209,7 +209,7 @@ def test_generic_adapter_non_null_title() -> None:
 
     html = _read("generic_job.html")
     result = parse_html(html, "https://acme.com/jobs/engineer")
-    assert result["title"] is not None and result["title"] != ""
+    assert result["title"]
 
 
 def test_generic_adapter_non_null_role_type() -> None:

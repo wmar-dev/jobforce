@@ -34,7 +34,7 @@ def test_valid_config_loads(tmp_path: Path) -> None:
 
 
 def test_missing_file_raises(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError, match="config.yaml not found"):
+    with pytest.raises(FileNotFoundError, match=r"config\.yaml not found"):
         load_config(str(tmp_path / "nonexistent.yaml"))
 
 
@@ -46,7 +46,7 @@ def test_missing_search_queries_raises(tmp_path: Path) -> None:
           queries: []
         """,
     )
-    with pytest.raises(Exception, match="search.queries"):
+    with pytest.raises(Exception, match=r"search\.queries"):
         load_config(str(cfg_path))
 
 

@@ -33,9 +33,8 @@ def _openai_location(doc: BeautifulSoup, url: str) -> str | None:
     title_h2 = doc.select_one("main h2")
     if title_h2:
         el = title_h2.find_next_sibling("p")
-        if el and (t := _text(el)):
-            if _LOCATION_KEYWORDS.search(t):
-                return t
+        if el and (t := _text(el)) and _LOCATION_KEYWORDS.search(t):
+            return t
     return slug_to_location(urlparse(url).path)
 
 

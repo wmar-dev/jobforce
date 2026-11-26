@@ -83,7 +83,7 @@ async def render_tex_cli(
     if not script.exists():
         raise RuntimeError(f"render_template.py not found at {script}")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(output_dir.mkdir, parents=True, exist_ok=True)
     tex_path = output_dir / f"{filename_stem}.tex"
 
     with tempfile.NamedTemporaryFile(
@@ -106,7 +106,7 @@ async def render_tex_cli(
     except TimeoutError as exc:
         raise RuntimeError("render_template.py timed out") from exc
     finally:
-        tmp_path.unlink(missing_ok=True)
+        await asyncio.to_thread(tmp_path.unlink, missing_ok=True)
 
     if proc.returncode != 0:
         raise RuntimeError(
@@ -158,7 +158,7 @@ async def compile_pdf_cli(tex_path: Path) -> Path | None:
 
 
 class ExportResult:
-    __slots__ = ("tex_path", "pdf_path")
+    __slots__ = ("pdf_path", "tex_path")
 
     def __init__(self, tex_path: str, pdf_path: str | None) -> None:
         self.tex_path = tex_path

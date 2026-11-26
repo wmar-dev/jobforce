@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import html as html_module
 import json
 import sys
@@ -338,15 +339,13 @@ async def _wait_for_icims_and_extract(page: Any, hostname: str) -> str | None:
         return None
     from playwright.async_api import TimeoutError as PlaywrightTimeout
 
-    try:
+    with contextlib.suppress(PlaywrightTimeout):
         await page.wait_for_function(
             "document.querySelector('iframe[src*=\"icims.com\"]')"
             "?.contentDocument?.querySelector('h1')"
             "?.textContent?.trim()?.length > 0",
             timeout=10_000,
         )
-    except PlaywrightTimeout:
-        pass
     return await _extract_icims_frame_html(page)
 
 
@@ -361,25 +360,19 @@ async def _click_eightfold_description_tab(page: Any, hostname: str) -> None:
 
     # Some tenants (e.g. Lockheed Martin) show a one-time welcome modal on
     # first load that intercepts pointer events and blocks the tab click.
-    try:
+    with contextlib.suppress(PlaywrightTimeout):
         await page.click(".modalClose", timeout=2_000)
-    except PlaywrightTimeout:
-        pass
     # Custom-domain tenants (e.g. careers.qualcomm.com) have no tab: the body
     # is already in the DOM once hydrated, so a missing button is fine — still
     # wait for the hydrated title/body below.
-    try:
+    with contextlib.suppress(PlaywrightTimeout):
         await page.click("button:has-text('Job Description')", timeout=3_000)
-    except PlaywrightTimeout:
-        pass
-    try:
+    with contextlib.suppress(PlaywrightTimeout):
         await page.wait_for_function(
             "document.querySelector('h2[class*=\"position-title\"]') && "
             "document.querySelector('#job-description-container')?.textContent?.trim()?.length > 0",
             timeout=8_000,
         )
-    except PlaywrightTimeout:
-        pass
 
 
 async def _expand_notion_toggles(page: Any, hostname: str) -> None:
@@ -452,10 +445,8 @@ async def _fetch_html(url: str) -> str:
             try:
                 await page.wait_for_selector(wait_selector, timeout=10_000, state="attached")
                 if hydration_condition is not None:
-                    try:
+                    with contextlib.suppress(PlaywrightTimeout):
                         await page.wait_for_function(hydration_condition, timeout=10_000)
-                    except PlaywrightTimeout:
-                        pass
             except PlaywrightTimeout:
                 # SPA pages without the expected marker (e.g. TikTok): wait for JS to hydrate content
                 await page.wait_for_timeout(5_000)

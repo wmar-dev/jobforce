@@ -144,8 +144,7 @@ async def get_base_resume() -> ResumeOut:
 )
 async def put_base_resume(request: Request) -> ResumeOut:
     """Overwrite config/resume.json with the request body (used by /forge-import)."""
-    body = await request.json()
-    structured_data = body if isinstance(body, dict) else body
+    structured_data = await request.json()
     _RESUME_FILE.parent.mkdir(parents=True, exist_ok=True)
     _RESUME_FILE.write_text(json.dumps(structured_data, indent=2, ensure_ascii=False))
     return ResumeOut(

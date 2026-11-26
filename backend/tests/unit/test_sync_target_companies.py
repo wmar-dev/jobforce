@@ -85,7 +85,7 @@ def test_duplicate_config_entries_prefer_one_with_careers_url() -> None:
 def test_domain_url_is_normalized_and_quotes_escaped() -> None:
     text, _, _ = merge(_TARGET, [_c('Say "Hi"', "https://www.sayhi.ai/")])
 
-    entry = [e for e in yaml.safe_load(text) if e["name"] == 'Say "Hi"'][0]
+    entry = next(e for e in yaml.safe_load(text) if e["name"] == 'Say "Hi"')
     assert entry["domain"] == "sayhi.ai"
 
 

@@ -76,15 +76,14 @@ async def _seed_search_configs(session: AsyncSession, config: AppConfig) -> None
 if __name__ == "__main__":
     import asyncio
     import logging
-    import os
+    from pathlib import Path
 
     logging.basicConfig(level=logging.INFO)
     from jobforce.config import load_config
     from jobforce.db.engine import get_session_factory, init_engine
 
-    _here = os.path.dirname(os.path.abspath(__file__))
-    _root = os.path.normpath(os.path.join(_here, "..", "..", ".."))
-    config = load_config(os.path.join(_root, "config.yaml"))
+    _root = Path(__file__).resolve().parents[3]
+    config = load_config(str(_root / "config.yaml"))
     init_engine(config.database.path)
 
     async def _run() -> None:

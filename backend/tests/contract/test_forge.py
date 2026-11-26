@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -172,7 +173,6 @@ async def test_export_resume_tex_path_ends_with_company_and_title(
     test_client: AsyncClient,
 ) -> None:
     """Filename includes a sanitized company + title slug."""
-    import os
     from unittest.mock import AsyncMock, patch
 
     await _put_base_resume(test_client)
@@ -190,7 +190,7 @@ async def test_export_resume_tex_path_ends_with_company_and_title(
     assert resp.status_code == 200
     data = resp.json()
     # Filename should contain slugified "TechCo" and "Senior Python Engineer"
-    stem = os.path.basename(data["tex_path"]).replace(".tex", "")
+    stem = Path(data["tex_path"]).stem
     assert "techco" in stem.lower()
     assert "senior" in stem.lower()
 
@@ -223,10 +223,8 @@ async def test_export_resume_not_found_returns_404(test_client: AsyncClient) -> 
 async def test_export_pdf_performance_within_30s(test_client: AsyncClient) -> None:
     import shutil
 
-    import pytest as _pytest
-
     if not shutil.which("latexmk"):
-        _pytest.skip("LaTeX not installed — skipping performance test")
+        pytest.skip("LaTeX not installed — skipping performance test")
 
     base = await _put_base_resume(test_client)
     start = time.monotonic()

@@ -53,9 +53,8 @@ def _tiktok_description(doc: BeautifulSoup, url: str) -> str | None:
         classes = el.get_attribute_list("class")
         if "block-title" in classes:
             parts.append(f"\n## {_text(el)}\n")
-        elif "block-content" in classes:
-            if md_part := _to_markdown(el):
-                parts.append(md_part)
+        elif "block-content" in classes and (md_part := _to_markdown(el)):
+            parts.append(md_part)
     return "\n".join(parts).strip() or None
 
 

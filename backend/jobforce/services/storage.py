@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from pathlib import Path
@@ -10,6 +11,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobforce.db.models import PageSnapshot
 
 logger = logging.getLogger(__name__)
+
+
+def _write_snapshot_file(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+def _read_snapshot_file(path: Path) -> bytes | None:
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+
 
 BLOB_THRESHOLD_BYTES = 500 * 1024  # 500 KB
 
@@ -32,9 +46,8 @@ async def store_snapshot(
             size_bytes=size,
         )
     else:
-        Path(pages_dir).mkdir(parents=True, exist_ok=True)
         file_path = str(Path(pages_dir) / f"{job_listing_id}_{content_hash[:16]}.html")
-        Path(file_path).write_bytes(html_bytes)
+        await asyncio.to_thread(_write_snapshot_file, Path(file_path), html_bytes)
         snapshot = PageSnapshot(
             job_listing_id=job_listing_id,
             html_blob=None,
@@ -67,8 +80,8 @@ async def retrieve_snapshot(session: AsyncSession, job_listing_id: int) -> bytes
         return None
     if snapshot.html_blob is not None:
         return snapshot.html_blob
-    if snapshot.file_path and Path(snapshot.file_path).exists():
-        return Path(snapshot.file_path).read_bytes()
+    if snapshot.file_path:
+        return await asyncio.to_thread(_read_snapshot_file, Path(snapshot.file_path))
     return None
 
 
@@ -77,7 +90,7 @@ async def verify_integrity(session: AsyncSession) -> list[str]:
     snapshots = result.scalars().all()
     missing = []
     for snap in snapshots:
-        if snap.file_path and not Path(snap.file_path).exists():
+        if snap.file_path and not await asyncio.to_thread(Path(snap.file_path).exists):
             logger.warning(
                 "Missing snapshot file: %s (job_listing_id=%d)", snap.file_path, snap.job_listing_id
             )

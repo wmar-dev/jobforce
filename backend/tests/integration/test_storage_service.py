@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,7 +52,7 @@ async def test_large_html_stored_as_file(db_session: AsyncSession, tmp_path: obj
     )
     assert snapshot.html_blob is None
     assert snapshot.file_path is not None
-    assert os.path.exists(snapshot.file_path)
+    assert Path(snapshot.file_path).exists()
     assert snapshot.size_bytes == len(html)
 
 
@@ -108,7 +108,7 @@ async def test_verify_integrity_detects_missing_file(
         pages_dir=str(tmp_path),
     )
     assert snap.file_path is not None
-    os.remove(snap.file_path)
+    Path(snap.file_path).unlink()
 
     issues = await verify_integrity(session=db_session)
     assert snap.file_path in issues

@@ -36,7 +36,8 @@ def test_same_status_codes_merge() -> None:
     responses = error_responses(ErrorCode.JOB_NOT_FOUND, ErrorCode.NOTE_NOT_FOUND)
     assert list(responses) == [404]
     desc = responses[404]["description"]
-    assert "JOB_NOT_FOUND" in desc and "NOTE_NOT_FOUND" in desc
+    assert "JOB_NOT_FOUND" in desc
+    assert "NOTE_NOT_FOUND" in desc
 
 
 def test_422_documents_both_shapes() -> None:

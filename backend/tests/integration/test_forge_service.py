@@ -171,10 +171,12 @@ async def test_render_tex_cli_escapes_special_chars() -> None:
 @pytest.mark.asyncio
 async def test_render_tex_cli_raises_on_missing_template(monkeypatch: pytest.MonkeyPatch) -> None:
     # Patch the scripts dir to a non-existent path to force failure
-    with tempfile.TemporaryDirectory() as tmpdir:
-        with patch("jobforce.services.forge._SCRIPTS_DIR", Path("/nonexistent/path")):
-            with pytest.raises(RuntimeError):
-                await render_tex_cli(_BASE_DATA, Path(tmpdir), "resume-fail")
+    with (
+        tempfile.TemporaryDirectory() as tmpdir,
+        patch("jobforce.services.forge._SCRIPTS_DIR", Path("/nonexistent/path")),
+        pytest.raises(RuntimeError),
+    ):
+        await render_tex_cli(_BASE_DATA, Path(tmpdir), "resume-fail")
 
 
 # ---------------------------------------------------------------------------
@@ -190,11 +192,11 @@ async def test_export_resume_returns_tex_path_always(tmp_path: Path) -> None:
         id = 1
         structured_data = json.dumps(_BASE_DATA)
 
-    with patch("jobforce.services.forge._OUTPUT_DIR", tmp_path):
-        with patch(
-            "jobforce.services.forge.compile_pdf_cli", new_callable=AsyncMock, return_value=None
-        ):
-            result = await export_resume(FakeResume(), "Acme Corp", "Senior Engineer")
+    with (
+        patch("jobforce.services.forge._OUTPUT_DIR", tmp_path),
+        patch("jobforce.services.forge.compile_pdf_cli", new_callable=AsyncMock, return_value=None),
+    ):
+        result = await export_resume(FakeResume(), "Acme Corp", "Senior Engineer")
 
     assert result.tex_path.endswith(".tex")
     assert result.pdf_path is None
@@ -209,11 +211,13 @@ async def test_export_resume_returns_pdf_path_when_latex_available(tmp_path: Pat
     fake_pdf = tmp_path / "resume-test.pdf"
     fake_pdf.write_bytes(b"%PDF-1.4")
 
-    with patch("jobforce.services.forge._OUTPUT_DIR", tmp_path):
-        with patch(
+    with (
+        patch("jobforce.services.forge._OUTPUT_DIR", tmp_path),
+        patch(
             "jobforce.services.forge.compile_pdf_cli", new_callable=AsyncMock, return_value=fake_pdf
-        ):
-            result = await export_resume(FakeResume(), "Acme Corp", "Senior Engineer")
+        ),
+    ):
+        result = await export_resume(FakeResume(), "Acme Corp", "Senior Engineer")
 
     assert result.pdf_path is not None
     assert result.pdf_path.endswith(".pdf")

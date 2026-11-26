@@ -46,7 +46,7 @@ async def evaluate_answer(
     session: AsyncSession,
     session_id: int,
     question_id: str,
-    answer: str,  # noqa: ARG001
+    answer: str,
 ) -> dict[str, Any]:
     """Stub — answer evaluation via AI is out of scope post-migration."""
     interview = await session.get(InterviewSession, session_id)
