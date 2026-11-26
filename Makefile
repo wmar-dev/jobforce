@@ -19,7 +19,7 @@ check-backend:
 	@$(call gated,Backend,cd backend && $(MAKE) --no-print-directory check)
 
 check-frontend:
-	@$(call gated,Frontend,cd frontend && npm run check:api && npm run typecheck && npm run lint && npm test)
+	@$(call gated,Frontend,cd frontend && npm run check:api && npm run typecheck && npm run lint && npm run format:check && npm test)
 
 check-extension:
 	@$(call gated,Chrome extension,cd chrome-extension && npm run lint && npm test)
